@@ -1,0 +1,23 @@
+[MESSAGES CONTROL]
+max-line-length=200
+# disable = line-too-long
+
+[FORMAT]
+
+[TYPECHECK]
+
+[REPORTS]
+
+[BASIC]
+
+[DESIGN]
+
+[CLASSES]
+
+[IMPORTS]
+
+[EXCEPTIONS]
+
+[FUNCTIONS]
+
+[VARIABLES]

@@ -18,8 +18,33 @@ logger:
     logs:
         custom_components.solar_optimizer: debug
 
+input_boolean:
+  fake_device1:
+    name: "Radiateur"
+    icon: mdi:radiator
+  fake_device2:
+    name: "Ventillo"
+    icon: mdi:fan
+  fake_device3:
+    name: "Chauffe-eau"
+    icon: mdi:water-boiler
+
 solar_optimizer:
-  - not_used: non utilisé
+  refresh_period_sec: 10
+  devices:
+    - name: "Radiateur"
+      entity_id: "input_boolean.fake_device1"
+      power_max: 1500
+      check_usable_template: "{{ True }}"
+    - name: "Ventillo"
+      entity_id: "input_boolean.fake_device2"
+      power_max: 300
+      check_usable_template: "{{ True }}"
+    - name: "Chauffe-eau"
+      entity_id: "input_boolean.fake_device3"
+      power_max: 3000
+      check_usable_template: "{{ False }}"
+
 
 # If you need to debug uncommment the line below (doc: https://www.home-assistant.io/integrations/debugpy/)
 debugpy:

@@ -8,7 +8,7 @@
 		"9123:8123"
 	],
 	"postCreateCommand": "pip install -r requirements.txt",
-	
+
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -33,6 +33,7 @@
 				"python.linting.pylintEnabled": true,
 				"python.linting.enabled": true,
 				"python.formatting.provider": "black",
+				"python.formatting.blackPath": "/usr/local/py-utils/bin/black",
 				"editor.formatOnPaste": false,
 				"editor.formatOnSave": true,
 				"editor.formatOnType": true,
