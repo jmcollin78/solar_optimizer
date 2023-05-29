@@ -19,31 +19,143 @@ logger:
         custom_components.solar_optimizer: debug
 
 input_boolean:
-  fake_device1:
-    name: "Radiateur"
+  fake_device_a:
+    name: "Equipement A (1000 W)"
     icon: mdi:radiator
-  fake_device2:
-    name: "Ventillo"
-    icon: mdi:fan
-  fake_device3:
-    name: "Chauffe-eau"
-    icon: mdi:water-boiler
+  fake_device_b:
+    name: "Equipement B (500 W)"
+    icon: mdi:radiator
+  fake_device_c:
+    name: "Equipement C (800 W)"
+    icon: mdi:radiator
+  fake_device_d:
+    name: "Equipement D (2100 W)"
+    icon: mdi:radiator
+  fake_device_e:
+    name: "Equipement E (120 W)"
+    icon: mdi:radiator
+  fake_device_f:
+    name: "Equipement F (500W)"
+    icon: mdi:radiator
+  fake_device_g:
+    name: "Equipement G (1200 W)"
+    icon: mdi:radiator
+  fake_device_h:
+    name: "Equipement H (5000 W)"
+    icon: mdi:radiator
+  fake_device_i:
+    name: "Equipement I (700 W)"
+    icon: mdi:radiator
+
+input_number:
+  consommation_brut:
+    name: Puissance brut consommée
+    min: 0
+    max: 15000
+    step: 100
+    icon: mdi:flash
+    unit_of_measurement: W
+    mode: slider
+  consommation_net:
+    name: Puissance nette consommée
+    min: -5000
+    max: 15000
+    step: 100
+    icon: mdi:flash
+    unit_of_measurement: W
+    mode: slider
+  production_solaire:
+    name: Puissance solaire produite
+    min: 0
+    max: 4000
+    step: 100
+    icon: mdi:flash
+    unit_of_measurement: W
+    mode: slider
+  sell_cost:
+    name: Cout de revente d'un kWh (en centimes)
+    min: 0
+    max: 1
+    step: 0.01
+    icon: mdi:euro
+    unit_of_measurement: €
+    mode: box
+  buy_cost:
+    name: Cout d'achat d'un kWh (en centimes)
+    min: 0
+    max: 1
+    step: 0.01
+    icon: mdi:euro
+    unit_of_measurement: €
+    mode: box
+  sell_tax_percent:
+    name: Taxe sur la revente en %
+    min: 0
+    max: 100
+    step: 0.5
+    icon: mdi:percent
+    unit_of_measurement: '%'
+    mode: slider
 
 solar_optimizer:
   refresh_period_sec: 10
+  algorithm:
+    initial_temp: 1000
+    min_temp: 0.1
+    cooling_factor: 0.95
+    max_iteration_number: 1000
+  power_consumption_entity_id: "input_number.consommation_net"
+  power_production_entity_id: "input_number.production_solaire"
+  sell_cost_entity_id: "input_number.sell_cost"
+  buy_cost_entity_id: "input_number.buy_cost"
+  sell_tax_percent_entity_id: "input_number.sell_tax_percent"
   devices:
-    - name: "Radiateur"
-      entity_id: "input_boolean.fake_device1"
-      power_max: 1500
+    - name: "Equipement A"
+      entity_id: "input_boolean.fake_device_a"
+      power_max: 1000
       check_usable_template: "{{ True }}"
-    - name: "Ventillo"
-      entity_id: "input_boolean.fake_device2"
-      power_max: 300
+      duration_sec: 20
+    - name: "Equipement B"
+      entity_id: "input_boolean.fake_device_b"
+      power_max: 500
       check_usable_template: "{{ True }}"
-    - name: "Chauffe-eau"
-      entity_id: "input_boolean.fake_device3"
-      power_max: 3000
-      check_usable_template: "{{ False }}"
+      duration_sec: 40
+    - name: "Equipement C"
+      entity_id: "input_boolean.fake_device_c"
+      power_max: 800
+      check_usable_template: "{{ True }}"
+      duration_sec: 60
+    - name: "Equipement D"
+      entity_id: "input_boolean.fake_device_d"
+      power_max: 2100
+      check_usable_template: "{{ True }}"
+      duration_sec: 30
+    - name: "Equipement E"
+      entity_id: "input_boolean.fake_device_e"
+      power_max: 120
+      check_usable_template: "{{ True }}"
+      duration_sec: 125
+    - name: "Equipement F"
+      entity_id: "input_boolean.fake_device_f"
+      power_max: 500
+      check_usable_template: "{{ True }}"
+      duration_sec: 10
+    - name: "Equipement G"
+      entity_id: "input_boolean.fake_device_g"
+      power_max: 1200
+      check_usable_template: "{{ True }}"
+      duration_sec: 90
+    - name: "Equipement H"
+      entity_id: "input_boolean.fake_device_h"
+      power_max: 5000
+      check_usable_template: "{{ True }}"
+      duration_sec: 25
+    - name: "Equipement I"
+      entity_id: "input_boolean.fake_device_i"
+      power_max: 700
+      check_usable_template: "{{ True }}"
+      duration_sec: 7
+
 
 
 # If you need to debug uncommment the line below (doc: https://www.home-assistant.io/integrations/debugpy/)

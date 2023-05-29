@@ -7,7 +7,7 @@
     "config_flow": false,
     "documentation": "https://github.com/jmcollin78/solar_optimizer",
     "integration_type": "device",
-    "iot_class": "calculated",
+    "iot_class": "local_polling",
     "issue_tracker": "https://github.com/jmcollin78/solar_optimizer/issues",
     "quality_scale": "silver",
     "version": "3.0.0"

@@ -3,36 +3,36 @@ import logging
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import SolarOptimizerCoordinator
+from .sensor import SolarOptimizerSensorEntity, async_setup_entry
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, config: ConfigType
 ):  # pylint: disable=unused-argument
     """Initialisation de l'intégration"""
     _LOGGER.info(
         "Initializing %s integration with plaforms: %s with config: %s",
         DOMAIN,
         PLATFORMS,
-        entry,
+        config,
     )
 
     hass.data.setdefault(DOMAIN, {})
 
     # L'argument config contient votre fichier configuration.yaml
-    solar_optimizer_config = entry.get(DOMAIN)
+    solar_optimizer_config = config.get(DOMAIN)
 
     hass.data[DOMAIN]["coordinator"] = coordinator = SolarOptimizerCoordinator(hass, solar_optimizer_config)
 
     await coordinator.async_config_entry_first_refresh()
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    # entry.async_on_unload(entry.add_update_listener(async_reload_entry))
-
+    await async_setup_entry(hass)
 
     # Return boolean to indicate that initialization was successful.
     return True
