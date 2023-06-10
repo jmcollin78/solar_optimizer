@@ -141,7 +141,7 @@ class ManagedDevice:
             self._entity_id,
             requested_power,
         )
-        if requested_power:
+        if requested_power is not None:
             self._requested_power = requested_power
 
         if self._action_mode == CONF_ACTION_MODE_SERVICE:
@@ -182,7 +182,7 @@ class ManagedDevice:
 
     async def deactivate(self):
         """Use this method to deactivate this ManagedDevice"""
-        return await self._apply_action(ACTION_DEACTIVATE)
+        return await self._apply_action(ACTION_DEACTIVATE, 0)
 
     async def change_requested_power(self, requested_power):
         """Use this method to change the requested power of this ManagedDevice"""

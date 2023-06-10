@@ -263,7 +263,8 @@ class SimulatedAnnealingAlgorithm:
             requested_power = current_power + power_add
             if requested_power < power_min:
                 # deactivate the equipment
-                eqt["state"] = not state
+                eqt["state"] = False
+                requested_power = 0
             elif requested_power > power_max:
                 # Do nothing
                 requested_power = current_power

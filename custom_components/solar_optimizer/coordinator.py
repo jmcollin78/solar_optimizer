@@ -152,14 +152,15 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             for _, device in enumerate(self._devices):
                 if device.name == equipement["name"]:
                     requested_power = equipement.get("requested_power")
-                    if device.is_active and not equipement["state"]:
+                    is_active = device.is_active
+                    if is_active and not equipement["state"]:
                         _LOGGER.debug("Extinction de %s", equipement["name"])
                         await device.deactivate()
-                    elif not device.is_active and equipement["state"]:
+                    elif not is_active and equipement["state"]:
                         _LOGGER.debug("Allumage de %s", equipement["name"])
                         await device.activate(requested_power)
                     elif (
-                        device.is_active
+                        is_active
                         and equipement["state"]
                         and device.current_power != requested_power
                         and device.can_change_power
