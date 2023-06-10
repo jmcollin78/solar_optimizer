@@ -103,9 +103,15 @@ class SimulatedAnnealingAlgorithm:
             self._equipements.append(
                 {
                     "power_max": device.power_max,
+                    "power_min": device.power_min,
+                    "power_step": device.power_step,
+                    "current_power": device.current_power,
+                    # Initial Requested power is the current power
+                    "requested_power": device.current_power,
                     "name": device.name,
                     "state": device.is_active,
                     "is_usable": device.is_usable,
+                    "can_change_power": device.can_change_power,
                 }
             )
         if DEBUG:
@@ -214,7 +220,7 @@ class SimulatedAnnealingAlgorithm:
     def consommation_equipements(self, solution):
         """The total power consumption for all active equipement"""
         return sum(
-            equipement["power_max"]
+            equipement["requested_power"]
             for _, equipement in enumerate(solution)
             if equipement["state"]
         )
@@ -225,71 +231,51 @@ class SimulatedAnnealingAlgorithm:
 
         usable = [eqt for eqt in voisin if eqt["is_usable"]]
 
+        if len(usable) <= 0:
+            return voisin
+
         eqt = random.choice(usable)
-        eqt["state"] = not eqt["state"]
+
+        name = eqt["name"]
+        state = eqt["state"]
+        can_change_power = eqt["can_change_power"]
+        # Current power is the last requested_power
+        current_power = eqt.get("requested_power")
+        power_max = eqt.get("power_max")
+        power_step = eqt.get("power_step")
+        if can_change_power:
+            power_min = eqt.get("power_min")
+        else:
+            # If power is not manageable, min = max
+            power_min = power_max
+
+        if not state or not can_change_power:
+            eqt["state"] = not state
+            # We always start at the min power
+            eqt["requested_power"] = power_min
+        else:
+            _LOGGER.debug("Managing a can_change_power eqt which is already Activated")
+            # Deactivate eqt or change power
+            power_add = random.choice([-1, 1]) * power_step
+            _LOGGER.debug(
+                "Adding %d power to current_power (%d)", power_add, current_power
+            )
+            requested_power = current_power + power_add
+            if requested_power < power_min:
+                # deactivate the equipment
+                eqt["state"] = not state
+            elif requested_power > power_max:
+                # Do nothing
+                requested_power = current_power
+            _LOGGER.debug("New requested_power is %s for eqt %s", requested_power, name)
+            # Update the solution with current_power and
+            eqt["requested_power"] = requested_power
+
         if DEBUG:
             _LOGGER.debug(
                 "      -- On permute %s puissance max de %.2f. Il passe à %s",
                 eqt["name"],
-                eqt["power_max"],
+                eqt["requested_power"],
                 eqt["state"],
             )
         return voisin
-
-
-# Exemple de données des équipements (puissance et durée)
-# equipements = [
-#    {"nom": "Equipement A", "puissance": 1000, "duree": 4, "state": False},
-#    {"nom": "Equipement B", "puissance": 500, "duree": 2, "state": False},
-#    {"nom": "Equipement C", "puissance": 800, "duree": 3, "state": False},
-#    {"nom": "Equipement D", "puissance": 2100, "duree": 1, "state": False},
-#    {"nom": "Equipement E", "puissance": 300, "duree": 3, "state": False},
-#    {"nom": "Equipement F", "puissance": 500, "duree": 5, "state": False},
-#    {"nom": "Equipement G", "puissance": 1200, "duree": 2, "state": False},
-#    {"nom": "Equipement H", "puissance": 5000, "duree": 3, "state": False},
-#    {"nom": "Equipement I", "puissance": 700, "duree": 4, "state": False},
-# ]
-
-
-# Données de production solaire
-# production_solaire = 4000
-
-# Consommation totale du logement (< 0 -> production solaire)
-# consommation_net = -2350
-
-# puissance_totale_eqt_initiale = 0
-
-# Paramètres de l'algorithme de recuit simulé
-# temperature_initiale = 1000
-# temperature_minimale = 0.1
-# facteur_refroidissement = 0.95
-# nombre_iterations = 1000
-#
-# cout_achat = 15  # centimes
-# cout_revente = 10  # centimes
-# taxe_revente = 0.13  # pourcentage
-
-
-# Résolution du problème avec l'algorithme de recuit simulé
-# solution_optimale = recuit_simule()
-
-# Affichage de la solution optimale
-# _LOGGER.debug("Solution optimale :")
-# for equipement in solution_optimale:
-#     if equipement["state"]:
-#         _LOGGER.debug(
-#             "- ",
-#             equipement["nom"],
-#             "(",
-#             equipement["puissance"],
-#             "W) etat:",
-#             equipement["state"],
-#         )
-#
-# # Calcul de la puissance totale consommée et de la durée totale
-# puissance_totale = sum(
-#     equipement["puissance"] for equipement in solution_optimale if equipement["state"]
-# )
-#
-# _LOGGER.debug("Puissance totale consommée :", puissance_totale)
-# _LOGGER.debug("Valeur de l'objectif: ", calculer_objectif(solution_optimale))
