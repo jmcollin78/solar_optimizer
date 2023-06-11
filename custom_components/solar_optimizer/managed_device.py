@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import Template
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_OFF, STATE_ON
+from homeassistant.const import STATE_ON
 
 from .const import (
     get_tz,
@@ -12,7 +12,8 @@ from .const import (
     CONF_ACTION_MODE_EVENT,
     CONF_ACTION_MODES,
     ConfigurationError,
-    EVENT_TYPE_SOLAR_OPTIMIZER,
+    EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
+    EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
 )
 
 ACTION_ACTIVATE = "Activate"
@@ -25,9 +26,10 @@ _LOGGER = logging.getLogger(__name__)
 async def do_service_action(
     hass: HomeAssistant,
     entity_id,
+    action_type,
     service_name,
-    current_power=None,
-    requested_power=None,
+    current_power=None,  # pylint: disable=unused-argument
+    requested_power=None,  # pylint: disable=unused-argument
 ):
     """Activate an entity via a service call"""
     _LOGGER.info("Calling service %s for entity %s", service_name, entity_id)
@@ -48,6 +50,16 @@ async def do_service_action(
             parties[1],
             service_data,
         )
+
+        # Also send an event to inform
+        do_event_action(
+            hass,
+            entity_id,
+            action_type,
+            current_power,
+            requested_power,
+            EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
+        )
     else:
         raise ConfigurationError(
             f"Incorrect service declaration for entity {entity_id}. Service {service_name} should be formatted with: 'domain/service'"
@@ -55,19 +67,25 @@ async def do_service_action(
 
 
 def do_event_action(
-    hass: HomeAssistant, entity_id, action_type, current_power, requested_power
+    hass: HomeAssistant,
+    entity_id,
+    action_type,
+    current_power,
+    requested_power,
+    event_type: str,
 ):
     """Activate an entity via an event"""
     _LOGGER.info(
-        "Sending event %s for entity %s with requested_power %s and current_power %s",
-        EVENT_TYPE_SOLAR_OPTIMIZER,
+        "Sending event %s with action %s for entity %s with requested_power %s and current_power %s",
+        event_type,
+        action_type,
         entity_id,
         requested_power,
         current_power,
     )
 
     hass.bus.fire(
-        event_type=EVENT_TYPE_SOLAR_OPTIMIZER,
+        event_type=event_type,
         event_data={
             "action_type": action_type,
             "requested_power": requested_power,
@@ -131,6 +149,11 @@ class ManagedDevice:
         self._deactivation_service = device_config.get("deactivation_service")
         self._change_power_service = device_config.get("change_power_service")
 
+        if self.is_active:
+            self._requested_power = self._current_power = (
+                self._power_max if self._can_change_power else self._power_min
+            )
+
     async def _apply_action(self, action_type: str, requested_power=None):
         """Apply an action to a managed device.
         This method is a generical method for activate, deactivate, change_requested_power
@@ -156,6 +179,7 @@ class ManagedDevice:
             await do_service_action(
                 self._hass,
                 self._entity_id,
+                action_type,
                 method,
                 self._current_power,
                 self._requested_power,
@@ -167,6 +191,7 @@ class ManagedDevice:
                 action_type,
                 self._current_power,
                 self._requested_power,
+                EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
             )
         else:
             raise ConfigurationError(

@@ -92,12 +92,21 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         device_states = {}
         # Add a device state attributes
         for _, device in enumerate(self._devices):
+            # Initialize current power if not set and is active
+
             device_states[device.name] = {
                 "name": device.name,
                 "is_active": device.is_active,
                 "is_usable": device.is_usable,
+                "current_power": device.current_power,
+                "requested_power": device.requested_power,
             }
-            # _LOGGER.debug("Evaluation of %s, device_active: %s, device_usable: %s", device.name, device.is_device_active, device.is_device_usable)
+            _LOGGER.debug(
+                "Evaluation of %s, device_active: %s, device_usable: %s",
+                device.name,
+                device.is_active,
+                device.is_usable,
+            )
         calculated_data["device_states"] = device_states
 
         # Add a power_consumption and power_production

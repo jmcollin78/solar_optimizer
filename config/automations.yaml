@@ -3,33 +3,53 @@
   description: ''
   trigger:
   - platform: event
-    event_type: solar_optimizer_event
+    event_type: solar_optimizer_change_power_event
+    id: power_event
+  - platform: event
+    event_type: solar_optimizer_state_change_event
+    id: state_change
   condition: []
   action:
-  - service: notify.persistent_notification
-    data:
-      message: '{{ trigger.event.data.action_type }} pour entité {{ trigger.event.data.entity_id}}     avec
-        requested_power {{ trigger.event.data.requested_power }}. (current_power is
-        {{ trigger.event.data.current_power }})'
-      title: Event de Solar Optimizer
-  - service: input_select.select_option
-    data:
-      option: '{{ (trigger.event.data.requested_power | float(0) / 660) | round(0)
-        }} A'
-    target:
-      entity_id: input_select.fake_tesla_1
-  - if:
-    - condition: state
-      entity_id: input_select.fake_tesla_1
-      state: 0 A
-    then:
-    - service: input_boolean.turn_off
-      data: {}
-      target:
-        entity_id: input_boolean.fake_device_h
-    else:
-    - service: input_boolean.turn_on
-      data: {}
-      target:
-        entity_id: input_boolean.fake_device_h
-  mode: single
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: power_event
+      sequence:
+      - service: persistent_notification.create
+        data:
+          message: '{{ trigger.event.data.action_type }} pour entité {{ trigger.event.data.entity_id}}     avec
+            requested_power {{ trigger.event.data.requested_power }}. (current_power
+            is {{ trigger.event.data.current_power }})'
+          title: ChangePower Event de Solar Optimizer
+      - service: input_select.select_option
+        data:
+          option: '{{ (trigger.event.data.requested_power | float(0) / 660) | round(0)
+            }} A'
+        target:
+          entity_id: input_select.fake_tesla_1
+      - if:
+        - condition: state
+          entity_id: input_select.fake_tesla_1
+          state: 0 A
+        then:
+        - service: input_boolean.turn_off
+          data: {}
+          target:
+            entity_id: input_boolean.fake_device_h
+        else:
+        - service: input_boolean.turn_on
+          data: {}
+          target:
+            entity_id: input_boolean.fake_device_h
+    - conditions:
+      - condition: trigger
+        id: state_change
+      sequence:
+      - service: persistent_notification.create
+        data:
+          message: '{{ trigger.event.data.action_type }} pour entité {{ trigger.event.data.entity_id}}     avec
+            requested_power {{ trigger.event.data.requested_power }}. (current_power
+            is {{ trigger.event.data.current_power }})'
+          title: StateChange Event de Solar Optimizer
+  mode: parallel
+  max: 50
