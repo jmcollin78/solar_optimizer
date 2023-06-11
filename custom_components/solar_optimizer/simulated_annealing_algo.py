@@ -111,6 +111,7 @@ class SimulatedAnnealingAlgorithm:
                     "name": device.name,
                     "state": device.is_active,
                     "is_usable": device.is_usable,
+                    "is_waiting": device.is_waiting,
                     "can_change_power": device.can_change_power,
                 }
             )
@@ -239,6 +240,8 @@ class SimulatedAnnealingAlgorithm:
         name = eqt["name"]
         state = eqt["state"]
         can_change_power = eqt["can_change_power"]
+        is_waiting = eqt["is_waiting"]
+
         # Current power is the last requested_power
         current_power = eqt.get("requested_power")
         power_max = eqt.get("power_max")
@@ -249,6 +252,19 @@ class SimulatedAnnealingAlgorithm:
             # If power is not manageable, min = max
             power_min = power_max
 
+        # TODO on en est là: on veut gérer le is_waiting qui interdit d'allumer ou éteindre un eqt usable.
+        # On veut pouvoir changer la puissance si l'eqt est déjà allumé malgré qu'il soit waiting.
+        # Usable veut dire qu'on peut l'allumer/éteindre OU qu'on peut changer la puissance
+
+        # if not can_change_power and is_waiting:
+        #    -> on ne fait rien (mais ne devrait pas arriver car il ne serait pas usable dans ce cas)
+        #
+        # if not state or not can_change_power:
+        #    -> allumage ou extinction
+        #
+        # if state and can_change_power and is_waiting:
+        #    -> change power mais sans l'éteindre (requested_power >= power_min)
+        #
         if not state or not can_change_power:
             eqt["state"] = not state
             # We always start at the min power

@@ -62,18 +62,6 @@ switch:
           data:
             entity_id: input_boolean.fake_device_i
 
-input_select:
-  fake_tesla_1:
-    name: "Fake Tesla 1"
-    options:
-      - "0 A"
-      - "1 A"
-      - "2 A"
-      - "3 A"
-      - "4 A"
-      - "5 A"
-      - "6 A"
-
 input_number:
   consommation_brut:
     name: Puissance brut consommée
@@ -123,6 +111,15 @@ input_number:
     icon: mdi:percent
     unit_of_measurement: '%'
     mode: slider
+  tesla_amps:
+    name: Tesla Amps
+    min: 0
+    max: 32
+    icon: mdi:ev-station
+    unit_of_measurement: A
+    mode: slider
+    step: 1
+
 
 solar_optimizer:
   refresh_period_sec: 10
@@ -194,15 +191,20 @@ solar_optimizer:
       activation_service: "input_boolean/turn_on"
       deactivation_service: "input_boolean/turn_off"
     - name: "Equipement H"
-      entity_id: "input_select.fake_tesla_1"
+      entity_id: "input_boolean.fake_device_h"
+      power_entity_id: "input_number.tesla_amps"
       power_min: 660
       power_max: 3960
       power_step: 660
-      check_active_template: "{{ not is_state('input_select.fake_tesla_1', '0 A') }}"
+      # check_active_template: "{{ not is_state('input_select.fake_tesla_1', '0 A') }}"
       check_usable_template: "{{ True }}"
-      duration_sec: 30
-      action_mode: "event"
-      change_power_service: "fake/change_power"
+      duration_sec: 60
+      duration_power_sec: 10
+      action_mode: "service_call"
+      activation_service: "input_boolean/turn_on"
+      deactivation_service: "input_boolean/turn_off"
+      change_power_service: "input_number/set_value"
+      convert_power_divide_factor: 660
     - name: "Equipement I"
       entity_id: "switch.fake_switch_1"
       power_max: 20

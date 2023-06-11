@@ -28,7 +28,7 @@ async def async_setup_entry(hass: HomeAssistant) -> None:
 
 
 class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
-    """The entity holding the algorithm calciulation"""
+    """The entity holding the algorithm calculation"""
 
     def __init__(self, coordinator, hass, idx):
         super().__init__(coordinator, context=idx)

@@ -28,42 +28,42 @@ async def do_service_action(
     entity_id,
     action_type,
     service_name,
-    current_power=None,  # pylint: disable=unused-argument
-    requested_power=None,  # pylint: disable=unused-argument
+    current_power,
+    requested_power,
+    convert_power_divide_factor,
 ):
     """Activate an entity via a service call"""
     _LOGGER.info("Calling service %s for entity %s", service_name, entity_id)
 
     parties = service_name.split("/")
-    if len(parties) == 2:
-        service_data = {
-            "entity_id": entity_id,
-        }
-        # Don't work
-        # if requested_power:
-        #     service_data.update(
-        #         {"requested_power": requested_power, "current_power": current_power}
-        #     )
-
-        await hass.services.async_call(
-            parties[0],
-            parties[1],
-            service_data,
-        )
-
-        # Also send an event to inform
-        do_event_action(
-            hass,
-            entity_id,
-            action_type,
-            current_power,
-            requested_power,
-            EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
-        )
-    else:
+    if len(parties) != 2:
         raise ConfigurationError(
             f"Incorrect service declaration for entity {entity_id}. Service {service_name} should be formatted with: 'domain/service'"
         )
+
+    if action_type == ACTION_CHANGE_POWER:
+        value = round(requested_power / convert_power_divide_factor)
+        service_data = {"value": value}
+    else:
+        service_data = {}
+
+    target = {
+        "entity_id": entity_id,
+    }
+
+    await hass.services.async_call(
+        parties[0], parties[1], service_data=service_data, target=target
+    )
+
+    # Also send an event to inform
+    do_event_action(
+        hass,
+        entity_id,
+        action_type,
+        current_power,
+        requested_power,
+        EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
+    )
 
 
 def do_event_action(
@@ -100,6 +100,7 @@ class ManagedDevice:
 
     _name: str
     _entity_id: str
+    _power_entity_id: str
     _power_max: int
     _power_min: int
     _power_step: int
@@ -107,26 +108,38 @@ class ManagedDevice:
     _current_power: int
     _requested_power: int
     _duration_sec: int
+    _duration_power_sec: int
     _check_usable_template: Template
     _check_active_template: Template
     _next_date_available: datetime
+    _next_date_available_power: datetime
     _action_mode: str
     _activation_service: str
     _deactivation_service: str
     _change_power_service: str
+    _convert_power_divide_factor: int
 
     def __init__(self, hass: HomeAssistant, device_config):
         """Initialize a manageable device"""
         self._hass = hass
         self._name = device_config.get("name")
         self._entity_id = device_config.get("entity_id")
+        self._power_entity_id = device_config.get("power_entity_id")
         self._power_max = int(device_config.get("power_max"))
         self._power_min = int(device_config.get("power_min") or -1)
         self._power_step = int(device_config.get("power_step") or 0)
+        self._power_step = int(device_config.get("power_step") or 0)
         self._can_change_power = self._power_min >= 0
+        self._convert_power_divide_factor = int(
+            device_config.get("convert_power_divide_factor") or 1
+        )
 
         self._current_power = self._requested_power = 0
         self._duration_sec = int(device_config.get("duration_sec"))
+        self._duration_power_sec = int(
+            device_config.get("duration_power_sec") or self._duration_sec
+        )
+
         if device_config.get("check_usable_template"):
             self._check_usable_template = Template(
                 device_config.get("check_usable_template"), hass
@@ -143,7 +156,9 @@ class ManagedDevice:
                 "{{ is_state('" + self._entity_id + "', '" + STATE_ON + "') }}"
             )
             self._check_active_template = Template(template_string, hass)
-        self._next_date_available = datetime.now(get_tz(hass))
+        self._next_date_available_power = self._next_date_available = datetime.now(
+            get_tz(hass)
+        )
         self._action_mode = device_config.get("action_mode")
         self._activation_service = device_config.get("activation_service")
         self._deactivation_service = device_config.get("deactivation_service")
@@ -169,20 +184,27 @@ class ManagedDevice:
 
         if self._action_mode == CONF_ACTION_MODE_SERVICE:
             method = None
+            entity_id = self._entity_id
             if action_type == ACTION_ACTIVATE:
                 method = self._activation_service
             elif action_type == ACTION_DEACTIVATE:
                 method = self._deactivation_service
             elif action_type == ACTION_CHANGE_POWER:
+                assert (
+                    self._can_change_power
+                ), f"Equipment {self._name} cannot change its power. We should not be there."
                 method = self._change_power_service
+                entity_id = self._power_entity_id
+                self.reset_next_date_available_power()
 
             await do_service_action(
                 self._hass,
-                self._entity_id,
+                entity_id,
                 action_type,
                 method,
                 self._current_power,
                 self._requested_power,
+                self._convert_power_divide_factor,
             )
         elif self._action_mode == CONF_ACTION_MODE_EVENT:
             do_event_action(
@@ -222,6 +244,17 @@ class ManagedDevice:
             "Next availability date for %s is %s", self._name, self._next_date_available
         )
 
+    def reset_next_date_available_power(self):
+        """Incremente the next availability date for power change to now + _duration_power_sec"""
+        self._next_date_available_power = datetime.now(get_tz(self._hass)) + timedelta(
+            seconds=self._duration_power_sec
+        )
+        _LOGGER.debug(
+            "Next availability date for power change for %s is %s",
+            self._name,
+            self._next_date_available_power,
+        )
+
     @property
     def is_active(self):
         """Check if device is active by getting the underlying state of the device"""
@@ -245,12 +278,23 @@ class ManagedDevice:
         if the device is not waiting for the end of its cycle"""
         context = {}
         now = datetime.now(get_tz(self._hass))
-        result = (
-            self._check_usable_template.async_render(context)
-            and now >= self._next_date_available
+        result = self._check_usable_template.async_render(context) and (
+            now >= self._next_date_available
+            or (self._can_change_power and now >= self._next_date_available_power)
         )
         if not result:
             _LOGGER.debug("%s is not usable", self._name)
+
+        return result
+
+    @property
+    def is_waiting(self):
+        """A device is waiting if the device is waiting for the end of its cycle"""
+        now = datetime.now(get_tz(self._hass))
+        result = now < self._next_date_available
+
+        if result:
+            _LOGGER.debug("%s is waiting", self._name)
 
         return result
 

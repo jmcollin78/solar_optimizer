@@ -18,8 +18,6 @@ from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 
 _LOGGER = logging.getLogger(__name__)
 
-SIMUL = True
-
 
 def get_safe_float(hass, entity_id: str):
     """Get a safe float state value for an entity.
@@ -98,6 +96,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 "name": device.name,
                 "is_active": device.is_active,
                 "is_usable": device.is_usable,
+                "is_waiting": device.is_waiting,
                 "current_power": device.current_power,
                 "requested_power": device.requested_power,
             }
@@ -110,21 +109,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         calculated_data["device_states"] = device_states
 
         # Add a power_consumption and power_production
-        power_production = calculated_data["power_production"] = get_safe_float(
+        calculated_data["power_production"] = get_safe_float(
             self.hass, self._power_production_entity_id
         )
-
-        if SIMUL:
-            conso_brut = get_safe_float(self.hass, "input_number.consommation_brut")
-        #     if conso_brut is not None and power_production is not None:
-        #         await self.hass.services.async_call(
-        #             "input_number",
-        #             "set_value",
-        #             {
-        #                 "entity_id": "input_number.consommation_net",
-        #                 "value": str(int(conso_brut - power_production)),
-        #             },
-        #         )
 
         calculated_data["power_consumption"] = get_safe_float(
             self.hass, self._power_consumption_entity_id
@@ -155,24 +142,27 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         calculated_data["best_objective"] = best_objective
         calculated_data["total_power"] = total_power
 
-        # Uses the result to turn on or off
+        # Uses the result to turn on or off or change power
         for _, equipement in enumerate(best_solution):
             _LOGGER.debug("Dealing with best_solution for %s", equipement)
             for _, device in enumerate(self._devices):
-                if device.name == equipement["name"]:
+                name = equipement["name"]
+                if device.name == name:
                     requested_power = equipement.get("requested_power")
+                    state = equipement["state"]
                     is_active = device.is_active
-                    if is_active and not equipement["state"]:
-                        _LOGGER.debug("Extinction de %s", equipement["name"])
+                    if is_active and not state:
+                        _LOGGER.debug("Extinction de %s", name)
                         await device.deactivate()
-                    elif not is_active and equipement["state"]:
-                        _LOGGER.debug("Allumage de %s", equipement["name"])
+                    elif not is_active and state:
+                        _LOGGER.debug("Allumage de %s", name)
                         await device.activate(requested_power)
-                    elif (
-                        is_active
-                        and equipement["state"]
-                        and device.current_power != requested_power
+
+                    # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
+                    if (
+                        state
                         and device.can_change_power
+                        and (device.current_power != requested_power or not is_active)
                     ):
                         _LOGGER.debug(
                             "Change power of %s to %s",
@@ -183,20 +173,5 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                     break
 
         _LOGGER.debug("Calculated data are: %s", calculated_data)
-
-        if (
-            SIMUL
-            and conso_brut is not None
-            and total_power is not None
-            and power_production is not None
-        ):
-            await self.hass.services.async_call(
-                "input_number",
-                "set_value",
-                {
-                    "entity_id": "input_number.consommation_net",
-                    "value": str(int(conso_brut + total_power - power_production)),
-                },
-            )
 
         return calculated_data
