@@ -259,11 +259,17 @@ class SimulatedAnnealingAlgorithm:
         # if not can_change_power and is_waiting:
         #    -> on ne fait rien (mais ne devrait pas arriver car il ne serait pas usable dans ce cas)
         #
-        # if not state or not can_change_power:
-        #    -> allumage ou extinction
-        #
         # if state and can_change_power and is_waiting:
         #    -> change power mais sans l'éteindre (requested_power >= power_min)
+        #
+        # if state and can_change_power and not is_waiting:
+        #    -> change power avec extinction possible
+        #
+        # if not state and not is_waiting
+        #    -> allumage
+        #
+        # if state and not is_waiting
+        #    -> extinction
         #
         if not state or not can_change_power:
             eqt["state"] = not state
