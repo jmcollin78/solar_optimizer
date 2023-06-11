@@ -1,3 +1,3 @@
 # solar_optimizer
 
-Modifié
+This integration provides a Solar Optimizer. It aims to activate / deactivate some equipments depending on the Solar Production and Electricity consumption.
