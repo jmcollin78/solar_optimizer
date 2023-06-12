@@ -7,7 +7,8 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import SolarOptimizerCoordinator
-from .sensor import SolarOptimizerSensorEntity, async_setup_entry
+from .sensor import async_setup_entry as async_setup_entry_sensor
+from .binary_sensor import async_setup_entry as async_setup_entry_binary_sensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,14 +29,18 @@ async def async_setup(
     # L'argument config contient votre fichier configuration.yaml
     solar_optimizer_config = config.get(DOMAIN)
 
-    hass.data[DOMAIN]["coordinator"] = coordinator = SolarOptimizerCoordinator(hass, solar_optimizer_config)
+    hass.data[DOMAIN]["coordinator"] = coordinator = SolarOptimizerCoordinator(
+        hass, solar_optimizer_config
+    )
 
     await coordinator.async_config_entry_first_refresh()
 
-    await async_setup_entry(hass)
+    await async_setup_entry_sensor(hass)
+    await async_setup_entry_binary_sensor(hass)
 
     # Return boolean to indicate that initialization was successful.
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""

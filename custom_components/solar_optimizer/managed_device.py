@@ -221,7 +221,8 @@ class ManagedDevice:
             )
 
         self._current_power = self._requested_power
-        self.reset_next_date_available()
+        if action_type == ACTION_ACTIVATE or action_type == ACTION_DEACTIVATE:
+            self.reset_next_date_available()
 
     async def activate(self, requested_power=None):
         """Use this method to activate this ManagedDevice"""
@@ -254,6 +255,10 @@ class ManagedDevice:
             self._name,
             self._next_date_available_power,
         )
+
+    def init_power(self, power: int):
+        """Initialise current_power and requested_power to the given value"""
+        self._requested_power = self._current_power = power
 
     @property
     def is_active(self):
@@ -342,3 +347,13 @@ class ManagedDevice:
     def can_change_power(self) -> bool:
         """true is the device can change its power"""
         return self._can_change_power
+
+    @property
+    def next_date_available(self) -> datetime:
+        """true is the device can change its power"""
+        return self._next_date_available
+
+    @property
+    def next_date_available_power(self) -> datetime:
+        """true is the device can change its power"""
+        return self._next_date_available_power

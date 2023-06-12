@@ -226,6 +226,32 @@ class SimulatedAnnealingAlgorithm:
             if equipement["state"]
         )
 
+    def calculer_new_power(
+        self, current_power, power_step, power_min, power_max, can_switch_off
+    ):
+        """Calcul une nouvelle puissance"""
+        choices = []
+        if current_power > power_min or can_switch_off:
+            choices.append(-1)
+        if current_power < power_max:
+            choices.append(1)
+
+        if len(choices) <= 0:
+            # No changes
+            return current_power
+
+        power_add = random.choice(choices) * power_step
+        _LOGGER.debug("Adding %d power to current_power (%d)", power_add, current_power)
+        requested_power = current_power + power_add
+        _LOGGER.debug("New requested_power is %s", requested_power)
+        return requested_power
+        # if requested_power < power_min:
+        # deactivate the equipment
+        #    requested_power = 0
+        # elif requested_power > power_max:
+        # Do nothing
+        #    requested_power = current_power
+
     def permuter_equipement(self, solution):
         """Permuter le state d'un equipement eau hasard"""
         voisin = copy.deepcopy(solution)
@@ -237,7 +263,7 @@ class SimulatedAnnealingAlgorithm:
 
         eqt = random.choice(usable)
 
-        name = eqt["name"]
+        # name = eqt["name"]
         state = eqt["state"]
         can_change_power = eqt["can_change_power"]
         is_waiting = eqt["is_waiting"]
@@ -252,7 +278,7 @@ class SimulatedAnnealingAlgorithm:
             # If power is not manageable, min = max
             power_min = power_max
 
-        # TODO on en est là: on veut gérer le is_waiting qui interdit d'allumer ou éteindre un eqt usable.
+        # On veut gérer le is_waiting qui interdit d'allumer ou éteindre un eqt usable.
         # On veut pouvoir changer la puissance si l'eqt est déjà allumé malgré qu'il soit waiting.
         # Usable veut dire qu'on peut l'allumer/éteindre OU qu'on peut changer la puissance
 
@@ -271,28 +297,70 @@ class SimulatedAnnealingAlgorithm:
         # if state and not is_waiting
         #    -> extinction
         #
-        if not state or not can_change_power:
-            eqt["state"] = not state
-            # We always start at the min power
-            eqt["requested_power"] = power_min
-        else:
-            _LOGGER.debug("Managing a can_change_power eqt which is already Activated")
-            # Deactivate eqt or change power
-            power_add = random.choice([-1, 1]) * power_step
-            _LOGGER.debug(
-                "Adding %d power to current_power (%d)", power_add, current_power
+        if (not can_change_power and is_waiting) or (
+            not state and can_change_power and is_waiting
+        ):
+            _LOGGER.debug("not can_change_power and is_waiting -> do nothing")
+            return voisin
+
+        if state and can_change_power and is_waiting:
+            # calculated a new power but do not switch off (because waiting)
+            requested_power = self.calculer_new_power(
+                current_power, power_step, power_min, power_max, False
             )
-            requested_power = current_power + power_add
+            assert (
+                requested_power > 0
+            ), "Requested_power should be > 0 because is_waiting is True"
+
+        if state and can_change_power and not is_waiting:
+            # change power and accept switching off
+            requested_power = self.calculer_new_power(
+                current_power, power_step, power_min, power_max, True
+            )
             if requested_power < power_min:
                 # deactivate the equipment
                 eqt["state"] = False
                 requested_power = 0
-            elif requested_power > power_max:
-                # Do nothing
-                requested_power = current_power
-            _LOGGER.debug("New requested_power is %s for eqt %s", requested_power, name)
-            # Update the solution with current_power and
-            eqt["requested_power"] = requested_power
+
+        if not state and not is_waiting:
+            # Allumage
+            eqt["state"] = not state
+            requested_power = power_min
+
+        if state and not is_waiting:
+            # Extinction
+            eqt["state"] = not state
+            requested_power = 0
+
+        if "requested_power" not in locals():
+            _LOGGER.error("We should not be there. eqt=%s", eqt)
+            assert False, "Requested power n'a pas été calculé. Ce n'est pas normal"
+
+        eqt["requested_power"] = requested_power
+
+        # old code that was working
+        # if not state or not can_change_power:
+        #    eqt["state"] = not state
+        #    # We always start at the min power
+        #    eqt["requested_power"] = power_min
+        # else:
+        #    _LOGGER.debug("Managing a can_change_power eqt which is already Activated")
+        #    # Deactivate eqt or change power
+        #    power_add = random.choice([-1, 1]) * power_step
+        #    _LOGGER.debug(
+        #        "Adding %d power to current_power (%d)", power_add, current_power
+        #    )
+        #    requested_power = current_power + power_add
+        #    if requested_power < power_min:
+        #        # deactivate the equipment
+        #        eqt["state"] = False
+        #        requested_power = 0
+        #    elif requested_power > power_max:
+        #        # Do nothing
+        #        requested_power = current_power
+        #    _LOGGER.debug("New requested_power is %s for eqt %s", requested_power, name)
+        #    # Update the solution with current_power and
+        #    eqt["requested_power"] = requested_power
 
         if DEBUG:
             _LOGGER.debug(

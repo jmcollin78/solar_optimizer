@@ -1,11 +1,12 @@
 """ Les constantes pour l'intégration Tuto HACS """
+from slugify import slugify
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 DOMAIN = "solar_optimizer"
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
 DEFAULT_REFRESH_PERIOD_SEC = 300
 
@@ -22,6 +23,11 @@ def get_tz(hass: HomeAssistant):
     """Get the current timezone"""
 
     return dt_util.get_time_zone(hass.config.time_zone)
+
+
+def name_to_unique_id(name: str) -> str:
+    """Convert a name to a unique id. Replace ' ' by _"""
+    return slugify(name).replace("-", "_")
 
 
 class ConfigurationError(Exception):

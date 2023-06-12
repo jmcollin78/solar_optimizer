@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import (
     # UpdateFailed,
 )
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC
+from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 
@@ -87,26 +87,33 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         calculated_data = {}
 
-        device_states = {}
+        # device_states = {}
         # Add a device state attributes
         for _, device in enumerate(self._devices):
             # Initialize current power if not set and is active
+            if device.is_active and device.current_power == 0:
+                device.init_power(
+                    device.power_max if device.can_change_power else device.power_min
+                )
+            if not device.is_active:
+                device.init_power(0)
 
-            device_states[device.name] = {
-                "name": device.name,
-                "is_active": device.is_active,
-                "is_usable": device.is_usable,
-                "is_waiting": device.is_waiting,
-                "current_power": device.current_power,
-                "requested_power": device.requested_power,
-            }
-            _LOGGER.debug(
-                "Evaluation of %s, device_active: %s, device_usable: %s",
-                device.name,
-                device.is_active,
-                device.is_usable,
-            )
-        calculated_data["device_states"] = device_states
+            # calculate a device_states (not used)
+            # device_states[device.name] = {
+            #     "name": device.name,
+            #     "is_active": device.is_active,
+            #     "is_usable": device.is_usable,
+            #     "is_waiting": device.is_waiting,
+            #     "current_power": device.current_power,
+            #     "requested_power": device.requested_power,
+            # }
+            # _LOGGER.debug(
+            #     "Evaluation of %s, device_active: %s, device_usable: %s",
+            #     device.name,
+            #     device.is_active,
+            #     device.is_usable,
+            # )
+        # calculated_data["device_states"] = device_states
 
         # Add a power_consumption and power_production
         calculated_data["power_production"] = get_safe_float(
@@ -145,33 +152,46 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         # Uses the result to turn on or off or change power
         for _, equipement in enumerate(best_solution):
             _LOGGER.debug("Dealing with best_solution for %s", equipement)
-            for _, device in enumerate(self._devices):
-                name = equipement["name"]
-                if device.name == name:
-                    requested_power = equipement.get("requested_power")
-                    state = equipement["state"]
-                    is_active = device.is_active
-                    if is_active and not state:
-                        _LOGGER.debug("Extinction de %s", name)
-                        await device.deactivate()
-                    elif not is_active and state:
-                        _LOGGER.debug("Allumage de %s", name)
-                        await device.activate(requested_power)
+            name = equipement["name"]
+            requested_power = equipement.get("requested_power")
+            state = equipement["state"]
+            device = self.get_device_name(name)
+            calculated_data[name_to_unique_id(name)] = device
+            if not device:
+                continue
+            is_active = device.is_active
+            if is_active and not state:
+                _LOGGER.debug("Extinction de %s", name)
+                await device.deactivate()
+            elif not is_active and state:
+                _LOGGER.debug("Allumage de %s", name)
+                await device.activate(requested_power)
 
-                    # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
-                    if (
-                        state
-                        and device.can_change_power
-                        and (device.current_power != requested_power or not is_active)
-                    ):
-                        _LOGGER.debug(
-                            "Change power of %s to %s",
-                            equipement["name"],
-                            requested_power,
-                        )
-                        await device.change_requested_power(requested_power)
-                    break
+            # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
+            if (
+                state
+                and device.can_change_power
+                and (device.current_power != requested_power or not is_active)
+            ):
+                _LOGGER.debug(
+                    "Change power of %s to %s",
+                    equipement["name"],
+                    requested_power,
+                )
+                await device.change_requested_power(requested_power)
 
         _LOGGER.debug("Calculated data are: %s", calculated_data)
 
         return calculated_data
+
+    @property
+    def devices(self) -> list[ManagedDevice]:
+        """Get all the managed device"""
+        return self._devices
+
+    def get_device_name(self, name: str) -> ManagedDevice | None:
+        """Returns the device which name is given in argument"""
+        for _, device in enumerate(self._devices):
+            if device.name == name:
+                return device
+        return None

@@ -1,4 +1,4 @@
-""" A sensor entoy that holds the result of the recuit simule algorithm """
+""" A sensor entity that holds the result of the recuit simule algorithm """
 import logging
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
