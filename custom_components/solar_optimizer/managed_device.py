@@ -187,8 +187,10 @@ class ManagedDevice:
             entity_id = self._entity_id
             if action_type == ACTION_ACTIVATE:
                 method = self._activation_service
+                self.reset_next_date_available()
             elif action_type == ACTION_DEACTIVATE:
                 method = self._deactivation_service
+                self.reset_next_date_available()
             elif action_type == ACTION_CHANGE_POWER:
                 assert (
                     self._can_change_power
@@ -221,8 +223,6 @@ class ManagedDevice:
             )
 
         self._current_power = self._requested_power
-        if action_type == ACTION_ACTIVATE or action_type == ACTION_DEACTIVATE:
-            self.reset_next_date_available()
 
     async def activate(self, requested_power=None):
         """Use this method to activate this ManagedDevice"""
@@ -258,6 +258,9 @@ class ManagedDevice:
 
     def init_power(self, power: int):
         """Initialise current_power and requested_power to the given value"""
+        _LOGGER.debug(
+            "Initializing power for entity '%s' with %s value", self._name, power
+        )
         self._requested_power = self._current_power = power
 
     @property
@@ -329,9 +332,19 @@ class ManagedDevice:
         return self._duration_sec
 
     @property
+    def duration_power_sec(self) -> int:
+        """The duration a device is not available after a change of the managed device for power change"""
+        return self._duration_power_sec
+
+    @property
     def entity_id(self) -> str:
         """The entity_id of the device"""
         return self._entity_id
+
+    @property
+    def power_entity_id(self) -> str:
+        """The entity_id of the device which gives the current power"""
+        return self._power_entity_id
 
     @property
     def current_power(self) -> int:
@@ -350,10 +363,15 @@ class ManagedDevice:
 
     @property
     def next_date_available(self) -> datetime:
-        """true is the device can change its power"""
+        """returns the next available date for state change"""
         return self._next_date_available
 
     @property
     def next_date_available_power(self) -> datetime:
-        """true is the device can change its power"""
+        """return the next available date for power change"""
         return self._next_date_available_power
+
+    @property
+    def convert_power_divide_factor(self) -> int:
+        """return"""
+        return self._convert_power_divide_factor

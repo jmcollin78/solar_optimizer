@@ -92,28 +92,21 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         for _, device in enumerate(self._devices):
             # Initialize current power if not set and is active
             if device.is_active and device.current_power == 0:
-                device.init_power(
-                    device.power_max if device.can_change_power else device.power_min
-                )
+                power = device.power_max
+                if device.can_change_power:
+                    state = self.hass.states.get(device.power_entity_id)
+                    if power is not None:
+                        power = round(
+                            float(state.state) * device.convert_power_divide_factor
+                        )
+                    else:
+                        power = device.power_min
+                    device.reset_next_date_available()
+                    device.reset_next_date_available_power()
+
+                device.init_power(power)
             if not device.is_active:
                 device.init_power(0)
-
-            # calculate a device_states (not used)
-            # device_states[device.name] = {
-            #     "name": device.name,
-            #     "is_active": device.is_active,
-            #     "is_usable": device.is_usable,
-            #     "is_waiting": device.is_waiting,
-            #     "current_power": device.current_power,
-            #     "requested_power": device.requested_power,
-            # }
-            # _LOGGER.debug(
-            #     "Evaluation of %s, device_active: %s, device_usable: %s",
-            #     device.name,
-            #     device.is_active,
-            #     device.is_usable,
-            # )
-        # calculated_data["device_states"] = device_states
 
         # Add a power_consumption and power_production
         calculated_data["power_production"] = get_safe_float(

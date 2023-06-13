@@ -135,16 +135,14 @@ class SimulatedAnnealingAlgorithm:
             # Calculer les objectifs pour la solution actuelle et le voisin
             objectif_voisin = self.calculer_objectif(voisin)
             if DEBUG:
-                _LOGGER.debug("Objecttif voisin : %2.f", objectif_voisin)
+                _LOGGER.debug("Objectif voisin : %2.f", objectif_voisin)
 
             # Accepter le voisin si son objectif est meilleur ou si la consommation totale n'excède pas la production solaire
             if objectif_voisin < objectif_actuel:
-                if DEBUG:
-                    _LOGGER.debug("---> On garde l'objectif voisin")
+                _LOGGER.debug("---> On garde l'objectif voisin")
                 solution_actuelle = voisin
                 if objectif_voisin < self.calculer_objectif(meilleure_solution):
-                    if DEBUG:
-                        _LOGGER.debug("---> C'est la meilleure jusque là")
+                    _LOGGER.debug("---> C'est la meilleure jusque là")
                     meilleure_solution = voisin
                     meilleure_objectif = objectif_voisin
             else:
@@ -312,7 +310,7 @@ class SimulatedAnnealingAlgorithm:
                 requested_power > 0
             ), "Requested_power should be > 0 because is_waiting is True"
 
-        if state and can_change_power and not is_waiting:
+        elif state and can_change_power and not is_waiting:
             # change power and accept switching off
             requested_power = self.calculer_new_power(
                 current_power, power_step, power_min, power_max, True
@@ -322,17 +320,17 @@ class SimulatedAnnealingAlgorithm:
                 eqt["state"] = False
                 requested_power = 0
 
-        if not state and not is_waiting:
+        elif not state and not is_waiting:
             # Allumage
             eqt["state"] = not state
             requested_power = power_min
 
-        if state and not is_waiting:
+        elif state and not is_waiting:
             # Extinction
             eqt["state"] = not state
             requested_power = 0
 
-        if "requested_power" not in locals():
+        elif "requested_power" not in locals():
             _LOGGER.error("We should not be there. eqt=%s", eqt)
             assert False, "Requested power n'a pas été calculé. Ce n'est pas normal"
 

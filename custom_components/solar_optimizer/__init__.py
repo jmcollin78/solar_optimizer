@@ -1,6 +1,7 @@
 """Initialisation du package de l'intégration HACS Tuto"""
 import logging
 
+from homeassistant.const import EVENT_HOMEASSISTANT_START
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType
@@ -33,10 +34,14 @@ async def async_setup(
         hass, solar_optimizer_config
     )
 
-    await coordinator.async_config_entry_first_refresh()
-
     await async_setup_entry_sensor(hass)
     await async_setup_entry_binary_sensor(hass)
+
+    # refresh data on startup
+    async def _internal_startup(*_):
+        await coordinator.async_config_entry_first_refresh()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _internal_startup)
 
     # Return boolean to indicate that initialization was successful.
     return True
