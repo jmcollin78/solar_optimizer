@@ -23,7 +23,7 @@ def get_safe_float(hass, entity_id: str):
     """Get a safe float state value for an entity.
     Return None if entity is not available"""
     state = hass.states.get(entity_id)
-    if not state:
+    if not state or state.state == "unknown" or state.state == "unavailable":
         return None
     float_val = float(state.state)
     return None if math.isinf(float_val) or not math.isfinite(float_val) else float_val
