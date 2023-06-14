@@ -143,6 +143,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         calculated_data["total_power"] = total_power
 
         # Uses the result to turn on or off or change power
+        should_log = False
         for _, equipement in enumerate(best_solution):
             _LOGGER.debug("Dealing with best_solution for %s", equipement)
             name = equipement["name"]
@@ -155,9 +156,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             is_active = device.is_active
             if is_active and not state:
                 _LOGGER.debug("Extinction de %s", name)
+                should_log = True
                 await device.deactivate()
             elif not is_active and state:
                 _LOGGER.debug("Allumage de %s", name)
+                should_log = True
                 await device.activate(requested_power)
 
             # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
@@ -171,9 +174,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                     equipement["name"],
                     requested_power,
                 )
+                should_log = True
                 await device.change_requested_power(requested_power)
 
-        _LOGGER.debug("Calculated data are: %s", calculated_data)
+        if should_log:
+            _LOGGER.info("Calculated data are: %s", calculated_data)
+        else:
+            _LOGGER.debug("Calculated data are: %s", calculated_data)
 
         return calculated_data
 

@@ -58,6 +58,8 @@ class ManagedDeviceBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "requested_power": device.requested_power,
             "duration_sec": device.duration_sec,
             "duration_power_sec": device.duration_power_sec,
+            "power_min": device.power_min,
+            "power_max": device.power_max,
             "next_date_available": device.next_date_available.astimezone(
                 current_tz
             ).isoformat(),
