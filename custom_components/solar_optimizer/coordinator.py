@@ -7,10 +7,10 @@ from datetime import timedelta
 from homeassistant.core import HomeAssistant  # callback
 
 from homeassistant.helpers.update_coordinator import (
-    # CoordinatorEntity,
     DataUpdateCoordinator,
-    # UpdateFailed,
 )
+
+from homeassistant.config_entries import ConfigEntry
 
 from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id
 from .managed_device import ManagedDevice
@@ -35,20 +35,19 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     _devices: list[ManagedDevice]
     _power_consumption_entity_id: str
     _power_production_entity_id: str
+    _sell_cost_entity_id: str
+    _buy_cost_entity_id: str
+    _sell_tax_percent_entity_id: str
 
     _algo: SimulatedAnnealingAlgorithm
 
     def __init__(self, hass: HomeAssistant, config):
         """Initialize the coordinator"""
-        # TODO mettre un Voluptuous schema pour verifier la config dans __init__
-        refresh_period_sec = (
-            config.get("refresh_period_sec") or DEFAULT_REFRESH_PERIOD_SEC
-        )
         super().__init__(
             hass,
             _LOGGER,
             name="Solar Optimizer",
-            update_interval=timedelta(seconds=refresh_period_sec),
+            # update_interval=timedelta(seconds=refresh_period_sec),
         )  # pylint : disable=line-too-long
         self._devices = []
         try:
@@ -61,17 +60,6 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 "Your 'devices' configuration is wrong. SolarOptimizer will not be operational until you fix it"
             )
             raise err
-        self._power_consumption_entity_id = config.get("power_consumption_entity_id")
-        # if self._power_consumption_entity_id is None:
-        #     err = HomeAssistantError(
-        #         "Your 'power_consumption_entity_id' configuration is wrong. SolarOptimizer will not be operational until you fix it"
-        #     )
-        #     _LOGGER.error(err)
-        #     raise err
-        self._power_production_entity_id = config.get("power_production_entity_id")
-        self._sell_cost_entity_id = config.get("sell_cost_entity_id")
-        self._buy_cost_entity_id = config.get("buy_cost_entity_id")
-        self._sell_tax_percent_entity_id = config.get("sell_tax_percent_entity_id")
 
         algo_config = config.get("algorithm")
         self._algo = SimulatedAnnealingAlgorithm(
@@ -81,6 +69,24 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             int(algo_config.get("max_iteration_number")),
         )
         self.config = config
+
+    async def configure(self, config: ConfigEntry) -> None:
+        """Configure the coordinator from configEntry of the integration"""
+        refresh_period_sec = (
+            config.data.get("refresh_period_sec") or DEFAULT_REFRESH_PERIOD_SEC
+        )
+        self.update_interval = timedelta(seconds=refresh_period_sec)
+        self._schedule_refresh()
+
+        self._power_consumption_entity_id = config.data.get(
+            "power_consumption_entity_id"
+        )
+        self._power_production_entity_id = config.data.get("power_production_entity_id")
+        self._sell_cost_entity_id = config.data.get("sell_cost_entity_id")
+        self._buy_cost_entity_id = config.data.get("buy_cost_entity_id")
+        self._sell_tax_percent_entity_id = config.data.get("sell_tax_percent_entity_id")
+
+        await self.async_config_entry_first_refresh()
 
     async def _async_update_data(self):
         _LOGGER.info("Refreshing Solar Optimizer calculation")

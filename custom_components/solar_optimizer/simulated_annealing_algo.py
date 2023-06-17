@@ -100,18 +100,26 @@ class SimulatedAnnealingAlgorithm:
 
         self._equipements = []
         for _, device in enumerate(devices):
+            usable = device.is_usable
+            waiting = device.is_waiting
+            # Force deactivation if active, not usable and not waiting
+            force_state = (
+                False
+                if device.is_active and not usable and not waiting
+                else device.is_active
+            )
             self._equipements.append(
                 {
                     "power_max": device.power_max,
                     "power_min": device.power_min,
                     "power_step": device.power_step,
-                    "current_power": device.current_power,
-                    # Initial Requested power is the current power
-                    "requested_power": device.current_power,
+                    "current_power": device.current_power,  # if force_state else 0,
+                    # Initial Requested power is the current power if usable
+                    "requested_power": device.current_power,  # if force_state else 0,
                     "name": device.name,
-                    "state": device.is_active,
+                    "state": force_state,
                     "is_usable": device.is_usable,
-                    "is_waiting": device.is_waiting,
+                    "is_waiting": waiting,
                     "can_change_power": device.can_change_power,
                 }
             )

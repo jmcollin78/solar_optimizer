@@ -4,7 +4,7 @@
     "codeowners": [
         "@jmcollin78"
     ],
-    "config_flow": false,
+    "config_flow": true,
     "documentation": "https://github.com/jmcollin78/solar_optimizer",
     "integration_type": "device",
     "iot_class": "local_polling",

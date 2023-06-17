@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 DOMAIN = "solar_optimizer"
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
 DEFAULT_REFRESH_PERIOD_SEC = 300
 

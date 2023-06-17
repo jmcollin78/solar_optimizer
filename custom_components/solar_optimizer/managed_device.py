@@ -135,9 +135,9 @@ class ManagedDevice:
         )
 
         self._current_power = self._requested_power = 0
-        self._duration_sec = int(device_config.get("duration_sec"))
-        self._duration_power_sec = int(
-            device_config.get("duration_power_sec") or self._duration_sec
+        self._duration_sec = round(float(device_config.get("duration_min")) * 60)
+        self._duration_power_sec = round(
+            float(device_config.get("duration_power_min") or self._duration_sec) * 60
         )
 
         if device_config.get("check_usable_template"):

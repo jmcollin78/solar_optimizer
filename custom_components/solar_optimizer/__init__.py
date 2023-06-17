@@ -9,7 +9,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN, PLATFORMS
 from .coordinator import SolarOptimizerCoordinator
 from .sensor import async_setup_entry as async_setup_entry_sensor
-from .binary_sensor import async_setup_entry as async_setup_entry_binary_sensor
+from .switch import async_setup_entry as async_setup_entry_switch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ async def async_setup(
         "Initializing %s integration with plaforms: %s with config: %s",
         DOMAIN,
         PLATFORMS,
-        config,
+        config.get(DOMAIN),
     )
 
     hass.data.setdefault(DOMAIN, {})
@@ -30,20 +30,36 @@ async def async_setup(
     # L'argument config contient votre fichier configuration.yaml
     solar_optimizer_config = config.get(DOMAIN)
 
-    hass.data[DOMAIN]["coordinator"] = coordinator = SolarOptimizerCoordinator(
+    hass.data[DOMAIN]["coordinator"] = SolarOptimizerCoordinator(
         hass, solar_optimizer_config
     )
 
-    await async_setup_entry_sensor(hass)
-    await async_setup_entry_binary_sensor(hass)
-
-    # refresh data on startup
-    async def _internal_startup(*_):
-        await coordinator.async_config_entry_first_refresh()
-
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _internal_startup)
+    # await async_setup_entry_sensor(hass)
+    # await async_setup_entry_switch(hass)
+    #
+    # # refresh data on startup
+    # async def _internal_startup(*_):
+    #     await coordinator.async_config_entry_first_refresh()
+    #
+    # hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _internal_startup)
 
     # Return boolean to indicate that initialization was successful.
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Creation des entités à partir d'une configEntry"""
+
+    _LOGGER.debug(
+        "Appel de async_setup_entry entry: entry_id='%s', data='%s'",
+        entry.entry_id,
+        entry.data,
+    )
+
+    hass.data.setdefault(DOMAIN, {})
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
 
 
