@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import Template
-from homeassistant.const import STATE_ON
+from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 
 from .const import (
     get_tz,
@@ -256,12 +256,51 @@ class ManagedDevice:
             self._next_date_available_power,
         )
 
-    def init_power(self, power: int):
-        """Initialise current_power and requested_power to the given value"""
-        _LOGGER.debug(
-            "Initializing power for entity '%s' with %s value", self._name, power
+    # def init_power(self, power: int):
+    #     """Initialise current_power and requested_power to the given value"""
+    #     _LOGGER.debug(
+    #         "Initializing power for entity '%s' with %s value", self._name, power
+    #     )
+    #     self._requested_power = self._current_power = power
+
+    def set_current_power_with_device_state(self):
+        """Set the current power according to the real device state"""
+        if not self.is_active:
+            self._current_power = 0
+            _LOGGER.debug(
+                "Set current_power to 0 for device %s cause not active", self._name
+            )
+            return
+
+        if not self._can_change_power:
+            self._current_power = self._power_max
+            _LOGGER.debug(
+                "Set current_power to %s for device %s cause active and not can_change_power",
+                self._current_power,
+                self._name,
+            )
+            return
+
+        amps = self._hass.states.get(self._power_entity_id)
+        if not amps or amps.state in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
+            self._current_power = self._power_min
+            _LOGGER.debug(
+                "Set current_power to %s for device %s cause can_change_power but amps is %s",
+                self._current_power,
+                self._name,
+                amps,
+            )
+            return
+
+        self._current_power = round(
+            float(amps.state) * self._convert_power_divide_factor
         )
-        self._requested_power = self._current_power = power
+        _LOGGER.debug(
+            "Set current_power to %s for device %s cause can_change_power and amps is %s",
+            self._current_power,
+            self._name,
+            amps.state,
+        )
 
     @property
     def is_active(self):
