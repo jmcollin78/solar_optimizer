@@ -73,6 +73,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_added_to_hass(self) -> None:
         """The entity have been added to hass, listen to state change of the underlying entity"""
+        await super().async_added_to_hass()
+
         # Arme l'écoute de la première entité
         listener_cancel = async_track_state_change_event(
             self.hass,
