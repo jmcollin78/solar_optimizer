@@ -67,9 +67,11 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         self._entity_id = entity_id
 
         # Try to get the state if it exists
-        device: ManagedDevice = coordinator.data.get(self.idx)
-        if device:
+        device: ManagedDevice = None
+        if coordinator.data and (device := coordinator.data.get(self.idx)) is not None:
             self._attr_is_on = device.is_active
+        else:
+            self._attr_is_on = None
 
     async def async_added_to_hass(self) -> None:
         """The entity have been added to hass, listen to state change of the underlying entity"""

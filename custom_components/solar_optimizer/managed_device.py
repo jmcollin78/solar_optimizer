@@ -188,6 +188,8 @@ class ManagedDevice:
             if action_type == ACTION_ACTIVATE:
                 method = self._activation_service
                 self.reset_next_date_available()
+                if self._can_change_power:
+                    self.reset_next_date_available_power()
             elif action_type == ACTION_DEACTIVATE:
                 method = self._deactivation_service
                 self.reset_next_date_available()

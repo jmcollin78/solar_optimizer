@@ -140,7 +140,6 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             requested_power = equipement.get("requested_power")
             state = equipement["state"]
             device = self.get_device_name(name)
-            calculated_data[name_to_unique_id(name)] = device
             if not device:
                 continue
             is_active = device.is_active
@@ -166,6 +165,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 )
                 should_log = True
                 await device.change_requested_power(requested_power)
+
+            # Add updated data to the result
+            calculated_data[name_to_unique_id(name)] = device
 
         if should_log:
             _LOGGER.info("Calculated data are: %s", calculated_data)

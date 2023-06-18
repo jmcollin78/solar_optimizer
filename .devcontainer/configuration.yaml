@@ -123,19 +123,27 @@ input_number:
     mode: slider
     step: 1
 
+template:
+  - trigger:
+      - platform: time_pattern
+        # This will update every night
+        seconds: "/2"
+    sensor:
+      - name: "Next availability Tesla (sec)"
+        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available')) - as_timestamp(now())) | int(0) }}"
+        unit_of_measurement: "s"
+        state_class: measurement
+      - name: "Next availability Tesla Power (sec)"
+        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available_power')) - as_timestamp(now())) | int(0) }}"
+        unit_of_measurement: "s"
+        state_class: measurement
 
 solar_optimizer:
-  refresh_period_sec: 10
   algorithm:
     initial_temp: 1000
     min_temp: 0.1
     cooling_factor: 0.95
     max_iteration_number: 1000
-  power_consumption_entity_id: "input_number.consommation_net"
-  power_production_entity_id: "input_number.production_solaire"
-  sell_cost_entity_id: "input_number.sell_cost"
-  buy_cost_entity_id: "input_number.buy_cost"
-  sell_tax_percent_entity_id: "input_number.sell_tax_percent"
   devices:
     - name: "Equipement A"
       entity_id: "input_boolean.fake_device_a"
@@ -189,7 +197,7 @@ solar_optimizer:
       entity_id: "input_boolean.fake_device_g"
       power_max: 1200
       check_usable_template: "{{ True }}"
-      duration_min: 90
+      duration_min: 1.5
       action_mode: "service_call"
       activation_service: "input_boolean/turn_on"
       deactivation_service: "input_boolean/turn_off"
