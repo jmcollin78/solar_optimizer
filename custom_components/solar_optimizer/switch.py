@@ -45,12 +45,10 @@ async def async_setup_entry(
         if entity is not None:
             entities.append(entity)
 
-    # component: EntityComponent[SwitchEntity] = hass.data.get(SWITCH_DOMAIN)
-    # if component is None:
-    #     component = hass.data[SWITCH_DOMAIN] = EntityComponent[SwitchEntity](
-    #         _LOGGER, SWITCH_DOMAIN, hass
-    #     )
-    # await component.async_add_entities(entities)
+        entity = ManagedDeviceEnable(hass, device)
+        if entity is not None:
+            entities.append(entity)
+
     async_add_entities(entities)
 
 
@@ -196,3 +194,52 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             "name": "Solar Optimizer",
             # Autres attributs du périphérique ici
         }
+
+
+class ManagedDeviceEnable(SwitchEntity):
+    """The that enables the ManagedDevice optimisation with"""
+
+    _device: ManagedDevice
+
+    def __init__(self, hass: HomeAssistant, device: ManagedDevice):
+        self._hass: HomeAssistant = hass
+        self._device = device
+        self._attr_name = "Enable Solar Optimizer " + device.name
+        self._attr_unique_id = "solar_optimizer_enable_" + name_to_unique_id(
+            device.name
+        )
+        self._attr_is_on = True
+
+    @property
+    def device_info(self):
+        # Retournez des informations sur le périphérique associé à votre entité
+        return {
+            "identifiers": {(DOMAIN, "solar_optimizer_device")},
+            "name": "Solar Optimizer",
+            # Autres attributs du périphérique ici
+        }
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:check"
+
+    @callback
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the entity on."""
+        self._attr_is_on = True
+        self.async_write_ha_state()
+        self.update_device_enabled()
+
+    @callback
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the entity off."""
+        self._attr_is_on = False
+        self.async_write_ha_state()
+        self.update_device_enabled()
+
+    def update_device_enabled(self) -> None:
+        """Update the device is enabled flag"""
+        if not self._device:
+            return
+
+        self._device.set_enable(self._attr_is_on)

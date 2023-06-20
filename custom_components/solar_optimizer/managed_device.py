@@ -169,6 +169,8 @@ class ManagedDevice:
                 self._power_max if self._can_change_power else self._power_min
             )
 
+        self._enable = True
+
     async def _apply_action(self, action_type: str, requested_power=None):
         """Apply an action to a managed device.
         This method is a generical method for activate, deactivate, change_requested_power
@@ -304,8 +306,18 @@ class ManagedDevice:
             amps.state,
         )
 
+    def set_enable(self, enable: bool):
+        """Enable or disable the ManagedDevice for Solar Optimizer"""
+        _LOGGER.info("%s - Set enable=%s", self.name, enable)
+        self._enable = enable
+
     @property
-    def is_active(self):
+    def is_enabled(self) -> bool:
+        """return true if the managed device is enabled for solar optimisation"""
+        return self._enable
+
+    @property
+    def is_active(self) -> bool:
         """Check if device is active by getting the underlying state of the device"""
         result = self._check_active_template.async_render(context={})
         if result:
@@ -322,9 +334,10 @@ class ManagedDevice:
         #     return True
 
     @property
-    def is_usable(self):
+    def is_usable(self) -> bool:
         """A device is usable for optimisation if the check_usable_template returns true and
         if the device is not waiting for the end of its cycle"""
+
         context = {}
         now = datetime.now(get_tz(self._hass))
         result = self._check_usable_template.async_render(context) and (

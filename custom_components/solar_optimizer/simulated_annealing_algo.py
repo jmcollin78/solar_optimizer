@@ -100,6 +100,10 @@ class SimulatedAnnealingAlgorithm:
 
         self._equipements = []
         for _, device in enumerate(devices):
+            if not device.is_enabled:
+                _LOGGER.debug("%s is disabled. Forget it", device.name)
+                continue
+
             usable = device.is_usable
             waiting = device.is_waiting
             # Force deactivation if active, not usable and not waiting
@@ -124,7 +128,7 @@ class SimulatedAnnealingAlgorithm:
                 }
             )
         if DEBUG:
-            _LOGGER.debug("_equipements are: %s", self._equipements)
+            _LOGGER.debug("enabled _equipements are: %s", self._equipements)
 
         # Générer une solution initiale
         solution_actuelle = self.generer_solution_initiale(self._equipements)

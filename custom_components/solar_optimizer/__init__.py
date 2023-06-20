@@ -6,10 +6,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType
 
+# from homeassistant.helpers.entity_component import EntityComponent
+
 from .const import DOMAIN, PLATFORMS
 from .coordinator import SolarOptimizerCoordinator
-from .sensor import async_setup_entry as async_setup_entry_sensor
-from .switch import async_setup_entry as async_setup_entry_switch
+
+# from .input_boolean import async_setup_entry as async_setup_entry_input_boolean
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +62,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # component: EntityComponent[InputBoolean] = hass.data.get(INPUT_BOOLEAN_DOMAIN)
+    # if component is None:
+    #     component = hass.data[INPUT_BOOLEAN_DOMAIN] = EntityComponent[InputBoolean](
+    #         _LOGGER, INPUT_BOOLEAN_DOMAIN, hass
+    #     )
+    # return await async_setup_entry_input_boolean(
+    #     hass, entry, component.async_add_entities
+    # )
     return True
 
 
