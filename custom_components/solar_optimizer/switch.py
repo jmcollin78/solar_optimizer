@@ -119,6 +119,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         """Add some custom attributes to the entity"""
         current_tz = get_tz(self._hass)
         self._attr_extra_state_attributes: dict(str, str) = {
+            "is_enabled": device.is_enabled,
             "is_active": device.is_active,
             "is_waiting": device.is_waiting,
             "is_usable": device.is_usable,
