@@ -1,9 +1,13 @@
 """ A sensor entity that holds the result of the recuit simule algorithm """
 import logging
+from homeassistant.const import UnitOfPower
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.components.sensor import SensorEntity
-
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 
 from homeassistant.helpers.entity_platform import (
@@ -61,3 +65,30 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
             "name": "Solar Optimizer",
             # Autres attributs du périphérique ici
         }
+
+    @property
+    def icon(self) -> str | None:
+        if self.idx == "best_objective":
+            return "mdi:bullseye-arrow"
+        elif self.idx == "total_power":
+            return "mdi:flash"
+        else:
+            return "mdi:solar-power-variant"
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        if self.idx == "best_objective":
+            return SensorDeviceClass.MONETARY
+        else:
+            return SensorDeviceClass.POWER
+
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        if self.idx == "best_objective":
+            return "€"
+        else:
+            return UnitOfPower.WATT
