@@ -38,6 +38,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     _sell_cost_entity_id: str
     _buy_cost_entity_id: str
     _sell_tax_percent_entity_id: str
+    _smooth_production: bool
+    _last_production: float
 
     _algo: SimulatedAnnealingAlgorithm
 
@@ -85,6 +87,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._sell_cost_entity_id = config.data.get("sell_cost_entity_id")
         self._buy_cost_entity_id = config.data.get("buy_cost_entity_id")
         self._sell_tax_percent_entity_id = config.data.get("sell_tax_percent_entity_id")
+        self._smooth_production = config.data.get("smooth_production") is True
+        self._last_production = 0.0
 
         await self.async_config_entry_first_refresh()
 
@@ -99,9 +103,16 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             device.set_current_power_with_device_state()
 
         # Add a power_consumption and power_production
-        calculated_data["power_production"] = get_safe_float(
-            self.hass, self._power_production_entity_id
-        )
+        power_production = get_safe_float(self.hass, self._power_production_entity_id)
+        if not self._smooth_production:
+            calculated_data["power_production"] = power_production
+        else:
+            self._last_production = round(
+                0.5 * self._last_production + 0.5 * power_production
+            )
+            calculated_data["power_production"] = self._last_production
+
+        calculated_data["power_production_brut"] = power_production
 
         calculated_data["power_consumption"] = get_safe_float(
             self.hass, self._power_consumption_entity_id

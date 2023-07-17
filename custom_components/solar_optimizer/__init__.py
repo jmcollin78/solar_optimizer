@@ -36,16 +36,6 @@ async def async_setup(
         hass, solar_optimizer_config
     )
 
-    # await async_setup_entry_sensor(hass)
-    # await async_setup_entry_switch(hass)
-    #
-    # # refresh data on startup
-    # async def _internal_startup(*_):
-    #     await coordinator.async_config_entry_first_refresh()
-    #
-    # hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _internal_startup)
-
-    # Return boolean to indicate that initialization was successful.
     return True
 
 
@@ -60,23 +50,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})
 
+    # Enregistrement de l'écouteur de changement 'update_listener'
+    entry.async_on_unload(entry.add_update_listener(update_listener))
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # component: EntityComponent[InputBoolean] = hass.data.get(INPUT_BOOLEAN_DOMAIN)
-    # if component is None:
-    #     component = hass.data[INPUT_BOOLEAN_DOMAIN] = EntityComponent[InputBoolean](
-    #         _LOGGER, INPUT_BOOLEAN_DOMAIN, hass
-    #     )
-    # return await async_setup_entry_input_boolean(
-    #     hass, entry, component.async_add_entities
-    # )
     return True
+
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Fonction qui force le rechargement des entités associées à une configEntry"""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+        pass
+        # hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded
 
 

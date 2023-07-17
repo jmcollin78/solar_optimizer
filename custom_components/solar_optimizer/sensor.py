@@ -17,23 +17,6 @@ from .coordinator import SolarOptimizerCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
-# async def async_setup_entry(hass: HomeAssistant) -> None:
-#     """Setup the entries of type Sensor"""
-#     entity1 = SolarOptimizerSensorEntity(
-#         hass.data[DOMAIN]["coordinator"], hass, "best_objective"
-#     )
-#     entity2 = SolarOptimizerSensorEntity(
-#         hass.data[DOMAIN]["coordinator"], hass, "total_power"
-#     )
-#
-#     component: EntityComponent[SensorEntity] = hass.data.get(SENSOR_DOMAIN)
-#     if component is None:
-#         component = hass.data[SENSOR_DOMAIN] = EntityComponent[SensorEntity](
-#             _LOGGER, SENSOR_DOMAIN, hass
-#         )
-#     await component.async_add_entities([entity1, entity2])
-
-
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -44,8 +27,10 @@ async def async_setup_entry(
 
     entity1 = SolarOptimizerSensorEntity(coordinator, hass, "best_objective")
     entity2 = SolarOptimizerSensorEntity(coordinator, hass, "total_power")
+    entity3 = SolarOptimizerSensorEntity(coordinator, hass, "power_production")
+    entity4 = SolarOptimizerSensorEntity(coordinator, hass, "power_production_brut")
 
-    async_add_entities([entity1, entity2], False)
+    async_add_entities([entity1, entity2, entity3, entity4], False)
 
     await coordinator.configure(entry)
 

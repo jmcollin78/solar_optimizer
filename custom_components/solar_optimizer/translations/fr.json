@@ -12,7 +12,8 @@
                     "power_production_entity_id": "Solar power production",
                     "sell_cost_entity_id": "Energy sell price",
                     "buy_cost_entity_id": "Energy buy price",
-                    "sell_tax_percent_entity_id": "Sell taxe percent"
+                    "sell_tax_percent_entity_id": "Sell taxe percent",
+                    "smooth_production": "Lisse la production"
                 },
                 "data_description": {
                     "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
@@ -20,7 +21,35 @@
                     "power_production_entity_id": "the entity_id of the solar power production sensor.",
                     "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
                     "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
-                    "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)"
+                    "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
+                    "smooth_production": "Si True la production solaire sera lissée pour éviter les fortes variations"
+                }
+            }
+        }
+    },
+    "options": {
+        "flow_title": "Solar Optimizer options configuration",
+        "step": {
+            "init": {
+                "title": "General parameters",
+                "description": "Give the general parameters",
+                "data": {
+                    "refresh_period_sec": "Refresh period",
+                    "power_consumption_entity_id": "Net power consumption",
+                    "power_production_entity_id": "Solar power production",
+                    "sell_cost_entity_id": "Energy sell price",
+                    "buy_cost_entity_id": "Energy buy price",
+                    "sell_tax_percent_entity_id": "Sell taxe percent",
+                    "smooth_production": "Lisse la production"
+                },
+                "data_description": {
+                    "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
+                    "power_consumption_entity_id": "the entity_id of the net power consumption sensor. Net power should be negative if power is exported to grid.",
+                    "power_production_entity_id": "the entity_id of the solar power production sensor.",
+                    "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
+                    "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
+                    "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
+                    "smooth_production": "Si True la production solaire sera lissée pour éviter les fortes variations"
                 }
             }
         }
