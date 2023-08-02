@@ -148,7 +148,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             return
         device: ManagedDevice = self.coordinator.data.get(self.idx)
         if not device:
-            _LOGGER.warning("No device %s found ...", self.idx)
+            # it is possible to not have device in coordinator update (if device is not enabled)
+            _LOGGER.debug("No device %s found ...", self.idx)
             return
 
         self._attr_is_on = device.is_active
