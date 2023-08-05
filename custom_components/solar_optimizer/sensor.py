@@ -54,6 +54,9 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        if not self.coordinator or not self.coordinator.data:
+            _LOGGER.warning("No coordinator found ...")
+            return
         value = self.coordinator.data.get(self.idx)
         if value:
             self._attr_native_value = value
