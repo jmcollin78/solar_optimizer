@@ -8,12 +8,14 @@ from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 
 from .const import (
     get_tz,
+    name_to_unique_id,
     CONF_ACTION_MODE_SERVICE,
     CONF_ACTION_MODE_EVENT,
     CONF_ACTION_MODES,
     ConfigurationError,
     EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
     EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
+    EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
 )
 
 ACTION_ACTIVATE = "Activate"
@@ -322,6 +324,7 @@ class ManagedDevice:
         """Enable or disable the ManagedDevice for Solar Optimizer"""
         _LOGGER.info("%s - Set enable=%s", self.name, enable)
         self._enable = enable
+        self.publish_enable_state_change()
 
     @property
     def is_enabled(self) -> bool:
@@ -438,3 +441,17 @@ class ManagedDevice:
     def convert_power_divide_factor(self) -> int:
         """return"""
         return self._convert_power_divide_factor
+
+    def publish_enable_state_change(self) -> None:
+        """Publish an event when the state is changed"""
+
+        self._hass.bus.fire(
+            event_type=EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
+            event_data={
+                "device_name": name_to_unique_id(self._name),
+                "is_enabled": self.is_enabled,
+                "is_active": self.is_active,
+                "is_usable": self.is_usable,
+                "is_waiting": self.is_waiting,
+            },
+        )

@@ -19,7 +19,12 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
 )
 
-from .const import DOMAIN, name_to_unique_id, get_tz
+from .const import (
+    DOMAIN,
+    name_to_unique_id,
+    get_tz,
+    EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
+)
 from .coordinator import SolarOptimizerCoordinator
 from .managed_device import ManagedDevice
 
@@ -84,6 +89,37 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         )
         # desarme le timer lors de la destruction de l'entité
         self.async_on_remove(listener_cancel)
+
+        # desarme le timer lors de la destruction de l'entité
+        self.async_on_remove(
+            self._hass.bus.async_listen(
+                event_type=EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
+                listener=self._on_enable_state_change,
+            )
+        )
+
+    @callback
+    async def _on_enable_state_change(self, event: Event) -> None:
+        """Triggered when the ManagedDevice enable state have change"""
+
+        # is it for me ?
+        if not event.data or (device_name := event.data.get("device_name")) != self.idx:
+            return
+
+        # search for coordinator and device
+        if (
+            not self.coordinator
+            or not self.coordinator.data
+            or not (device := self.coordinator.data.get(device_name))
+        ):
+            return
+
+        _LOGGER.info(
+            "Changing enabled state for %s to %s", device_name, device.is_enabled
+        )
+
+        self.update_custom_attributes(device)
+        self.async_write_ha_state()
 
     @callback
     async def _on_state_change(self, event: Event) -> None:
@@ -234,14 +270,14 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
         last_state = await self.async_get_last_state()
 
         # Si l'état précédent existe, vous pouvez l'utiliser
-        if last_state:
+        if last_state is not None:
             self._attr_is_on = last_state.state == "on"
         else:
             # Si l'état précédent n'existe pas, initialisez l'état comme vous le souhaitez
             self._attr_is_on = True
 
         # this breaks the start of integration
-        # self.update_device_enabled()
+        self.update_device_enabled()
 
     @callback
     async def async_turn_on(self, **kwargs: Any) -> None:

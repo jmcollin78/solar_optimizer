@@ -18,6 +18,10 @@ CONF_ACTION_MODES = [CONF_ACTION_MODE_SERVICE, CONF_ACTION_MODE_EVENT]
 EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER = "solar_optimizer_change_power_event"
 EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE = "solar_optimizer_state_change_event"
 
+EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE = (
+    "solar_optimizer_enable_state_change_event"
+)
+
 
 def get_tz(hass: HomeAssistant):
     """Get the current timezone"""
