@@ -108,6 +108,7 @@ class ManagedDevice:
     _current_power: int
     _requested_power: int
     _duration_sec: int
+    _duration_stop_sec: int
     _duration_power_sec: int
     _check_usable_template: Template
     _check_active_template: Template
@@ -135,9 +136,14 @@ class ManagedDevice:
         )
 
         self._current_power = self._requested_power = 0
-        self._duration_sec = round(float(device_config.get("duration_min")) * 60)
+        duration_min = float(device_config.get("duration_min"))
+        self._duration_sec = round(duration_min * 60)
         self._duration_power_sec = round(
-            float(device_config.get("duration_power_min") or self._duration_sec) * 60
+            float(device_config.get("duration_power_min") or duration_min) * 60
+        )
+
+        self._duration_stop_sec = round(
+            float(device_config.get("duration_stop_min") or duration_min) * 60
         )
 
         if device_config.get("check_usable_template"):
@@ -189,12 +195,12 @@ class ManagedDevice:
             entity_id = self._entity_id
             if action_type == ACTION_ACTIVATE:
                 method = self._activation_service
-                self.reset_next_date_available()
+                self.reset_next_date_available(action_type)
                 if self._can_change_power:
                     self.reset_next_date_available_power()
             elif action_type == ACTION_DEACTIVATE:
                 method = self._deactivation_service
-                self.reset_next_date_available()
+                self.reset_next_date_available(action_type)
             elif action_type == ACTION_CHANGE_POWER:
                 assert (
                     self._can_change_power
@@ -240,11 +246,17 @@ class ManagedDevice:
         """Use this method to change the requested power of this ManagedDevice"""
         return await self._apply_action(ACTION_CHANGE_POWER, requested_power)
 
-    def reset_next_date_available(self):
+    def reset_next_date_available(self, action_type):
         """Incremente the next availability date to now + _duration_sec"""
-        self._next_date_available = datetime.now(get_tz(self._hass)) + timedelta(
-            seconds=self._duration_sec
-        )
+        if action_type == ACTION_ACTIVATE:
+            self._next_date_available = datetime.now(get_tz(self._hass)) + timedelta(
+                seconds=self._duration_sec
+            )
+        else:
+            self._next_date_available = datetime.now(get_tz(self._hass)) + timedelta(
+                seconds=self._duration_stop_sec
+            )
+
         _LOGGER.debug(
             "Next availability date for %s is %s", self._name, self._next_date_available
         )
@@ -325,14 +337,6 @@ class ManagedDevice:
 
         return result
 
-        # state = self._hass.states.get(self._entity_id)
-        # if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-        #     return None
-        # elif state.state in (STATE_OFF):
-        #     return False
-        # else:
-        #     return True
-
     @property
     def is_usable(self) -> bool:
         """A device is usable for optimisation if the check_usable_template returns true and
@@ -384,6 +388,11 @@ class ManagedDevice:
     def duration_sec(self) -> int:
         """The duration a device is not available after a change of the managed device"""
         return self._duration_sec
+
+    @property
+    def duration_stop_sec(self) -> int:
+        """The duration a device is not available after a change of the managed device to stop"""
+        return self._duration_stop_sec
 
     @property
     def duration_power_sec(self) -> int:

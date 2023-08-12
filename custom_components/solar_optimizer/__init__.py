@@ -32,9 +32,11 @@ async def async_setup(
     # L'argument config contient votre fichier configuration.yaml
     solar_optimizer_config = config.get(DOMAIN)
 
-    hass.data[DOMAIN]["coordinator"] = SolarOptimizerCoordinator(
+    hass.data[DOMAIN]["coordinator"] = coordinator = SolarOptimizerCoordinator(
         hass, solar_optimizer_config
     )
+
+    hass.bus.async_listen_once("homeassistant_started", coordinator.on_ha_started)
 
     return True
 

@@ -6,6 +6,7 @@ from typing import Any
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_ON
 from homeassistant.core import callback, HomeAssistant, State, Event
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.components.switch import (
     SwitchEntity,
 )
@@ -102,7 +103,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         # old_state: State = event.data.get("old_state")
 
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            _LOGGER.warning("Pas d'état disponible. Evenement ignoré")
+            _LOGGER.debug("Pas d'état disponible. Evenement ignoré")
             return
 
         # On recherche la date de l'event pour la stocker dans notre état
@@ -144,8 +145,9 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         _LOGGER.debug("Calling _handle_coordinator_update for %s", self._attr_name)
 
         if not self.coordinator or not self.coordinator.data:
-            _LOGGER.warning("No coordinator found ...")
+            _LOGGER.debug("No coordinator found or no data...")
             return
+
         device: ManagedDevice = self.coordinator.data.get(self.idx)
         if not device:
             # it is possible to not have device in coordinator update (if device is not enabled)
@@ -198,7 +200,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         }
 
 
-class ManagedDeviceEnable(SwitchEntity):
+class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     """The that enables the ManagedDevice optimisation with"""
 
     _device: ManagedDevice
@@ -224,6 +226,22 @@ class ManagedDeviceEnable(SwitchEntity):
     @property
     def icon(self) -> str | None:
         return "mdi:check"
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+
+        # Récupérer le dernier état sauvegardé de l'entité
+        last_state = await self.async_get_last_state()
+
+        # Si l'état précédent existe, vous pouvez l'utiliser
+        if last_state:
+            self._attr_is_on = last_state.state == "on"
+        else:
+            # Si l'état précédent n'existe pas, initialisez l'état comme vous le souhaitez
+            self._attr_is_on = True
+
+        # this breaks the start of integration
+        # self.update_device_enabled()
 
     @callback
     async def async_turn_on(self, **kwargs: Any) -> None:

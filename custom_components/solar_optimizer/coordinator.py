@@ -90,6 +90,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._smooth_production = config.data.get("smooth_production") is True
         self._last_production = 0.0
 
+        # Do not calculate immediatly because switch state are not restored yet. Wait for homeassistant_started event
+        # which is captured in onHAStarted method
+        # await self.async_config_entry_first_refresh()
+
+    async def on_ha_started(self, _) -> None:
+        """Listen the homeassistant_started event to initialize the first calculation"""
+        _LOGGER.info("First initialization of Solar Optimizer")
         await self.async_config_entry_first_refresh()
 
     async def _async_update_data(self):
@@ -136,6 +143,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             self.hass, self._sell_tax_percent_entity_id
         )
 
+        #
+        # Call Algorithm Recuit simulé
+        #
         best_solution, best_objective, total_power = self._algo.recuit_simule(
             self._devices,
             calculated_data["power_consumption"],

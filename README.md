@@ -24,6 +24,10 @@
 
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 1.3.0** :
+>    - ajout du paramètre `duration_stop_min` qui permet de spécifier une durée minimale de désactivation pour le distinguer du délai minimal d'activation `duration_min`. Si non spécifié, ce paramètre prend la valeur de `duration_min`.
+>    - restaure l'état des switchs `enable` au démarrage de l'intégration.
+>    - lance un calcul immédiatement après le démarrage de Home Assistant
 > * **release 1.0** : première version opérationnelle. Commande d'équipements basés sur des switchs, commande de puissance (Tesla) et paramétrage via configuration.yaml.
 
 # Qu'est-ce que Solar Optimizer ?
@@ -83,7 +87,7 @@ Ces 5 informations sont nécessaires à l'algorithme pour fonctionner, elles son
 ## Configurer les équipements
 Les équipements pilotables sont définis dans le fichier configuration.yaml de la façon suivante :
 - ajouter la ligne suivante dans votre configuration.yaml:
-  
+
   ```solar_optimizer: !include solar_optimizer.yaml```
 - et créez un fichier au même niveau que le configuration.yaml avec les informations suivantes :
 ```
@@ -98,6 +102,7 @@ devices:
     power_max: <puissance max consommée>
     check_usable_template: "{{ <le template qui vaut True si l'équipement est utilisable> }}"
     duration_min: <la durée minimale d'activation en minutes>
+    duration_stop_min: <la durée minimale de desactivation en minutes>
     action_mode: "service_call"
     activation_service: "<service name>
     deactivation_service: "switch/turn_off"
@@ -107,26 +112,27 @@ Note: les paramètres sous `algorithm` ne doivent pas être touchés sauf si vou
 
 Sous `devices` il faut déclarer tous les équipements qui seront commandés par Solar Optimizer de la façon suivante :
 
-| attribut  | valable pour | signification  | exemple | commentaire |
-|---|---|---|---|---|
-| `name` | tous | Le nom de l'équipement  | "VMC sous-sol"  |  -  |
-| `entity_id` | tous  | l'entity id de l'équipement à commander  | "switch.vmc_sous_sol"  | - |
-| `power_max`  | tous  | la puissance maximale consommée par l'équipement  | 250  | - |
-| `check_usable_template`  | tous  | Un template qui vaut True si l'équipement pourra être utilisé par Solar Optimizer  | "{{ is_state('cover.porte_garage_garage', 'closed') }}"  | Dans l'exemple, Sonar Optimizer n'essayera pas de commander la "VMC sous-sol" si la porte du garage est ouverte |
-| `duration_min`  | tous  | La durée en minute minimale d'activation  | 60  | La VMC sous-sol s'allumera toujours pour une heure au minimum |
-| `action_mode`   | tous  | le mode d'action pour allumer ou éteindre l'équipement. Peut être "service_call" ou "event" (*)  | "service_call"  | "service_call" indique que l'équipement s'allume et s'éteint via un appel de service. Cf. ci-dessous. "event" indique qu'un évènement est envoyé lorsque l'état doit changer. Cf. (*) |
-| `activation_service`  | uniquement si action_mode="service_call"  | le service a appeler pour activer l'équipement sous la forme "domain/service"  | "switch/turn_on"  | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id" |
-| `deactivation_service`  | uniquement si action_mode="service_call"  | le service a appeler pour désactiver l'équipement sous la forme "domain/service"  | "switch/turn_off"  | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id" |
+| attribut                | valable pour                             | signification                                                                                   | exemple                                                 | commentaire                                                                                                                                                                           |
+| ----------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                  | tous                                     | Le nom de l'équipement                                                                          | "VMC sous-sol"                                          | -                                                                                                                                                                                     |
+| `entity_id`             | tous                                     | l'entity id de l'équipement à commander                                                         | "switch.vmc_sous_sol"                                   | -                                                                                                                                                                                     |
+| `power_max`             | tous                                     | la puissance maximale consommée par l'équipement                                                | 250                                                     | -                                                                                                                                                                                     |
+| `check_usable_template` | tous                                     | Un template qui vaut True si l'équipement pourra être utilisé par Solar Optimizer               | "{{ is_state('cover.porte_garage_garage', 'closed') }}" | Dans l'exemple, Sonar Optimizer n'essayera pas de commander la "VMC sous-sol" si la porte du garage est ouverte                                                                       |
+| `duration_min`          | tous                                     | La durée en minute minimale d'activation                                                        | 60                                                      | La VMC sous-sol s'allumera toujours pour une heure au minimum                                                                                                                         |
+| `duration_stop_min`     | tous                                     | La durée en minute minimale de desactivation. Vaut `duration_min` si elle n'est pas précisée    | 15                                                      | La VMC sous-sol s'éteindra toujours pour 15 min au minimum                                                                                                                            |
+| `action_mode`           | tous                                     | le mode d'action pour allumer ou éteindre l'équipement. Peut être "service_call" ou "event" (*) | "service_call"                                          | "service_call" indique que l'équipement s'allume et s'éteint via un appel de service. Cf. ci-dessous. "event" indique qu'un évènement est envoyé lorsque l'état doit changer. Cf. (*) |
+| `activation_service`    | uniquement si action_mode="service_call" | le service a appeler pour activer l'équipement sous la forme "domain/service"                   | "switch/turn_on"                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id"                                                                                                         |
+| `deactivation_service`  | uniquement si action_mode="service_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service"                | "switch/turn_off"                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id"                                                                                                    |
 
 Pour les équipements à puissance variable, les attributs suivants doivent être valorisés :
 
-| attribut  | valable pour | signification  | exemple | commentaire |
-|---|---|---|---|---|
-| `power_entity_id` | équipement à puissance variable | l'entity_id de l'entité gérant la puissance | `number.tesla_charging_amps` | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité |
-| `power_min` | équipement a puissance variable | La puissance minimale en watt de l'équipement | 100 | Lorsque la consigne de puissance passe en dessous de cette valeur, l'équipement sera éteint par l'appel du `deactivation_service` |
-| `power_step` | équipement a puissance variable | Le pas de puissance | 10 | - |
-| `change_power_service` | équipement a puissance variable | Le service a appelé pour changer la puissance | `"number/set_value"` | - |
-| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50 | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id` |
+| attribut                      | valable pour                    | signification                                                 | exemple                      | commentaire                                                                                                                       |
+| ----------------------------- | ------------------------------- | ------------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `power_entity_id`             | équipement à puissance variable | l'entity_id de l'entité gérant la puissance                   | `number.tesla_charging_amps` | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité                                |
+| `power_min`                   | équipement a puissance variable | La puissance minimale en watt de l'équipement                 | 100                          | Lorsque la consigne de puissance passe en dessous de cette valeur, l'équipement sera éteint par l'appel du `deactivation_service` |
+| `power_step`                  | équipement a puissance variable | Le pas de puissance                                           | 10                           | -                                                                                                                                 |
+| `change_power_service`        | équipement a puissance variable | Le service a appelé pour changer la puissance                 | `"number/set_value"`         | -                                                                                                                                 |
+| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`           |
 
 Exemple complet et commenté de la partie device :
 ```
@@ -159,6 +165,8 @@ devices:
     check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.cloucloute_charge_limit') | float(90) }}"
     # 1 h de charge minimum
     duration_min: 60
+    # 15 min de stop charge minimum
+    duration_stop_min: 15
     # L'entité qui pilote l'ampérage de charge
     power_entity_id: "number.tesla_charging_amps"
     # 5 min minimum entre 2 changements de puissance
@@ -179,7 +187,7 @@ Tout changement dans la configuration nécessite un arrêt / relance de l'intég
 L'intégration, une fois correctement configurée, créée un appareil (device) qui contient plusieurs entités :
 1. un sensor nommé "total_power" qui est le total de toutes les puissances des équipements commandés par Solar Optimizer,
 2. un sensor nommé "best_objective" qui est la valeur de la fonction de coût (cf. fonctionnement de l'algo),
-3. un switch par équipements nommé `switch.solar_optimize_<name>`déclarés dans le configuration.yaml. Si le switch est "Off", l'algorithme ne considérera pas cet équipement pour le calcul. Ca permet de manuellement sortir un équipement de la liste sans avoir à modifier la liste. Ce switch contient des attributs additionnels qui permettent de suivre l'état interne de l'équipement vu de l'algorithme.
+3. un switch par équipements nommé `switch.enable_solar_optimize_<name>` déclarés dans le configuration.yaml. Si le switch est "Off", l'algorithme ne considérera pas cet équipement pour le calcul. Ca permet de manuellement sortir un équipement de la liste sans avoir à modifier la liste. Ce switch contient des attributs additionnels qui permettent de suivre l'état interne de l'équipement vu de l'algorithme.
 
 # En complément
 En complément, le code Lovelace suivant permet de controller chaque équipement déclaré :
@@ -350,7 +358,7 @@ Si vous souhaitez contribuer, veuillez lire les [directives de contribution](CON
 
 ***
 
-[versatile_thermostat]: https://github.com/jmcollin78/solar_optimizer
+[solar_optimizer]: https://github.com/jmcollin78/solar_optimizer
 [buymecoffee]: https://www.buymeacoffee.com/jmcollin78
 [buymecoffeebadge]: https://img.shields.io/badge/Buy%20me%20a%20beer-%245-orange?style=for-the-badge&logo=buy-me-a-beer
 [commits-shield]: https://img.shields.io/github/commit-activity/y/jmcollin78/solar_optimizer.svg?style=for-the-badge
