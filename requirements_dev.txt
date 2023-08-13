@@ -1,8 +1,8 @@
 # Strictly for tests
-pytest-homeassistant-custom-component==0.13.46
+pytest-homeassistant-custom-component
 coverage
 pytest
-pytest-asyncio==0.21.0
+pytest-asyncio
 pytest-cov
 # Added by JMC
 ffmpeg
