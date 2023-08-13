@@ -7,7 +7,7 @@
 	"appPort": [
 		"9123:8123"
 	],
-	"postCreateCommand": "pip install -r requirements.txt",
+	"postCreateCommand": "pip install -r requirements.txt ; pip install -r requirements_dev.txt",
 
 	"mounts": [
 		"source=/Users/jmcollin/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
@@ -41,7 +41,9 @@
 				"editor.formatOnPaste": false,
 				"editor.formatOnSave": true,
 				"editor.formatOnType": true,
-				"files.trimTrailingWhitespace": true
+				"files.trimTrailingWhitespace": true,
+				"python.experiments.optOutFrom": ["pythonTestAdapter"],
+    			"python.analysis.logLevel": "Trace"
 			}
 		}
 	}

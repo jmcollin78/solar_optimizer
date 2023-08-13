@@ -1,0 +1,9 @@
+# Strictly for tests
+pytest-homeassistant-custom-component==0.13.46
+coverage
+pytest
+pytest-asyncio==0.21.0
+pytest-cov
+# Added by JMC
+ffmpeg
+ulid_transform

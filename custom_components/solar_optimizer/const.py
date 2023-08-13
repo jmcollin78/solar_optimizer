@@ -1,4 +1,4 @@
-""" Les constantes pour l'intégration Tuto HACS """
+""" Les constantes pour l'intégration Solar Optimizer """
 from slugify import slugify
 
 from homeassistant.const import Platform

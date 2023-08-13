@@ -1,1 +1,1 @@
-homeassistant
+homeassistant==2023.8.0b1
