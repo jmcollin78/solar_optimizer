@@ -166,7 +166,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             name = equipement["name"]
             requested_power = equipement.get("requested_power")
             state = equipement["state"]
-            device = self.get_device_name(name)
+            device = self.get_device_by_name(name)
             if not device:
                 continue
             is_active = device.is_active
@@ -208,9 +208,16 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         """Get all the managed device"""
         return self._devices
 
-    def get_device_name(self, name: str) -> ManagedDevice | None:
+    def get_device_by_name(self, name: str) -> ManagedDevice | None:
         """Returns the device which name is given in argument"""
         for _, device in enumerate(self._devices):
             if device.name == name:
+                return device
+        return None
+
+    def get_device_by_unique_id(self, uid: str) -> ManagedDevice | None:
+        """Returns the device which name is given in argument"""
+        for _, device in enumerate(self._devices):
+            if device.unique_id == uid:
                 return device
         return None

@@ -1,12 +1,12 @@
-from unittest.mock import patch
-from datetime import timedelta, datetime
+""" Nominal Unit test module"""
+#from unittest.mock import patch
+from datetime import datetime
 
 from homeassistant.setup import async_setup_component
 
 from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
-@pytest.mark.asyncio
 async def test_normal_start_one_device(hass: HomeAssistant):
     """A full nominal start of Solar Optimizer"""
 
@@ -56,7 +56,7 @@ async def test_normal_start_one_device(hass: HomeAssistant):
         domain=DOMAIN,
         title="TheSolarOptimizer",
         unique_id="uniqueId",
-        data={"devices": []},
+        data={},
     )
 
     entry.add_to_hass(hass)
@@ -92,7 +92,7 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert device.requested_power == 0
     assert device.can_change_power is False
 
-    tz = get_tz(hass)
+    tz = get_tz(hass) # pylint: disable=invalid-name
     now: datetime = datetime.now(tz=tz)
     assert (device.next_date_available.astimezone(tz) - now).total_seconds() < 1
     assert (device.next_date_available_power.astimezone(tz) - now).total_seconds() < 1
@@ -121,11 +121,9 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert device.requested_power == 0
     assert device.can_change_power is True
 
-    tz = get_tz(hass)
+    tz = get_tz(hass) # pylint: disable=invalid-name
     now: datetime = datetime.now(tz=tz)
     assert (device.next_date_available.astimezone(tz) - now).total_seconds() < 1
     assert (device.next_date_available_power.astimezone(tz) - now).total_seconds() < 1
 
     assert device.convert_power_divide_factor == 6
-
-

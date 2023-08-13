@@ -72,7 +72,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
         # Try to get the state if it exists
         device: ManagedDevice = None
-        if coordinator.data and (device := coordinator.data.get(self.idx)) is not None:
+        if (device := coordinator.get_device_by_unique_id(self.idx)) is not None:
             self._attr_is_on = device.is_active
         else:
             self._attr_is_on = None
@@ -103,19 +103,20 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         """Triggered when the ManagedDevice enable state have change"""
 
         # is it for me ?
-        if not event.data or (device_name := event.data.get("device_name")) != self.idx:
+        if (
+            not event.data
+            or (device_id := event.data.get("device_unique_id")) != self.idx
+        ):
             return
 
         # search for coordinator and device
-        if (
-            not self.coordinator
-            or not self.coordinator.data
-            or not (device := self.coordinator.data.get(device_name))
+        if not self.coordinator or not (
+            device := self.coordinator.get_device_by_unique_id(device_id)
         ):
             return
 
         _LOGGER.info(
-            "Changing enabled state for %s to %s", device_name, device.is_enabled
+            "Changing enabled state for %s to %s", device_id, device.is_enabled
         )
 
         self.update_custom_attributes(device)
@@ -234,6 +235,11 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             "name": "Solar Optimizer",
             # Autres attributs du périphérique ici
         }
+
+    @property
+    def get_attr_extra_state_attributes(self):
+        """Get the extra state attributes for the entity"""
+        return self._attr_extra_state_attributes
 
 
 class ManagedDeviceEnable(SwitchEntity, RestoreEntity):

@@ -101,6 +101,7 @@ class ManagedDevice:
     """A Managed device representation"""
 
     _name: str
+    _unique_id: str
     _entity_id: str
     _power_entity_id: str
     _power_max: int
@@ -126,6 +127,7 @@ class ManagedDevice:
         """Initialize a manageable device"""
         self._hass = hass
         self._name = device_config.get("name")
+        self._unique_id = name_to_unique_id(self._name)
         self._entity_id = device_config.get("entity_id")
         self._power_entity_id = device_config.get("power_entity_id")
         self._power_max = int(device_config.get("power_max"))
@@ -373,6 +375,11 @@ class ManagedDevice:
         return self._name
 
     @property
+    def unique_id(self):
+        """The id of the ManagedDevice"""
+        return self._unique_id
+
+    @property
     def power_max(self):
         """The power max of the managed device"""
         return self._power_max
@@ -448,7 +455,7 @@ class ManagedDevice:
         self._hass.bus.fire(
             event_type=EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
             event_data={
-                "device_name": name_to_unique_id(self._name),
+                "device_unique_id": self._unique_id,
                 "is_enabled": self.is_enabled,
                 "is_active": self.is_active,
                 "is_usable": self.is_usable,
