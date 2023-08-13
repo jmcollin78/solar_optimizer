@@ -39,16 +39,16 @@ async def test_set_enable(
     )
     assert device_switch is not None
 
-    assert enable_switch.state is "on"
+    assert enable_switch.state == "on"
     # The state of the underlying switch
-    assert device_switch.state is "off"
+    assert device_switch.state == "off"
     # The enable state should be True
     assert device_switch.get_attr_extra_state_attributes.get("is_enabled") is True
 
     await enable_switch.async_turn_off()
     await hass.async_block_till_done()
 
-    assert enable_switch.state is "off"
+    assert enable_switch.state == "off"
     assert device.is_enabled is False
     # The enable state should be True
     assert device_switch.get_attr_extra_state_attributes.get("is_enabled") is False
@@ -59,8 +59,8 @@ async def test_set_enable(
     await enable_switch.async_turn_on()
     await hass.async_block_till_done()
 
-    assert enable_switch.state is "on"
+    assert enable_switch.state == "on"
     assert device.is_enabled is True
-    assert device_switch.state is "off"
+    assert device_switch.state == "off"
     # The enable state should be False
     assert device_switch.get_attr_extra_state_attributes.get("is_enabled") is True

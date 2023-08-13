@@ -129,11 +129,13 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             "Appel de on_state_change à %s avec l'event %s", datetime.now(), event
         )
 
-        if not self.coordinator or not self.coordinator.data:
+        if not event.data:
             return
 
-        device: ManagedDevice = self.coordinator.data.get(self.idx)
-        if not device:
+        # search for coordinator and device
+        if not self.coordinator or not (
+            device := self.coordinator.get_device_by_unique_id(self.idx)
+        ):
             return
 
         new_state: State = event.data.get("new_state")

@@ -92,7 +92,7 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
 
     @property
     def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
+        return SensorStateClass.TOTAL
 
     @property
     def native_unit_of_measurement(self) -> str | None:
