@@ -32,11 +32,6 @@ def search_entity(hass: HomeAssistant, entity_id, domain) -> Entity:
             return entity
     return None
 
-    # for entity in component.entities:
-    #     if entity.entity_id == entity_id:
-    #         return entity
-    # return None
-
 async def send_state_change(hass, entity_id, old_state, new_state, date, sleep=False):
     """ Send a state change event for an entity """
     _LOGGER.info(
@@ -74,6 +69,7 @@ async def create_test_input_boolean(hass, entity_id, name):
     config = {
         "input_boolean": {
             # input_boolean to simulate the windows entity. Only for development environment.
+            # TODO replace with dynamic entity_id
             "fake_device_a": {
                 "name": name,
                 "icon": "mdi:window-closed-variant"

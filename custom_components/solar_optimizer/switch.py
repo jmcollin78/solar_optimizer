@@ -203,8 +203,10 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         _LOGGER.info("Turn_on Solar Optimizer switch %s", self._attr_name)
-        device: ManagedDevice = self.coordinator.data.get(self.idx)
-        if not device:
+        # search for coordinator and device
+        if not self.coordinator or not (
+            device := self.coordinator.get_device_by_unique_id(self.idx)
+        ):
             return
 
         if not self._attr_is_on:
@@ -219,8 +221,10 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         _LOGGER.info("Turn_on Solar Optimizer switch %s", self._attr_name)
-        device: ManagedDevice = self.coordinator.data.get(self.idx)
-        if not device:
+        # search for coordinator and device
+        if not self.coordinator or not (
+            device := self.coordinator.get_device_by_unique_id(self.idx)
+        ):
             return
 
         if self._attr_is_on:

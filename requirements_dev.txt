@@ -4,6 +4,19 @@ coverage
 pytest
 pytest-asyncio
 pytest-cov
+pytest-aiohttp
+pytest-freezer
+pytest-socket
+pytest-test-groups
+pytest-sugar
+pytest-timeout
+pytest-unordered
+pytest-picked
+pytest-xdist
 # Added by JMC
 ffmpeg
 ulid_transform
+black
+pylint
+pylint-per-file-ignores
+pipdeptree
