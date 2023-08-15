@@ -3,7 +3,7 @@ name: Push actions
 on:
   push:
     branches:
-      - master
+      - main
       - dev
 
 jobs:
