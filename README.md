@@ -6,193 +6,196 @@
 
 ![Icon](https://github.com/jmcollin78/solar_optimizer/blob/main/images/icon.png?raw=true)
 
-> ![Tip](https://github.com/jmcollin78/solar_optimizer/blob/main/images/tips.png?raw=true) Cette intégration permet d'optimiser l'utilisation de votre énergie solaire. Elle commande l'allumage et l'extinction de vos équipements dont l'activation est différable dans le temps en fonction de la production et de la consommation électrique courante.
+> ![Tip](https://github.com/jmcollin78/solar_optimizer/blob/main/images/tips.png?raw=true) This integration allows you to optimize the use of your solar energy. It controls the switching on and off of your equipment, the activation of which is deferred over time depending on production and current electricity consumption.
 
-- [Qu'est-ce que Solar Optimizer ?](#quest-ce-que-solar-optimizer-)
-- [Comment fonctionne-t-elle ?](#comment-fonctionne-t-elle-)
-  - [Anti-bagot](#anti-bagot)
-  - [Utilisabilité](#utilisabilité)
-- [Comment on l'installe ?](#comment-on-linstalle-)
-  - [HACS installation (recommendé)](#hacs-installation-recommendé)
-  - [Installation manuelle](#installation-manuelle)
-- [La configuration](#la-configuration)
-  - [Configurer l'intégration](#configurer-lintégration)
-  - [Configurer les équipements](#configurer-les-équipements)
-- [Entités disponibles](#entités-disponibles)
-- [En complément](#en-complément)
-- [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
+- [What is Solar Optimizer?](#what-is-solar-optimizer)
+- [How does it work?](#how-does-it-work)
+  - [Anti-flickering](#anti-flickering)
+  - [Usability](#usability)
+- [How do we install it?](#how-do-we-install-it)
+  - [HACS installation (recommended)](#hacs-installation-recommended)
+  - [Manual Install](#manual-install)
+- [The configuration](#the-configuration)
+  - [Configure integration](#configure-integration)
+  - [Configure equipment](#configure-equipment)
+- [Available entities](#available-entities)
+- [In addition](#in-addition)
+- [Contributions are welcome!](#contributions-are-welcome)
 
 
-> ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
-> * **release 1.3.0** :
->    - ajout du paramètre `duration_stop_min` qui permet de spécifier une durée minimale de désactivation pour le distinguer du délai minimal d'activation `duration_min`. Si non spécifié, ce paramètre prend la valeur de `duration_min`.
->    - restaure l'état des switchs `enable` au démarrage de l'intégration.
->    - lance un calcul immédiatement après le démarrage de Home Assistant
-> * **release 1.0** : première version opérationnelle. Commande d'équipements basés sur des switchs, commande de puissance (Tesla) et paramétrage via configuration.yaml.
+>![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 1.3.0**:
+>   - added the parameter `duration_stop_min` which allows to specify a minimal duration of deactivation to distinguish it from the minimal delay of activation `duration_min`. If not specified, this parameter takes the value of `duration_min`.
+>   - restores the state of the `enable` switches when the integration starts.
+>   - starts a calculation immediately after starting Home Assistant
+> * **release 1.0**: first operational version. Control of equipment based on switches, power control (Tesla) and configuration via configuration.yaml.
 
-# Qu'est-ce que Solar Optimizer ?
-Cette intégration va vous permettre de maximiser l'utilisation de votre production solaire. Vous lui déléguez le contrôle de vos équipements dontl'activation peut être différée dans le temps (chauffe-eau, pompe de piscine, charge de véhicle électrique, lave-vaisselle, lave-linge, etc) et elle s'occupe de les lancer lorsque la puissance produite est suffisante.
+# What is Solar Optimizer?
+This integration will allow you to maximize the use of your solar production. You delegate to it the control of your equipment whose activation can be deferred over time (water heater, swimming pool pump, electric vehicle charge, dishwasher, washing machine, etc.) and it takes care of launching them when the power produced is sufficient.
 
-Elle tente en permanence de minimiser l'import et l'export d'énergie en démarrant, stoppant, modifiant la puissance allouée à un équipement.
+It constantly tries to minimize the import and export of energy by starting, stopping and modifying the power allocated to equipment.
 
-2 types d'équipements sont gérés :
-1. les équipements commandés par un switch (un service d'une manière générale) qui ont une puissance consommée fixe et pré-déterminée,
-2. les équipements dont la puissance de consommation est réglable (Tesla, Robotdyn). En réglant la puissance allouée à ces équipements, Solar Optimizer aligne la consommation sur la production au plus près.
+2 types of equipment are managed:
+1. equipment controlled by a switch (a service in general) which has a fixed and pre-determined power consumption,
+2. equipment whose power consumption is adjustable (Tesla, Robotdyn). By adjusting the power allocated to this equipment, Solar Optimizer aligns consumption as closely as possible with production.
 
-L'idéal est d'avoir au moins un équipement dont la puissance est ajustable dans la liste des équipements gérés par Solar Optimizer.
+The ideal is to have at least one piece of equipment whose power is adjustable in the list of equipment managed by Solar Optimizer.
 
-# Comment fonctionne-t-elle ?
-Le fonctionnement est le suivant :
-1. à interval régulier (paramétrable), l'algorithme simule des modifications des états des équipements (allumé / éteint / puissance allouée) et calcule un coût de cette configuration. Globalement le coût est le `a * puissance_importée + b * puissance_exportée`. La coefficients a et b sont calculés en fonction du cout de l'électricité au moment du calcul,
-2. l'algorithme garde la meilleure configuration (celle qui a un cout minimum) et cherche d'autres solutions, jusqu'à ce qu'un minimum soit atteint.
-3. la meilleure configuration est alors appliquée.
+# How does it work?
+The operation is as follows:
+1. at regular intervals (configurable), the algorithm simulates modifications to the states of the equipment (on / off / allocated power) and calculates a cost for this configuration. Overall the cost is the `a * imported_power + b * exported_power`. The coefficients a and b are calculated according to the cost of electricity at the time of calculation,
+2. the algorithm keeps the best configuration (the one with a minimum cost) and looks for other solutions, until a minimum is reached.
+3. the best configuration is then applied.
 
-L'algorithme utilisé est un algorithme de type recuit simulé dont vous trouverez une description ici : https://fr.wikipedia.org/wiki/Recuit_simul%C3%A9
+The algorithm used is a simulated annealing type algorithm, a description of which you will find here: https://fr.wikipedia.org/wiki/Recuit_simul%C3%A9
 
-## Anti-bagot
-Pour éviter les effets de bagottements d'un cycle à l'autre, un délai minimal d'activation est paramétrable par équipements. Par exemple : un chauffe-eau doit être activé au moins une heure pour que l'allumage soit utile, la charge d'une voiture électrique doit durer au moins deux heures, ...
+## Anti-flickering
+To avoid the effects of flickering from one cycle to another, a minimum activation delay can be configured by equipment: `duration_min`. For example: a water heater must be activated for at least one hour for the ignition to be useful, charging an electric car must last at least two hours, ...
+Similarly, a minimum stop duration can be specified in the `duration_stop_min` parameter.
 
-## Utilisabilité
-A chaque équipement configuré est associé une entité de type switch qui permet d'autoriser l'algorithme à utiliser l'équipement. Si je veux forcer la chauffe du ballon d'eau chauffe, je mets son switch sur off. L'algorithme ne le regardera donc pas, le chauffe-eau repasse en manuel, non géré par Solar Optimizer.
+## Usability
+Each configured device is associated with a switch-type entity that authorizes the algorithm to use the device. If I want to force the heating of the hot water tank, I put its switch to off. The algorithm will therefore not look at it, the water heater switches back to manual, not managed by Solar Optimizer.
 
-Par ailleurs, il est possible de définir une règle d'utilisabilité des équipements. Par exemple, si la voiture est chargée à plus de 90%, l'algorithme considère que l'équipement qui pilote la charge de la voiture doit être éteint. Cette régle est définit sous la forme d'un template configurable qui vaut True si l'équipement est utilisable.
+In addition, it is possible to define a usability rule for equipment. For example, if the car is charged at more than 90%, the algorithm considers that the equipment which controls the charging of the car must be switched off. This rule is defined in the form of a configurable template which is True if the equipment is usable.
 
-Ces 2 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
+These 2 rules allow the algorithm to control only what is really useful at a time t. These rules are re-evaluated at each cycle.
 
-# Comment on l'installe ?
-## HACS installation (recommendé)
+# How do we install it?
+## HACS installation (recommended)
 
-1. Installez [HACS](https://hacs.xyz/). De cette façon, vous obtenez automatiquement les mises à jour.
-2. Ajoutez ce repository Github en tant que repository personnalisé dans les paramètres HACS.
-3. recherchez et installez "Solar Optimizer" dans HACS et cliquez sur "installer".
-4. Redémarrez Home Assistant.
-5. Ensuite, vous pouvez ajouter l'intégration de Solar Optimizer dans la page d'intégration. Vous ne pouvez installer qu'une seule intégration Solar Optimizer.
+1. Install [HACS](https://hacs.xyz/). This way you get updates automatically.
+2. Add this Github repo as a custom repo in HACS settings.
+3. Find and install "Solar Optimizer" in HACS and click "Install".
+4. Restart Home Assistant.
+5. Then you can add the Solar Optimizer integration in the integration page. You can only install one Solar Optimizer integration.
 
-## Installation manuelle
-Une installation manuelle est possible. Elle n'est pas recommandée et donc elle ne sera pas décrite ici.
+## Manual Install
+Manual installation is possible. It is not recommended and therefore it will not be described here.
 
-# La configuration
-## Configurer l'intégration
-Lors de l'ajout de l'intégration Solar Optimizer, la page de paramétrage suivante s'ouvre :
+# The configuration
+## Configure integration
+When adding the Solar Optimizer integration, the following settings page opens:
 
-Vous devez spécifier :
-1. le sensor qui donne la consommation nette instantanée du logement (elle doit être négative si la production dépasse la consommation). Ce chiffre est indiqué en Watt,
-2. le sensor qui donne la production photovoltaïque instantanée en Watt aussi,
-3. un sensor ou input_number qui donne le cout du kwh importée,
-3. un sensor ou input_number qui donne le prix du kwh exortée (dépend de votre contrat),
-3. un sensor ou input_number qui donne la taxe applicable sur les kwh exortée (dépend de votre contrat)
+You must specify:
+1. the sensor which gives the instantaneous net consumption of the dwelling (it must be negative if production exceeds consumption). This figure is indicated in Watt,
+2. the sensor which gives the instantaneous photovoltaic production in Watt too,
+3. a sensor or input_number which gives the cost of the imported kwh,
+3. a sensor or input_number which gives the price of the exported kwh (depends on your contract),
+3. a sensor or input_number which gives the applicable tax on the exorted kwh (depends on your contract)
 
-Ces 5 informations sont nécessaires à l'algorithme pour fonctionner, elles sont donc toutes obligatoires. Le fait que ce soit des sensor ou input_number permet d'avoir des valeurs qui sont réévaluées à chaque cycle. En conséquence le passage en heure creuse peut modifier le calcul et donc les états des équipements puisque l'import devient moins cher. Donc tout est dynamique et recalculé à chaque cycle.
+These 5 pieces of information are necessary for the algorithm to work, so they are all mandatory. The fact that they are sensors or input_number allows to have values that are re-evaluated at each cycle. Consequently, switching to off-peak hours can modify the calculation and therefore the states of the equipment since the import becomes less expensive. So everything is dynamic and recalculated at each cycle.
 
-## Configurer les équipements
-Les équipements pilotables sont définis dans le fichier configuration.yaml de la façon suivante :
-- ajouter la ligne suivante dans votre configuration.yaml:
+## Configure equipment
+Controllable devices are defined in the configuration.yaml file as follows:
+- add the following line in your configuration.yaml:
 
-  ```solar_optimizer: !include solar_optimizer.yaml```
-- et créez un fichier au même niveau que le configuration.yaml avec les informations suivantes :
+   ```solar_optimizer: !include solar_optimizer.yaml```
+- and create a file at the same level as the configuration.yaml with the following information:
 ```
 algorithm:
-  initial_temp: 1000
-  min_temp: 0.1
-  cooling_factor: 0.95
-  max_iteration_number: 1000
+   initial_temp: 1000
+   min_temp: 0.1
+   cooling_factor: 0.95
+   max_iteration_number: 1000
 devices:
-  - name: "<nom de l'équipement>"
-    entity_id: "switch.xxxxx"
-    power_max: <puissance max consommée>
-    check_usable_template: "{{ <le template qui vaut True si l'équipement est utilisable> }}"
-    duration_min: <la durée minimale d'activation en minutes>
-    duration_stop_min: <la durée minimale de desactivation en minutes>
-    action_mode: "service_call"
-    activation_service: "<service name>
-    deactivation_service: "switch/turn_off"
+   - name: "<equipment name>"
+     entity_id: "switch.xxxxx"
+     power_max: <max power consumed>
+     check_usable_template: "{{ <the template which is True if the equipment is usable> }}"
+     duration_min: <the minimum activation duration in minutes>
+     duration_stop_min: <minimum stop duration in minutes>
+     action_mode: "service_call"
+     service_activation: "<service name>
+     deactivation_service: "switch/turn_off"
 ```
 
-Note: les paramètres sous `algorithm` ne doivent pas être touchés sauf si vous savez exactement ce que vous faites.
+Note: parameters under `algorithm` should not be touched unless you know exactly what you are doing.
 
-Sous `devices` il faut déclarer tous les équipements qui seront commandés par Solar Optimizer de la façon suivante :
+Under `devices` you must declare all the equipment that will be controlled by Solar Optimizer as follows:
 
-| attribut                | valable pour                             | signification                                                                                   | exemple                                                 | commentaire                                                                                                                                                                           |
-| ----------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                  | tous                                     | Le nom de l'équipement                                                                          | "VMC sous-sol"                                          | -                                                                                                                                                                                     |
-| `entity_id`             | tous                                     | l'entity id de l'équipement à commander                                                         | "switch.vmc_sous_sol"                                   | -                                                                                                                                                                                     |
-| `power_max`             | tous                                     | la puissance maximale consommée par l'équipement                                                | 250                                                     | -                                                                                                                                                                                     |
-| `check_usable_template` | tous                                     | Un template qui vaut True si l'équipement pourra être utilisé par Solar Optimizer               | "{{ is_state('cover.porte_garage_garage', 'closed') }}" | Dans l'exemple, Sonar Optimizer n'essayera pas de commander la "VMC sous-sol" si la porte du garage est ouverte                                                                       |
-| `duration_min`          | tous                                     | La durée en minute minimale d'activation                                                        | 60                                                      | La VMC sous-sol s'allumera toujours pour une heure au minimum                                                                                                                         |
-| `duration_stop_min`     | tous                                     | La durée en minute minimale de desactivation. Vaut `duration_min` si elle n'est pas précisée    | 15                                                      | La VMC sous-sol s'éteindra toujours pour 15 min au minimum                                                                                                                            |
-| `action_mode`           | tous                                     | le mode d'action pour allumer ou éteindre l'équipement. Peut être "service_call" ou "event" (*) | "service_call"                                          | "service_call" indique que l'équipement s'allume et s'éteint via un appel de service. Cf. ci-dessous. "event" indique qu'un évènement est envoyé lorsque l'état doit changer. Cf. (*) |
-| `activation_service`    | uniquement si action_mode="service_call" | le service a appeler pour activer l'équipement sous la forme "domain/service"                   | "switch/turn_on"                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id"                                                                                                         |
-| `deactivation_service`  | uniquement si action_mode="service_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service"                | "switch/turn_off"                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id"                                                                                                    |
+| attribute | valid for | meaning | example | comment |
+| ----------------------- | ---------------------------------------- | -------------------------------------------- | ------------------------------------------------------- | ------------------------------------ |
+| `name` | all | The name of the equipment | "VMC basement" | - |
+| `entity_id` | all | the entity id of the equipment to order | "switch.vmc_basement" | - |
+| `power_max` | all | the maximum power consumed by the equipment | 250 | - |
+| `check_usable_template` | all | A template that is True if the equipment can be used by Solar Optimizer | "{{ is_state('cover.porte_garage_garage', 'closed') }}" | In the example, Sonar Optimizer will not try to control the "VMC basement" if the garage door is open |
+| `duration_min` | all | The minimum duration in minutes of activation | 60 | The basement VMC will always turn on for at least one hour |
+| `duration_stop_min` | all | The minimum duration in minutes of deactivation. Is `duration_min` if not specified | 15 | The basement VMC will always turn off for at least 15 min |
+| `action_mode` | all | the mode of action for turning the equipment on or off. Can be "service_call" or "event" (*) | "service_call" | "service_call" indicates that the equipment is switched on and off via a service call. See below. "event" indicates that an event is sent when the state should change. See (*) |
+| `activation_service` | only if action_mode="service_call" | the service to be called to activate the equipment in the form "domain/service" | "switch/turn_on" | activation will trigger the "switch/turn_on" service on the entity "entity_id" |
+| `deactivation_service` | only if action_mode="service_call" | the service to call to deactivate the equipment in the form "domain/service" | "switch/turn_off" | deactivation will trigger the "switch/turn_off" service on the entity "entity_id" |
 
-Pour les équipements à puissance variable, les attributs suivants doivent être valorisés :
+For variable power equipment, the following attributes must be valued:
 
-| attribut                      | valable pour                    | signification                                                 | exemple                      | commentaire                                                                                                                       |
-| ----------------------------- | ------------------------------- | ------------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `power_entity_id`             | équipement à puissance variable | l'entity_id de l'entité gérant la puissance                   | `number.tesla_charging_amps` | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité                                |
-| `power_min`                   | équipement a puissance variable | La puissance minimale en watt de l'équipement                 | 100                          | Lorsque la consigne de puissance passe en dessous de cette valeur, l'équipement sera éteint par l'appel du `deactivation_service` |
-| `power_step`                  | équipement a puissance variable | Le pas de puissance                                           | 10                           | -                                                                                                                                 |
-| `change_power_service`        | équipement a puissance variable | Le service a appelé pour changer la puissance                 | `"number/set_value"`         | -                                                                                                                                 |
-| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`           |
+| attribute | valid for | meaning | example | comment |
+| ----------------------------- | ------------------------------- | ----------------------------------------------------------- | ---------------------------- | ---------------------------------------------------- |
+| `power_entity_id` | variable power equipment | the entity_id of the entity managing the power | `number.tesla_charging_amps` | The power change will be done by calling the `change_power_service` service on this entity |
+| `power_min` | variable power equipment | The minimum power in watts of the equipment | 100 | When the power setpoint falls below this value, the equipment will be switched off by calling the `deactivation_service` |
+| `power_step` | variable power equipment | The power step | 10 | - |
+| `change_power_service` | variable power equipment | Service called to change power | `"number/set_value"` | - |
+| `convert_power_divide_factor` | variable power equipment | The divisor applied to convert power to value | 50 | In the example, the "number/set_value" service will be called with the `power setpoint / 50` on the entity `entity_id`. For a Tesla on a three-phase electrical installation this parameter should be set to 660 (220 x 3), to convert power to amperes. For mono-phase installation, set it to 220. |
 
-Exemple complet et commenté de la partie device :
+Complete and commented example of the device part:
 ```
 devices:
-  - name: "Pompe réservoir"
-    # Le switch qui commande la pompe du réservoir
-    entity_id: "switch.prise_pompe_reservoir"
-    # la puissance de cette pompe
-    power_max: 170
-    # Toujours utilisable
-    # check_usable_template: "{{ True }}"
-    # 15 min d'activation minimum
-    duration_min: 15
-    # On active/desactive via un appel de service
-    action_mode: "service_call"
-    # Le service permettant d'activer le switch
-    activation_service: "switch/turn_on"
-    # Le service permettant de désactiver le switch
-    deactivation_service: "switch/turn_off"
+   - name: "Reservoir pump"
+     # The switch that controls the tank pump
+     entity_id: "switch.tank_pump_socket"
+     # the power of this pump
+     power_max: 170
+     # Always usable
+     # check_usable_template: "{{ True }}"
+     # 15 min minimum activation
+     duration_min: 15
+     # 5 min deactivation minimum
+     duration_stop_min: 5
+     # On enable/disable via a service call
+     action_mode: "service_call"
+     # The service enabling the switch
+     activation_service: "switch/turn_on"
+     # The service to deactivate the switch
+     deactivation_service: "switch/turn_off"
 
-  - name: "Recharge Tesla"
-    entity_id: "switch.cloucloute_charger"
-    # La puissance minimale de charge est 660 W (soit 1 Amp car convert_power_divide_factor=660 aussi)
-    power_min: 660
-    # La puissance minimale de charge est 3960 W (soit 5 Amp (= 3960/600) )
-    power_max: 3960
-    # le step de 660 soit 1 Amp après division par convert_power_divide_factor
-    power_step: 660
-    # Utilisable si le mode de charge est "Solaire" et la voiture est branchée sur le chargeur et elle est chargée à moins de 90 % (donc ca s'arrête tout seul à 90% )
-    check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.cloucloute_charge_limit') | float(90) }}"
-    # 1 h de charge minimum
-    duration_min: 60
-    # 15 min de stop charge minimum
-    duration_stop_min: 15
-    # L'entité qui pilote l'ampérage de charge
-    power_entity_id: "number.tesla_charging_amps"
-    # 5 min minimum entre 2 changements de puissance
-    duration_power_min: 5
-    # l'activation se fait par un appel de service
-    action_mode: "service_call"
-    activation_service: "switch/turn_on"
-    deactivation_service: "switch/turn_off"
-    # le changement de puissance se fait par un appel de service
-    change_power_service: "number/set_value"
-    # le facteur permettant de convertir la puissance consigne en Ampères (number.tesla_charging_amps prend des Ampères)
-    convert_power_divide_factor: 660
+   - name: "Tesla Recharge"
+     entity_id: "switch.cloucloute_charger"
+     # The minimum load power is 660 W (i.e. 1 Amp because convert_power_divide_factor=660 too)
+     power_min: 660
+     # The minimum load power is 3960 W (i.e. 5 Amp (= 3960/600) )
+     power_max: 3960
+     # the step of 660 or 1 Amp after division by convert_power_divide_factor
+     power_step: 660
+     # Usable if the charging mode is "Solar" and the car is plugged into the charger and it is charged at less than 90% (so it stops by itself at 90%)
+     check_usable_template: "{{ is_state('input_select.charge_mode', 'Solar') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery ') | float(100) < states('number.cloucloute_charge_limit') | float(90) }}"
+     # 1 hour minimum charge
+     duration_min: 60
+     # 15 min minimum stop charge
+     duration_stop_min: 15
+     # The entity that drives the load amperage
+     power_entity_id: "number.tesla_charging_amps"
+     # 5 min minimum between 2 power changes
+     duration_power_min: 5
+     # activation is done by a service call
+     action_mode: "service_call"
+     activation_service: "switch/turn_on"
+     deactivation_service: "switch/turn_off"
+     # the power change is done by a service call
+     change_power_service: "number/set_value"
+     # the factor used to convert the set power into Amps (number.tesla_charging_amps takes Amps)
+     convert_power_divide_factor: 660
 ...
 ```
-Tout changement dans la configuration nécessite un arrêt / relance de l'intégration (ou de Home Assistant) pour être pris en compte.
+Any change in the configuration requires a stop / restart of the integration (or of Home Assistant) to be taken into account.
 
-# Entités disponibles
-L'intégration, une fois correctement configurée, créée un appareil (device) qui contient plusieurs entités :
-1. un sensor nommé "total_power" qui est le total de toutes les puissances des équipements commandés par Solar Optimizer,
-2. un sensor nommé "best_objective" qui est la valeur de la fonction de coût (cf. fonctionnement de l'algo),
-3. un switch par équipements nommé `switch.enable_solar_optimize_<name>` déclarés dans le configuration.yaml. Si le switch est "Off", l'algorithme ne considérera pas cet équipement pour le calcul. Ca permet de manuellement sortir un équipement de la liste sans avoir à modifier la liste. Ce switch contient des attributs additionnels qui permettent de suivre l'état interne de l'équipement vu de l'algorithme.
+# Available entities
+The integration, once properly configured, creates a device that contains several entities:
+1. a sensor named "total_power" which is the total of all the powers of the equipment controlled by Solar Optimizer,
+2. a sensor named "best_objective" which is the value of the cost function (see how the algorithm works),
+3. a switch per equipment named `switch.enable_solar_optimizer_<name>` declared in the configuration.yaml. If the switch is "Off", the algorithm will not consider this equipment for the calculation. This allows you to manually remove equipment from the list without having to modify the list. This switch contains additional attributes which make it possible to follow the internal state of the equipment seen by the algorithm.
 
-# En complément
-En complément, le code Lovelace suivant permet de controller chaque équipement déclaré :
+# In addition
+In addition, the following Lovelace code is used to control each declared device:
 ```
-# A mettre en début de page
+# To put at the beginning of the front-end page
 decluttering_templates:
   managed_device_power:
     default: null
@@ -325,7 +328,7 @@ decluttering_templates:
           content_info: none
 ```
 
-puis à utiliser de la façon suivante :
+then use as follows:
 ```
           - type: vertical-stack
             cards:
@@ -347,14 +350,14 @@ puis à utiliser de la façon suivante :
                   - enable_entity: >-
                       switch.enable_solar_optimizer_prise_recharge_voiture_garage
 ```
-Vous obtiendrez alors un composant permettant d'interagir avec l'équipement qui ressemble à ça :
+You will then get a component to interact with the equipment that looks like this:
 
-![Lovelace equipements](https://github.com/jmcollin78/solar_optimizer/blob/main/images/lovelace-eqts.png?raw=true)
+![Lovelace equipment](https://github.com/jmcollin78/solar_optimizer/blob/main/images/lovelace-eqts.png?raw=true)
 
 
-# Les contributions sont les bienvenues !
+# Contributions are welcome!
 
-Si vous souhaitez contribuer, veuillez lire les [directives de contribution](CONTRIBUTING.md)
+If you would like to contribute, please read the [contribution guidelines](CONTRIBUTING.md)
 
 ***
 
