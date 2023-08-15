@@ -202,21 +202,21 @@ decluttering_templates:
       title-card-button-overlay: true
       title-card:
         type: custom:mushroom-template-card
-        primary: '{{ state_attr(''[[device]]'', ''friendly_name'') }}'
-        secondary: '[[secondary_infos]]'
-        icon: '[[icon]]'
+        primary: "{{ state_attr('[[device]]', 'friendly_name') }}"
+        secondary: "[[secondary_infos]]"
+        icon: "[[icon]]"
         badge_icon: >-
-          {% if is_state_attr('[[device]]','is_usable', True) %}mdi:check{% else
-          %}mdi:alert-circle{% endif %}
-        badge_color: |-
-          {% if is_state_attr('[[device]]', 'is_enabled', True) %}
-            {% if is_state_attr('[[device]]', 'is_usable', True) %}
-              {% if is_state_attr('[[device]]','is_waiting', False) %}
-              green
-              {% else %}orange{% endif %}
-            {% else %}darkgray{% endif %}
-          {% else %}lightgray{% endif %}
-        entity: '[[device]]'
+          {% if is_state_attr('[[device]]','is_enabled', True) %}mdi:check{%
+          else %}mdi:cancel{% endif %}
+        badge_color: >-
+          {% if is_state_attr('[[device]]', 'is_usable', True) and
+          is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
+          is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
+          is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
+          is_state_attr('[[device]]', 'is_usable', False) or
+          state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
+          %}blue{% endif %}
+        entity: "[[device]]"
         icon_color: >-
           {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
           %}
@@ -230,7 +230,7 @@ decluttering_templates:
         - type: custom:mushroom-chips-card
           chips:
             - type: entity
-              entity: '[[enable_entity]]'
+              entity: "[[enable_entity]]"
               double_tap_action:
                 action: more-info
               tap_action:
@@ -260,23 +260,23 @@ decluttering_templates:
       title-card-button-overlay: true
       title-card:
         type: custom:mushroom-template-card
-        primary: '{{ state_attr(''[[device]]'', ''friendly_name'') }}'
+        primary: "{{ state_attr('[[device]]', 'friendly_name') }}"
         secondary: >-
           [[secondary_infos]] (max. {{ state_attr('[[device]]', 'power_max') }}
           W)
-        icon: '[[icon]]'
+        icon: "[[icon]]"
         badge_icon: >-
-          {% if is_state_attr('[[device]]','is_usable', True) %}mdi:check{% else
-          %}mdi:alert-circle{% endif %}
-        badge_color: |-
-          {% if is_state_attr('[[device]]', 'is_enabled', True) %}
-            {% if is_state_attr('[[device]]', 'is_usable', True) %}
-              {% if is_state_attr('[[device]]','is_waiting', False) %}
-              green
-              {% else %}orange{% endif %}
-            {% else %}darkgray{% endif %}
-          {% else %}lightgray{% endif %}
-        entity: '[[device]]'
+          {% if is_state_attr('[[device]]','is_enabled', True) %}mdi:check{%
+          else %}mdi:cancel{% endif %}
+        badge_color: >-
+          {% if is_state_attr('[[device]]', 'is_usable', True) and
+          is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
+          is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
+          is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
+          is_state_attr('[[device]]', 'is_usable', False) or
+          state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
+          %}blue{% endif %}
+        entity: "[[device]]"
         icon_color: >-
           {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
           %}
@@ -290,7 +290,7 @@ decluttering_templates:
         - type: custom:mushroom-chips-card
           chips:
             - type: entity
-              entity: '[[enable_entity]]'
+              entity: "[[enable_entity]]"
               double_tap_action:
                 action: more-info
               tap_action:
