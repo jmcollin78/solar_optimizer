@@ -11,7 +11,7 @@ from homeassistant.helpers import selector
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 
 # from homeassistant.helpers.entity_component import EntityComponent
 
@@ -48,7 +48,7 @@ CONFIG_SCHEMA = vol.Schema(
                             ),
                             vol.Optional("power_entity_id"): selector.EntitySelector(
                                 selector.EntitySelectorConfig(
-                                    domain=[INPUT_NUMBER_DOMAIN, SENSOR_DOMAIN]
+                                    domain=[INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN]
                                 )
                             ),
                             vol.Required("power_max"): vol.Coerce(float),

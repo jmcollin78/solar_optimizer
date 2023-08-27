@@ -87,7 +87,9 @@ def define_config_2_devices():
                         "action_mode": "event",
                         "convert_power_divide_factor": 6,
                         "change_power_service": "input_number/set_value",
-                        "power_entity_id": "input_number.tesla_amps"
+                        "power_entity_id": "input_number.tesla_amps",
+                        "activation_service": "input_boolean/turn_on",
+                        "deactivation_service": "input_boolean/turn_off"
                     }
                 ],
             }

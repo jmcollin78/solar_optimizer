@@ -41,6 +41,8 @@ async def test_normal_start_one_device(hass: HomeAssistant):
                     "duration_stop_min": 2,
                     "duration_power_min": 3,
                     "action_mode": "event",
+                    "activation_service": "input_boolean/turn_on",
+                    "deactivation_service": "input_boolean/turn_off",
                     "convert_power_divide_factor": 6,
                     "change_power_service": "input_number/set_value",
                     "power_entity_id": "input_number.tesla_amps"
