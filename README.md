@@ -105,8 +105,8 @@ devices:
      duration_min: <the minimum activation duration in minutes>
      duration_stop_min: <minimum stop duration in minutes>
      action_mode: "service_call"
-     service_activation: "<service name>
-     deactivation_service: "switch/turn_off"
+     activation_service: "<service name>"
+     deactivation_service: "<service name>"
 ```
 
 Note: parameters under `algorithm` should not be touched unless you know exactly what you are doing.
