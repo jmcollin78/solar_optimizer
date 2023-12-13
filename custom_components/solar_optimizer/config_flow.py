@@ -32,10 +32,10 @@ solar_optimizer_schema = {
         selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
     ),
     vol.Required("sell_cost_entity_id"): selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+        selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
     ),
     vol.Required("buy_cost_entity_id"): selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+        selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
     ),
     vol.Required("sell_tax_percent_entity_id"): selector.EntitySelector(
         selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
