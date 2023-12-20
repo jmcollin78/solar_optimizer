@@ -44,27 +44,6 @@ solar_optimizer_schema = {
 }
 
 
-def add_suggested_values_to_schema(
-    data_schema: vol.Schema, suggested_values: Mapping[str, Any]
-) -> vol.Schema:
-    """Make a copy of the schema, populated with suggested values.
-
-    For each schema marker matching items in `suggested_values`,
-    the `suggested_value` will be set. The existing `suggested_value` will
-    be left untouched if there is no matching item.
-    """
-    schema = {}
-    for key, val in data_schema.schema.items():
-        new_key = key
-        if key in suggested_values and isinstance(key, vol.Marker):
-            # Copy the marker to not modify the flow schema
-            new_key = copy.copy(key)
-            new_key.description = {"suggested_value": suggested_values[key]}
-        schema[new_key] = val
-    _LOGGER.debug("add_suggested_values_to_schema: schema=%s", schema)
-    return vol.Schema(schema)
-
-
 class SolarOptimizerConfigFlow(ConfigFlow, domain=DOMAIN):
     """La classe qui implémente le config flow pour notre DOMAIN.
     Elle doit dériver de FlowHandler"""
@@ -130,7 +109,7 @@ class SolarOptimizerOptionsFlow(OptionsFlow):
             )
             return self.async_show_form(
                 step_id="init",
-                data_schema=add_suggested_values_to_schema(
+                data_schema=self.add_suggested_values_to_schema(
                     data_schema=user_form,
                     suggested_values=self._user_inputs,
                 ),
