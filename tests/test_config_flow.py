@@ -49,28 +49,28 @@ async def test_config_inputs(
     assert _result["type"] == FlowResultType.FORM
     assert _result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
-        _result["flow_id"],
-        {
+    user_input = {
             "refresh_period_sec": 300,
             "power_consumption_entity_id": power_consumption,
             "power_production_entity_id": power_production,
             "sell_cost_entity_id": sell_cost,
             "buy_cost_entity_id": buy_cost,
             "sell_tax_percent_entity_id": "input_number.tax_percent",
-        },
+    }
+
+    result = await hass.config_entries.flow.async_configure(
+        _result["flow_id"],
+        user_input
     )
     await hass.async_block_till_done()
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     data = result.get("data")
     assert data is not None
-    assert data["refresh_period_sec"] == 300
-    assert data["power_consumption_entity_id"] == power_consumption
-    assert data["power_production_entity_id"] == power_production
-    assert data["sell_cost_entity_id"] == sell_cost
-    assert data["buy_cost_entity_id"] == buy_cost
-    assert data["sell_tax_percent_entity_id"] == "input_number.tax_percent"
+
+    for key, value in user_input.items():
+        assert data.get(key) == value
+
     assert data["smooth_production"]
 
     assert result["title"] == "SolarOptimizer"
