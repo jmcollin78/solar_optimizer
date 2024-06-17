@@ -81,7 +81,7 @@ You must specify:
 2. the sensor which gives the instantaneous photovoltaic production in Watt too,
 3. a sensor or input_number which gives the cost of the imported kwh,
 3. a sensor or input_number which gives the price of the exported kwh (depends on your contract),
-3. a sensor or input_number which gives the applicable tax on the exorted kwh (depends on your contract)
+3. a sensor or input_number which gives the applicable tax on the exported kwh (depends on your contract)
 
 These 5 pieces of information are necessary for the algorithm to work, so they are all mandatory. The fact that they are sensors or input_number allows to have values that are re-evaluated at each cycle. Consequently, switching to off-peak hours can modify the calculation and therefore the states of the equipment since the import becomes less expensive. So everything is dynamic and recalculated at each cycle.
 
