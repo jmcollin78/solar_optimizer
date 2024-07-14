@@ -35,8 +35,6 @@
 				"terminal.integrated.defaultProfile.linux": "Bash Profile",
 				"python.pythonPath": "/usr/bin/python3",
 				"python.analysis.autoSearchPaths": true,
-				"python.linting.pylintEnabled": true,
-				"python.linting.enabled": true,
 				"python.formatting.provider": "black",
 				"python.formatting.blackPath": "/usr/local/py-utils/bin/black",
 				"editor.formatOnPaste": false,
