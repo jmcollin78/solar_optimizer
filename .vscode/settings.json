@@ -1,11 +1,9 @@
 {
     "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "modifications"
     },
-    "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true,
-    "python.pythonPath": "/usr/local/bin/python",
-    "python.formatting.provider": "none",
     "files.associations": {
         "*.yaml": "home-assistant"
     },
@@ -14,4 +12,8 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+    "python.analysis.extraPaths": [
+        "/workspaces/solar_optimizer/custom_components/solar_optimizer",
+        "/home/vscode/.local/lib/python3.12/site-packages/homeassistant"
+    ]
 }
