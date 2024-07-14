@@ -2,8 +2,9 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
 	"name": "Solar Optimizer",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:0-3.11",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
 	"appPort": [
 		"9123:8123"
 	],

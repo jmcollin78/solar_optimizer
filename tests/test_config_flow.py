@@ -3,7 +3,7 @@ import pytest
 import voluptuous
 
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 
 from custom_components.solar_optimizer import config_flow
 
@@ -17,7 +17,7 @@ async def test_empty_config(hass: HomeAssistant):
     assert _result["type"] == FlowResultType.FORM
     assert _result["errors"] is None
 
-    with pytest.raises(voluptuous.error.MultipleInvalid):
+    with pytest.raises(InvalidData):
         await hass.config_entries.flow.async_configure(
             _result["flow_id"], user_input={}
         )

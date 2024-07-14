@@ -1,4 +1,5 @@
 # Strictly for tests
+-r requirements.txt
 pytest-homeassistant-custom-component
 coverage
 pytest
