@@ -57,7 +57,7 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
         if (
             not self.coordinator
             or not self.coordinator.data
-            or not (value := self.coordinator.data.get(self.idx))
+            or (value := self.coordinator.data.get(self.idx)) == None
         ):
             _LOGGER.debug("No coordinator found or no data...")
             return
