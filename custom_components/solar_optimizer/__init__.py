@@ -14,6 +14,7 @@ from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.humidifier import DOMAIN as HUMIDIFIER_DOMAIN
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
+from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
 
 # from homeassistant.helpers.entity_component import EntityComponent
 
@@ -45,7 +46,7 @@ CONFIG_SCHEMA = vol.Schema(
                             vol.Required("name"): str,
                             vol.Required("entity_id"): selector.EntitySelector(
                                 selector.EntitySelectorConfig(
-                                    domain=[INPUT_BOOLEAN_DOMAIN, SWITCH_DOMAIN, HUMIDIFIER_DOMAIN, CLIMATE_DOMAIN]
+                                    domain=[INPUT_BOOLEAN_DOMAIN, SWITCH_DOMAIN, HUMIDIFIER_DOMAIN, CLIMATE_DOMAIN, BUTTON_DOMAIN]
                                 )
                             ),
                             vol.Optional("power_entity_id"): selector.EntitySelector(
