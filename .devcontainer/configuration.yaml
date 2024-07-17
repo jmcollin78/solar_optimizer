@@ -122,6 +122,14 @@ input_number:
     unit_of_measurement: A
     mode: slider
     step: 1
+  battery_soc:
+    name: Battery SOC
+    min: 0
+    max: 100
+    icon: mdi:battery
+    unit_of_measurement: '%'
+    mode: slider
+    step: 1
 
 template:
   - trigger:

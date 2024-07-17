@@ -13,7 +13,8 @@
                     "sell_cost_entity_id": "Energy sell price",
                     "buy_cost_entity_id": "Energy buy price",
                     "sell_tax_percent_entity_id": "Sell taxe percent",
-                    "smooth_production": "Smooth the solar production"
+                    "smooth_production": "Smooth the solar production",
+                    "battery_soc_entity_id": "Battery soc"
                 },
                 "data_description": {
                     "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
@@ -22,7 +23,8 @@
                     "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
                     "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
-                    "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation"
+                    "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
+                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty"
                 }
             }
         }
@@ -40,7 +42,8 @@
                     "sell_cost_entity_id": "Energy sell price",
                     "buy_cost_entity_id": "Energy buy price",
                     "sell_tax_percent_entity_id": "Sell taxe percent",
-                    "smooth_production": "Smooth the solar production"
+                    "smooth_production": "Smooth the solar production",
+                    "battery_soc_entity_id": "Battery soc"
                 },
                 "data_description": {
                     "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
@@ -49,7 +52,8 @@
                     "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
                     "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
-                    "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation"
+                    "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
+                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty"
                 }
             }
         }
