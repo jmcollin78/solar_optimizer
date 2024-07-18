@@ -69,6 +69,7 @@ CONFIG_SCHEMA = vol.Schema(
                             vol.Optional("convert_power_divide_factor"): vol.Coerce(
                                 float
                             ),
+                            vol.Optional("battery_soc_threshold", default=0): vol.Coerce(float),
                         }
                     ]
                 ),

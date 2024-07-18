@@ -24,6 +24,8 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 1.7.0**:
+> - added battery management. You can specify a percentage type entity that gives the state of charge of the battery (soc). On each device you can specify a `battery_soc_threshold` parameter: the battery threshold below which the device will not be usable.
 > * **release 1.3.0**:
 >   - added the parameter `duration_stop_min` which allows to specify a minimal duration of deactivation to distinguish it from the minimal delay of activation `duration_min`. If not specified, this parameter takes the value of `duration_min`.
 >   - restores the state of the `enable` switches when the integration starts.
@@ -58,7 +60,9 @@ Each configured device is associated with a switch-type entity that authorizes t
 
 In addition, it is possible to define a usability rule for equipment. For example, if the car is charged at more than 90%, the algorithm considers that the equipment which controls the charging of the car must be switched off. This rule is defined in the form of a configurable template which is True if the equipment is usable.
 
-These 2 rules allow the algorithm to control only what is really useful at a time t. These rules are re-evaluated at each cycle.
+If a battery is specified when configuring the integration and if the threshold `battery_soc_threshold` is specified, the equipment will only be usable if the soc (percentage of battery charge) is greater than or equal to the threshold.
+
+These 3 rules allow the algorithm to only order what is really useful at a given time. These rules are re-evaluated each cycle.
 
 # How do we install it?
 ## HACS installation (recommended)
@@ -107,6 +111,7 @@ devices:
      action_mode: "service_call"
      activation_service: "<service name>"
      deactivation_service: "<service name>"
+     battery_soc_threshold: 30
 ```
 
 Note: parameters under `algorithm` should not be touched unless you know exactly what you are doing.
@@ -124,6 +129,7 @@ Under `devices` you must declare all the equipment that will be controlled by So
 | `action_mode` | all | the mode of action for turning the equipment on or off. Can be "service_call" or "event" (*) | "service_call" | "service_call" indicates that the equipment is switched on and off via a service call. See below. "event" indicates that an event is sent when the state should change. See (*) |
 | `activation_service` | only if action_mode="service_call" | the service to be called to activate the equipment in the form "domain/service" | "switch/turn_on" | activation will trigger the "switch/turn_on" service on the entity "entity_id" |
 | `deactivation_service` | only if action_mode="service_call" | the service to call to deactivate the equipment in the form "domain/service" | "switch/turn_off" | deactivation will trigger the "switch/turn_off" service on the entity "entity_id" |
+| `battery_soc_threshold`  | tous | minimal percentage of charge of the solar battery to enable this device            | 30                                       |                                                                                                     |
 
 For variable power equipment, the following attributes must be valued:
 
@@ -155,6 +161,8 @@ devices:
      activation_service: "switch/turn_on"
      # The service to deactivate the switch
      deactivation_service: "switch/turn_off"
+     # We authorize the pump to start if there is 10% battery in the solar installation
+     battery_soc_threshold: 10
 
    - name: "Tesla Recharge"
      entity_id: "switch.cloucloute_charger"
@@ -182,6 +190,8 @@ devices:
      change_power_service: "number/set_value"
      # the factor used to convert the set power into Amps (number.tesla_charging_amps takes Amps)
      convert_power_divide_factor: 660
+     # We do not start a charge if the battery of the solar installation is not at least 50% charged
+     battery_soc_threshold: 50
 ...
 ```
 Any change in the configuration requires a stop / restart of the integration (or of Home Assistant) to be taken into account.

@@ -41,6 +41,9 @@ solar_optimizer_schema = {
         selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
     ),
     vol.Optional("smooth_production", default=True): cv.boolean,
+    vol.Optional("battery_soc_entity_id"): selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
+    ),
 }
 
 

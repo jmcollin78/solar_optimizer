@@ -55,6 +55,7 @@ class SimulatedAnnealingAlgorithm:
         sell_cost: float,
         buy_cost: float,
         sell_tax_percent: float,
+        battery_soc: float
     ):
         """The entrypoint of the algorithm:
         You should give:
@@ -104,6 +105,7 @@ class SimulatedAnnealingAlgorithm:
                 _LOGGER.debug("%s is disabled. Forget it", device.name)
                 continue
 
+            device.set_battery_soc(battery_soc)
             usable = device.is_usable
             waiting = device.is_waiting
             # Force deactivation if active, not usable and not waiting

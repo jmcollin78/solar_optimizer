@@ -33,8 +33,9 @@ async def async_setup_entry(
     entity2 = SolarOptimizerSensorEntity(coordinator, hass, "total_power")
     entity3 = SolarOptimizerSensorEntity(coordinator, hass, "power_production")
     entity4 = SolarOptimizerSensorEntity(coordinator, hass, "power_production_brut")
+    entity5 = SolarOptimizerSensorEntity(coordinator, hass, "battery_soc")
 
-    async_add_entities([entity1, entity2, entity3, entity4], False)
+    async_add_entities([entity1, entity2, entity3, entity4, entity5], False)
 
     await coordinator.configure(entry)
 
@@ -80,6 +81,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
             return "mdi:bullseye-arrow"
         elif self.idx == "total_power":
             return "mdi:flash"
+        elif self.idx == "battery_soc":
+            return "mdi:battery"
         else:
             return "mdi:solar-power-variant"
 
@@ -87,6 +90,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     def device_class(self) -> SensorDeviceClass | None:
         if self.idx == "best_objective":
             return SensorDeviceClass.MONETARY
+        elif self.idx == "battery_soc":
+            return SensorDeviceClass.BATTERY
         else:
             return SensorDeviceClass.POWER
 
@@ -101,5 +106,7 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     def native_unit_of_measurement(self) -> str | None:
         if self.idx == "best_objective":
             return "€"
+        elif self.idx == "battery_soc":
+            return "%"
         else:
             return UnitOfPower.WATT
