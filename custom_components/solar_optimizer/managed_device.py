@@ -122,6 +122,8 @@ class ManagedDevice:
     _deactivation_service: str
     _change_power_service: str
     _convert_power_divide_factor: int
+    _battery_soc: float
+    _battery_soc_threshold: float
 
     def __init__(self, hass: HomeAssistant, device_config):
         """Initialize a manageable device"""
@@ -132,7 +134,6 @@ class ManagedDevice:
         self._power_entity_id = device_config.get("power_entity_id")
         self._power_max = int(device_config.get("power_max"))
         self._power_min = int(device_config.get("power_min") or -1)
-        self._power_step = int(device_config.get("power_step") or 0)
         self._power_step = int(device_config.get("power_step") or 0)
         self._can_change_power = self._power_min >= 0
         self._convert_power_divide_factor = int(
@@ -173,6 +174,9 @@ class ManagedDevice:
         self._activation_service = device_config.get("activation_service")
         self._deactivation_service = device_config.get("deactivation_service")
         self._change_power_service = device_config.get("change_power_service")
+
+        self._battery_soc = None
+        self._battery_soc_threshold = float(device_config.get("battery_soc_threshold") or 0)
 
         if self.is_active:
             self._requested_power = self._current_power = (
@@ -345,7 +349,7 @@ class ManagedDevice:
     @property
     def is_usable(self) -> bool:
         """A device is usable for optimisation if the check_usable_template returns true and
-        if the device is not waiting for the end of its cycle"""
+        if the device is not waiting for the end of its cycle and if the battery_soc_threshold is >= battery_soc"""
 
         context = {}
         now = datetime.now(get_tz(self._hass))
@@ -355,6 +359,11 @@ class ManagedDevice:
         )
         if not result:
             _LOGGER.debug("%s is not usable", self._name)
+
+        if result and self._battery_soc is not None and self._battery_soc_threshold is not None:
+            if self._battery_soc < self._battery_soc_threshold:
+                result = False
+                _LOGGER.debug("%s is not usable due to battery soc threshold (%s < %s)", self._name, self._battery_soc, self._battery_soc_threshold)
 
         return result
 
@@ -448,6 +457,12 @@ class ManagedDevice:
     def convert_power_divide_factor(self) -> int:
         """return"""
         return self._convert_power_divide_factor
+
+    def set_battery_soc(self, battery_soc):
+        """Define the battery soc. This is used with is_usable
+        to determine if the device is usable"""
+        self._battery_soc = battery_soc
+
 
     def publish_enable_state_change(self) -> None:
         """Publish an event when the state is changed"""

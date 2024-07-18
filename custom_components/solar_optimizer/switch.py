@@ -61,6 +61,28 @@ async def async_setup_entry(
 class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
     """The entity holding the algorithm calculation"""
 
+    _entity_component_unrecorded_attributes = (
+        SwitchEntity._entity_component_unrecorded_attributes.union(
+            frozenset(
+                {
+                    "is_enabled",
+                    "is_active",
+                    "is_waiting",
+                    "is_usable",
+                    "can_change_power",
+                    "duration_sec",
+                    "duration_power_sec",
+                    "power_min",
+                    "power_max",
+                    "next_date_available",
+                    "next_date_available_power",
+                    "battery_soc_threshold",
+                    "battery_soc",
+                }
+            )
+        )
+    )
+
     def __init__(self, coordinator, hass, name, idx, entity_id):
         _LOGGER.debug("Adding ManagedDeviceSwitch for %s", name)
         super().__init__(coordinator, context=idx)
@@ -176,6 +198,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             "next_date_available_power": device.next_date_available_power.astimezone(
                 current_tz
             ).isoformat(),
+            "battery_soc_threshold": device._battery_soc_threshold,
+            "battery_soc": device._battery_soc,
         }
 
     @callback

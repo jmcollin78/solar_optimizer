@@ -201,6 +201,7 @@ solar_optimizer:
       action_mode: "service_call"
       activation_service: "input_boolean/turn_on"
       deactivation_service: "input_boolean/turn_off"
+      battery_soc_threshold: 30
     - name: "Equipement G"
       entity_id: "input_boolean.fake_device_g"
       power_max: 1200
@@ -209,6 +210,7 @@ solar_optimizer:
       action_mode: "service_call"
       activation_service: "input_boolean/turn_on"
       deactivation_service: "input_boolean/turn_off"
+      battery_soc_threshold: 40
     - name: "Equipement H"
       entity_id: "input_boolean.fake_device_h"
       power_entity_id: "input_number.tesla_amps"
@@ -225,6 +227,7 @@ solar_optimizer:
       deactivation_service: "input_boolean/turn_off"
       change_power_service: "input_number/set_value"
       convert_power_divide_factor: 660
+      battery_soc_threshold: 50
     - name: "Equipement I"
       entity_id: "switch.fake_switch_1"
       power_max: 20
@@ -233,6 +236,7 @@ solar_optimizer:
       action_mode: "service_call"
       activation_service: "switch/turn_on"
       deactivation_service: "switch/turn_off"
+      battery_soc_threshold: 60
 
 
 

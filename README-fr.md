@@ -24,6 +24,8 @@
 
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 1.7.0** :
+>    - ajout d'une gestion d'une batterie. Vous pouvez spécifier une entité de type pourcentage qui donne l'état de charge de la batterie (soc). Sur chaque équipements vous pouvez spécifier un paramètre `battery_soc_threshold` : le seuil de batterie en dessous duquel l'équipement ne sera pas utilisable.
 > * **release 1.3.0** :
 >    - ajout du paramètre `duration_stop_min` qui permet de spécifier une durée minimale de désactivation pour le distinguer du délai minimal d'activation `duration_min`. Si non spécifié, ce paramètre prend la valeur de `duration_min`.
 >    - restaure l'état des switchs `enable` au démarrage de l'intégration.
@@ -58,7 +60,9 @@ A chaque équipement configuré est associé une entité de type switch qui perm
 
 Par ailleurs, il est possible de définir une règle d'utilisabilité des équipements. Par exemple, si la voiture est chargée à plus de 90%, l'algorithme considère que l'équipement qui pilote la charge de la voiture doit être éteint. Cette régle est définit sous la forme d'un template configurable qui vaut True si l'équipement est utilisable.
 
-Ces 2 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
+Si une batterie est spécifiée lors du paramétrage de l'intégration et si le seuil `battery_soc_threshold` est spécifié, l'équipement ne sera utilisable que si le soc (pourcentage de charge de la batterie) est supérieur ou égal au seuil.
+
+Ces 3 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
 
 # Comment on l'installe ?
 ## HACS installation (recommendé)
@@ -107,6 +111,7 @@ devices:
     action_mode: "service_call"
     activation_service: "<service name>
     deactivation_service: "switch/turn_off"
+    battery_soc_threshold: 30
 ```
 
 Note: les paramètres sous `algorithm` ne doivent pas être touchés sauf si vous savez exactement ce que vous faites.
@@ -124,6 +129,7 @@ Sous `devices` il faut déclarer tous les équipements qui seront commandés par
 | `action_mode`           | tous                                     | le mode d'action pour allumer ou éteindre l'équipement. Peut être "service_call" ou "event" (*) | "service_call"                                          | "service_call" indique que l'équipement s'allume et s'éteint via un appel de service. Cf. ci-dessous. "event" indique qu'un évènement est envoyé lorsque l'état doit changer. Cf. (*) |
 | `activation_service`    | uniquement si action_mode="service_call" | le service a appeler pour activer l'équipement sous la forme "domain/service"                   | "switch/turn_on"                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id"                                                                                                         |
 | `deactivation_service`  | uniquement si action_mode="service_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service"                | "switch/turn_off"                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id"                                                                                                    |
+| `battery_soc_threshold`  | tous | le pourcentage minimal de charge de la batterie pour que l'équipement soit utilisable            | 30                                       |                                                                                                     |
 
 Pour les équipements à puissance variable, les attributs suivants doivent être valorisés :
 
@@ -155,6 +161,8 @@ devices:
     activation_service: "switch/turn_on"
     # Le service permettant de désactiver le switch
     deactivation_service: "switch/turn_off"
+    # On autorise le démarrage de la pompe si il y a 10% de batterie dans l'installation solaire
+    battery_soc_threshold: 10
 
   - name: "Recharge Tesla"
     entity_id: "switch.cloucloute_charger"
@@ -182,6 +190,8 @@ devices:
     change_power_service: "number/set_value"
     # le facteur permettant de convertir la puissance consigne en Ampères (number.tesla_charging_amps prend des Ampères)
     convert_power_divide_factor: 660
+    # On ne démarre pas une charge si la batterie de l'installation solaire n'est pas chargée à au moins 50%
+    battery_soc_threshold: 50
 ...
 ```
 Tout changement dans la configuration nécessite un arrêt / relance de l'intégration (ou de Home Assistant) pour être pris en compte.

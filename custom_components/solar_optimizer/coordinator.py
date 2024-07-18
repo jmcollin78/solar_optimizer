@@ -22,8 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 def get_safe_float(hass, entity_id: str):
     """Get a safe float state value for an entity.
     Return None if entity is not available"""
-    state = hass.states.get(entity_id)
-    if not state or state.state == "unknown" or state.state == "unavailable":
+    if entity_id is None or not (state := hass.states.get(entity_id)) or state.state == "unknown" or state.state == "unavailable":
         return None
     float_val = float(state.state)
     return None if math.isinf(float_val) or not math.isfinite(float_val) else float_val
@@ -38,6 +37,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     _sell_cost_entity_id: str
     _buy_cost_entity_id: str
     _sell_tax_percent_entity_id: str
+    _battery_soc_entity_id: str
     _smooth_production: bool
     _last_production: float
 
@@ -87,6 +87,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._sell_cost_entity_id = config.data.get("sell_cost_entity_id")
         self._buy_cost_entity_id = config.data.get("buy_cost_entity_id")
         self._sell_tax_percent_entity_id = config.data.get("sell_tax_percent_entity_id")
+        self._battery_soc_entity_id = config.data.get("battery_soc_entity_id")
         self._smooth_production = config.data.get("smooth_production") is True
         self._last_production = 0.0
 
@@ -143,6 +144,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             self.hass, self._sell_tax_percent_entity_id
         )
 
+        soc = get_safe_float(self.hass, self._battery_soc_entity_id)
+        calculated_data["battery_soc"] = soc if soc is not None else 0
+
         #
         # Call Algorithm Recuit simulé
         #
@@ -153,6 +157,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             calculated_data["sell_cost"],
             calculated_data["buy_cost"],
             calculated_data["sell_tax_percent"],
+            calculated_data["battery_soc"]
         )
 
         calculated_data["best_solution"] = best_solution
