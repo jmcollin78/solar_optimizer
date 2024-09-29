@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import (
 )
 
 
-from .const import DOMAIN
+from .const import DOMAIN, DEVICE_MANUFACTURER, INTEGRATION_MODEL
 from .coordinator import SolarOptimizerCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,6 +70,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     def device_info(self):
         # Retournez des informations sur le périphérique associé à votre entité
         return {
+            "model": INTEGRATION_MODEL,
+            "manufacturer": DEVICE_MANUFACTURER,
             "identifiers": {(DOMAIN, "solar_optimizer_device")},
             "name": "Solar Optimizer",
             # Autres attributs du périphérique ici
