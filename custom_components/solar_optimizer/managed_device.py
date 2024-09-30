@@ -487,6 +487,17 @@ class ManagedDevice:
         """The max_on_time_per_day_sec configured"""
         return self._max_on_time_per_day_sec
 
+    @property
+    def battery_soc(self) -> int:
+        """The battery soc"""
+        return self._battery_soc
+
+    @property
+    def battery_soc_threshold(self) -> int:
+        """The battery soc"""
+        return self._battery_soc_threshold
+
+
     def set_battery_soc(self, battery_soc):
         """Define the battery soc. This is used with is_usable
         to determine if the device is usable"""

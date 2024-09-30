@@ -25,6 +25,7 @@ from .const import (
     EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
+    overrides,
 )
 from .coordinator import SolarOptimizerCoordinator
 from .managed_device import ManagedDevice
@@ -202,8 +203,9 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             "next_date_available_power": device.next_date_available_power.astimezone(
                 current_tz
             ).isoformat(),
-            "battery_soc_threshold": device._battery_soc_threshold,
-            "battery_soc": device._battery_soc,
+            "battery_soc_threshold": device.battery_soc_threshold,
+            "battery_soc": device.battery_soc,
+            "device_name": device.name,
         }
 
     @callback
@@ -276,6 +278,14 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         """Get the extra state attributes for the entity"""
         return self._attr_extra_state_attributes
 
+    @overrides
+    def turn_off(self, **kwargs: Any):
+        """Not used"""
+
+    @overrides
+    def turn_on(self, **kwargs: Any):
+        """Not used"""
+
 
 class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     """The that enables the ManagedDevice optimisation with"""
@@ -325,16 +335,12 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     @callback
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        self._attr_is_on = True
-        self.async_write_ha_state()
-        self.update_device_enabled()
+        self.turn_on()
 
     @callback
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        self._attr_is_on = False
-        self.async_write_ha_state()
-        self.update_device_enabled()
+        self.turn_off()
 
     def update_device_enabled(self) -> None:
         """Update the device is enabled flag"""
@@ -342,3 +348,15 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
             return
 
         self._device.set_enable(self._attr_is_on)
+
+    @overrides
+    def turn_off(self, **kwargs: Any):
+        self._attr_is_on = False
+        self.async_write_ha_state()
+        self.update_device_enabled()
+
+    @overrides
+    def turn_on(self, **kwargs: Any):
+        self._attr_is_on = True
+        self.async_write_ha_state()
+        self.update_device_enabled()
