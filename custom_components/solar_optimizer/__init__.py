@@ -80,6 +80,7 @@ CONFIG_SCHEMA = vol.Schema(
                             vol.Optional(
                                 "battery_soc_threshold", default=0
                             ): vol.Coerce(float),
+                            vol.Optional("max_on_time_per_day_min"): vol.Coerce(int),
                         }
                     ]
                 ),

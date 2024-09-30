@@ -111,7 +111,6 @@ async def test_underlying_state_initialize(hass, init_solar_optimizer_with_2_dev
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
-
     #
     # test the device_switch is on
     #

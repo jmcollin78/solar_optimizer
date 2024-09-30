@@ -22,6 +22,10 @@ EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE = (
     "solar_optimizer_enable_state_change_event"
 )
 
+DEVICE_MODEL = "Solar Optimizer device"
+INTEGRATION_MODEL = "Solar Optimizer"
+DEVICE_MANUFACTURER = "JM. COLLIN"
+
 
 def get_tz(hass: HomeAssistant):
     """Get the current timezone"""
