@@ -54,3 +54,16 @@ class ConfigurationError(Exception):
 
     def __init__(self, message):
         super().__init__(message)
+
+
+class overrides:  # pylint: disable=invalid-name
+    """An annotation to inform overrides"""
+
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, instance, owner):
+        return self.func.__get__(instance, owner)
+
+    def __call__(self, *args, **kwargs):
+        raise RuntimeError(f"Method {self.func.__name__} should have been overridden")
