@@ -26,7 +26,7 @@ async def test_is_usable(
     device: ManagedDevice = coordinator.devices[0]
     assert device.name == "Equipement A"
     device_switch = search_entity(
-        hass, "switch.active_solar_optimizer_equipement_a", SWITCH_DOMAIN
+        hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN
     )
 
     assert (

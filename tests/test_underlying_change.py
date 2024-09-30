@@ -37,7 +37,7 @@ async def test_underlying_state_change(
     # Check initial 'active' state
     #
     device_switch = search_entity(
-        hass, "switch.active_solar_optimizer_equipement_a", SWITCH_DOMAIN
+        hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN
     )
     assert device_switch is not None
 
@@ -115,7 +115,7 @@ async def test_underlying_state_initialize(hass, init_solar_optimizer_with_2_dev
     # test the device_switch is on
     #
     device_switch = search_entity(
-        hass, "switch.active_solar_optimizer_equipement_a", SWITCH_DOMAIN
+        hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN
     )
     assert device_switch is not None
     assert device_switch.state == "on"

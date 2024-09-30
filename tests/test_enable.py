@@ -35,7 +35,7 @@ async def test_set_enable(
     assert enable_switch is not None
 
     device_switch = search_entity(
-        hass, "switch.active_solar_optimizer_equipement_a", SWITCH_DOMAIN
+        hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN
     )
     assert device_switch is not None
 
