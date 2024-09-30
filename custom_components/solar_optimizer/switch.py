@@ -90,7 +90,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         self._device = device
         self.idx = idx
         self._attr_has_entity_name = True
-        self.entity_id = f"{SWITCH_DOMAIN}.active_solar_optimizer_{idx}"
+        self.entity_id = f"{SWITCH_DOMAIN}.solar_optimizer_{idx}"
         self._attr_name = "Active"
         self._attr_unique_id = "solar_optimizer_active_" + idx
         self._entity_id = device.entity_id
