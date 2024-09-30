@@ -36,6 +36,7 @@ from .const import (
     get_tz,
     name_to_unique_id,
     DEVICE_MODEL,
+    seconds_to_hms,
 )
 from .coordinator import SolarOptimizerCoordinator
 
@@ -155,6 +156,8 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
                 {
                     "max_on_time_per_day_sec",
                     "max_on_time_per_day_min",
+                    "max_on_time_hms",
+                    "on_time_hms",
                 }
             )
         )
@@ -293,6 +296,8 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             "last_datetime_on": self._last_datetime_on,
             "max_on_time_per_day_min": round(self._device.max_on_time_per_day_sec / 60),
             "max_on_time_per_day_sec": self._device.max_on_time_per_day_sec,
+            "on_time_hms": seconds_to_hms(self._attr_native_value),
+            "max_on_time_hms": seconds_to_hms(self._device.max_on_time_per_day_sec),
         }
 
     @property
