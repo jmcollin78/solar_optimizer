@@ -33,7 +33,6 @@ from .const import (
     DOMAIN,
     DEVICE_MANUFACTURER,
     INTEGRATION_MODEL,
-    get_tz,
     name_to_unique_id,
     DEVICE_MODEL,
     seconds_to_hms,
@@ -192,7 +191,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         # Add listener to midnight to reset the counter
         self.async_on_remove(
             async_track_time_change(
-                hass=self.hass, action=self._on_midnight, hour=8, minute=30, second=0
+                hass=self.hass, action=self._on_midnight, hour=0, minute=0, second=0
             )
         )
 
@@ -222,7 +221,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     @callback
     async def _on_state_change(self, event: Event) -> None:
         """The entity have change its state"""
-        now = datetime.now(tz=get_tz(self.hass))
+        now = self._device.now
         _LOGGER.info("Call of on_state_change at %s with event %s", now, event)
 
         if not event.data:
@@ -268,7 +267,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         # reset _last_datetime_on to now if it was active. Here we lose the time on of yesterday but it is too late I can't do better.
         # Else you will have two point with the same date and not the same value (one with value + duration and one with 0)
         if self._last_datetime_on is not None:
-            self._last_datetime_on = datetime.now(tz=get_tz(self.hass))
+            self._last_datetime_on = self._device.now
 
         self.update_custom_attributes()
         self.async_write_ha_state()
@@ -277,7 +276,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     @callback
     async def _on_update_on_time(self, _=None) -> None:
         """Called priodically to update the on_time sensor"""
-        now = datetime.now(tz=get_tz(self.hass))
+        now = self._device.now
         _LOGGER.info("Call of _on_update_on_time at %s", now)
 
         if self._last_datetime_on is not None:
@@ -330,3 +329,13 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     def suggested_display_precision(self) -> int | None:
         """Return the suggested number of decimal digits for display."""
         return 0
+
+    @property
+    def last_datetime_on(self) -> datetime | None:
+        """Returns the last_datetime_on"""
+        return self._last_datetime_on
+
+    @property
+    def get_attr_extra_state_attributes(self):
+        """Get the extra state attributes for the entity"""
+        return self._attr_extra_state_attributes

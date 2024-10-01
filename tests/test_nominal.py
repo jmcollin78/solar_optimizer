@@ -1,5 +1,5 @@
 """ Nominal Unit test module"""
-#from unittest.mock import patch
+# from unittest.mock import patch
 from datetime import datetime
 
 from homeassistant.setup import async_setup_component
@@ -29,6 +29,7 @@ async def test_normal_start_one_device(hass: HomeAssistant):
                     "action_mode": "service_call",
                     "activation_service": "input_boolean/turn_on",
                     "deactivation_service": "input_boolean/turn_off",
+                    "max_on_time_per_day_min": 10,
                 },
                 {
                     "name": "Equipement B",
@@ -45,8 +46,8 @@ async def test_normal_start_one_device(hass: HomeAssistant):
                     "deactivation_service": "input_boolean/turn_off",
                     "convert_power_divide_factor": 6,
                     "change_power_service": "input_number/set_value",
-                    "power_entity_id": "input_number.tesla_amps"
-                }
+                    "power_entity_id": "input_number.tesla_amps",
+                },
             ],
         }
     }
@@ -93,6 +94,7 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert device.current_power == 0
     assert device.requested_power == 0
     assert device.can_change_power is False
+    assert device.max_on_time_per_day_sec == 10 * 60
 
     tz = get_tz(hass) # pylint: disable=invalid-name
     now: datetime = datetime.now(tz=tz)
@@ -122,6 +124,7 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert device.current_power == 0
     assert device.requested_power == 0
     assert device.can_change_power is True
+    assert device.max_on_time_per_day_sec == 24 * 60 * 60
 
     tz = get_tz(hass) # pylint: disable=invalid-name
     now: datetime = datetime.now(tz=tz)
