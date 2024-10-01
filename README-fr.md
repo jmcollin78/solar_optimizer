@@ -24,13 +24,19 @@
 
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
-> * **release 1.7.0** :
->    - ajout d'une gestion d'une batterie. Vous pouvez spécifier une entité de type pourcentage qui donne l'état de charge de la batterie (soc). Sur chaque équipements vous pouvez spécifier un paramètre `battery_soc_threshold` : le seuil de batterie en dessous duquel l'équipement ne sera pas utilisable.
-> * **release 1.3.0** :
->    - ajout du paramètre `duration_stop_min` qui permet de spécifier une durée minimale de désactivation pour le distinguer du délai minimal d'activation `duration_min`. Si non spécifié, ce paramètre prend la valeur de `duration_min`.
->    - restaure l'état des switchs `enable` au démarrage de l'intégration.
->    - lance un calcul immédiatement après le démarrage de Home Assistant
-> * **release 1.0** : première version opérationnelle. Commande d'équipements basés sur des switchs, commande de puissance (Tesla) et paramétrage via configuration.yaml.
+> * **release 2.0.0** :
+>    - ajout d'un appareil (device) par équipement piloté pour regrouper les entités,
+>    - ajout d'un compteur de temps d'allumage pour chaque appareil. Lorsque le switch commandé passe à 'Off', le compteur de temps est incrémenté du temps passé à 'On', en secondes. Ce compteur est remis à zéro tous les jours à minuit.
+>    - ajout d'un maximum de temps à 'On' dans la configuration (en minutes). Lorsque cette durée est dépassée, l'équipement n'est plus utilisable par l'algorithme (is_usable = off) jusqu'au prochain reset. Cela offre la possibilité, de ne pas dépasser un temps d'allumage maximal par jour, même lorsque la puissance solaire est disponible.
+>    - pour profiter de cette nouvelle info, n'oubliez pas de mettre à jour le decluterring template (en fin de ce fichier)
+>    - cette release ouvre la porte a des évolutions plus conséquentes basé sur le temps d'allumage (avoir un minimum journalier par exemple) et prépare le terrain pour l'arrivée de la configuration via l'interface graphique.
+* **release 1.7.0** :
+  - ajout d'une gestion d'une batterie. Vous pouvez spécifier une entité de type pourcentage qui donne l'état de charge de la batterie (soc). Sur chaque équipements vous pouvez spécifier un paramètre `battery_soc_threshold` : le seuil de batterie en dessous duquel l'équipement ne sera pas utilisable.
+* **release 1.3.0** :
+  - ajout du paramètre `duration_stop_min` qui permet de spécifier une durée minimale de désactivation pour le distinguer du délai minimal d'activation `duration_min`. Si non spécifié, ce paramètre prend la valeur de `duration_min`.
+  - restaure l'état des switchs `enable` au démarrage de l'intégration.
+  - lance un calcul immédiatement après le démarrage de Home Assistant
+* **release 1.0** : première version opérationnelle. Commande d'équipements basés sur des switchs, commande de puissance (Tesla) et paramétrage via configuration.yaml.
 
 # Qu'est-ce que Solar Optimizer ?
 Cette intégration va vous permettre de maximiser l'utilisation de votre production solaire. Vous lui déléguez le contrôle de vos équipements dontl'activation peut être différée dans le temps (chauffe-eau, pompe de piscine, charge de véhicle électrique, lave-vaisselle, lave-linge, etc) et elle s'occupe de les lancer lorsque la puissance produite est suffisante.
@@ -62,7 +68,9 @@ Par ailleurs, il est possible de définir une règle d'utilisabilité des équip
 
 Si une batterie est spécifiée lors du paramétrage de l'intégration et si le seuil `battery_soc_threshold` est spécifié, l'équipement ne sera utilisable que si le soc (pourcentage de charge de la batterie) est supérieur ou égal au seuil.
 
-Ces 3 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
+Un temps d'utilisation maximal journalier est paramétrable en facultatif. Si il est valorisé et si la durée d'utilisation de l'équipement est dépasée, alors l'équipement ne sera pas utilisable par l'algorithme et laisse donc de la puissance pour les autres équipements.
+
+Ces 4 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
 
 # Comment on l'installe ?
 ## HACS installation (recommendé)
@@ -111,7 +119,8 @@ devices:
     action_mode: "service_call"
     activation_service: "<service name>
     deactivation_service: "switch/turn_off"
-    battery_soc_threshold: 30
+    battery_soc_threshold: <l'état de charge minimal pour utiliser cet équipement>
+    max_on_time_per_day_min: <la durée maximamle d'allumage par jour en minutes>
 ```
 
 Note: les paramètres sous `algorithm` ne doivent pas être touchés sauf si vous savez exactement ce que vous faites.
@@ -130,6 +139,7 @@ Sous `devices` il faut déclarer tous les équipements qui seront commandés par
 | `activation_service`    | uniquement si action_mode="service_call" | le service a appeler pour activer l'équipement sous la forme "domain/service"                   | "switch/turn_on"                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id"                                                                                                         |
 | `deactivation_service`  | uniquement si action_mode="service_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service"                | "switch/turn_off"                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id"                                                                                                    |
 | `battery_soc_threshold`  | tous | le pourcentage minimal de charge de la batterie pour que l'équipement soit utilisable            | 30                                       |                                                                                                     |
+| `max_on_time_per_day_min`  | tous | le nombre de minutes maximal en position allumé pour cet équipement. Au delà, l'équipement n'est plus utilisable par l'algorithme           | 10                                       |  L'équipement est sera allumé au maximum 10 minutes par jour                                                                                                    |
 
 Pour les équipements à puissance variable, les attributs suivants doivent être valorisés :
 
@@ -163,9 +173,11 @@ devices:
     deactivation_service: "switch/turn_off"
     # On autorise le démarrage de la pompe si il y a 10% de batterie dans l'installation solaire
     battery_soc_threshold: 10
+    # Une heure par jour maximum
+    max_on_time_per_day_min: 60
 
   - name: "Recharge Tesla"
-    entity_id: "switch.cloucloute_charger"
+    entity_id: "switch.testla_charger"
     # La puissance minimale de charge est 660 W (soit 1 Amp car convert_power_divide_factor=660 aussi)
     power_min: 660
     # La puissance minimale de charge est 3960 W (soit 5 Amp (= 3960/600) )
@@ -173,7 +185,7 @@ devices:
     # le step de 660 soit 1 Amp après division par convert_power_divide_factor
     power_step: 660
     # Utilisable si le mode de charge est "Solaire" et la voiture est branchée sur le chargeur et elle est chargée à moins de 90 % (donc ca s'arrête tout seul à 90% )
-    check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.cloucloute_charge_limit') | float(90) }}"
+    check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.tesla_charge_limit') | float(90) }}"
     # 1 h de charge minimum
     duration_min: 60
     # 15 min de stop charge minimum
@@ -215,9 +227,12 @@ decluttering_templates:
       title-card-button-overlay: true
       title-card:
         type: custom:mushroom-template-card
-        primary: "{{ state_attr('[[device]]', 'friendly_name') }}"
-        secondary: "[[secondary_infos]]"
-        icon: "[[icon]]"
+        primary: '{{ state_attr(''[[device]]'', ''device_name'') }}'
+        secondary: >-
+          [[secondary_infos]] ({{ state_attr('[[on_time_entity]]',
+          'on_time_hms') }} / {{ state_attr('[[on_time_entity]]',
+          'max_on_time_hms')}} )
+        icon: '[[icon]]'
         badge_icon: >-
           {% if is_state_attr('[[device]]','is_enabled', True) %}mdi:check{%
           else %}mdi:cancel{% endif %}
@@ -229,7 +244,7 @@ decluttering_templates:
           is_state_attr('[[device]]', 'is_usable', False) or
           state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
           %}blue{% endif %}
-        entity: "[[device]]"
+        entity: '[[device]]'
         icon_color: >-
           {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
           %}
@@ -243,7 +258,7 @@ decluttering_templates:
         - type: custom:mushroom-chips-card
           chips:
             - type: entity
-              entity: "[[enable_entity]]"
+              entity: '[[enable_entity]]'
               double_tap_action:
                 action: more-info
               tap_action:
@@ -273,11 +288,12 @@ decluttering_templates:
       title-card-button-overlay: true
       title-card:
         type: custom:mushroom-template-card
-        primary: "{{ state_attr('[[device]]', 'friendly_name') }}"
+        primary: '{{ state_attr(''[[device]]'', ''device_name'') }}'
         secondary: >-
           [[secondary_infos]] (max. {{ state_attr('[[device]]', 'power_max') }}
-          W)
-        icon: "[[icon]]"
+          W -  {{ state_attr('[[on_time_entity]]', 'on_time_hms')}} / {{
+          state_attr('[[on_time_entity]]', 'max_on_time_hms')}} )
+        icon: '[[icon]]'
         badge_icon: >-
           {% if is_state_attr('[[device]]','is_enabled', True) %}mdi:check{%
           else %}mdi:cancel{% endif %}
@@ -289,7 +305,7 @@ decluttering_templates:
           is_state_attr('[[device]]', 'is_usable', False) or
           state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
           %}blue{% endif %}
-        entity: "[[device]]"
+        entity: '[[device]]'
         icon_color: >-
           {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
           %}
@@ -303,7 +319,7 @@ decluttering_templates:
         - type: custom:mushroom-chips-card
           chips:
             - type: entity
-              entity: "[[enable_entity]]"
+              entity: '[[enable_entity]]'
               double_tap_action:
                 action: more-info
               tap_action:
@@ -351,6 +367,7 @@ puis à utiliser de la façon suivante :
                       ({{ states('number.tesla_charging_amps')}} A)
                   - icon: mdi:ev-station
                   - enable_entity: switch.enable_solar_optimizer_recharge_tesla
+                  - on_time_entity: sensor.on_time_today_solar_optimizer_recharge_tesla
               - type: custom:decluttering-card
                 template: managed_device
                 variables:
@@ -359,6 +376,7 @@ puis à utiliser de la façon suivante :
                   - icon: mdi:power-socket-fr
                   - enable_entity: >-
                       switch.enable_solar_optimizer_prise_recharge_voiture_garage
+                  - on_time_entity: sensor.on_time_today_solar_optimizer_prise_recharge_voiture_garage
 ```
 Vous obtiendrez alors un composant permettant d'interagir avec l'équipement qui ressemble à ça :
 
