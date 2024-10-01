@@ -129,6 +129,9 @@ class ManagedDevice:
 
     def __init__(self, hass: HomeAssistant, device_config):
         """Initialize a manageable device"""
+        self._now = None  # For testing purpose only
+        self._current_tz = get_tz(hass)
+
         self._hass = hass
         self._name = device_config.get("name")
         self._unique_id = name_to_unique_id(self._name)
@@ -169,9 +172,7 @@ class ManagedDevice:
                 "{{ is_state('" + self._entity_id + "', '" + STATE_ON + "') }}"
             )
             self._check_active_template = Template(template_string, hass)
-        self._next_date_available_power = self._next_date_available = datetime.now(
-            get_tz(hass)
-        )
+        self._next_date_available_power = self._next_date_available = self.now
         self._action_mode = device_config.get("action_mode")
         self._activation_service = device_config.get("activation_service")
         self._deactivation_service = device_config.get("deactivation_service")
@@ -264,11 +265,9 @@ class ManagedDevice:
     def reset_next_date_available(self, action_type):
         """Incremente the next availability date to now + _duration_sec"""
         if action_type == ACTION_ACTIVATE:
-            self._next_date_available = datetime.now(get_tz(self._hass)) + timedelta(
-                seconds=self._duration_sec
-            )
+            self._next_date_available = self.now + timedelta(seconds=self._duration_sec)
         else:
-            self._next_date_available = datetime.now(get_tz(self._hass)) + timedelta(
+            self._next_date_available = self.now + timedelta(
                 seconds=self._duration_stop_sec
             )
 
@@ -278,7 +277,7 @@ class ManagedDevice:
 
     def reset_next_date_available_power(self):
         """Incremente the next availability date for power change to now + _duration_power_sec"""
-        self._next_date_available_power = datetime.now(get_tz(self._hass)) + timedelta(
+        self._next_date_available_power = self.now + timedelta(
             seconds=self._duration_power_sec
         )
         _LOGGER.debug(
@@ -367,7 +366,7 @@ class ManagedDevice:
             result = False
         else:
             context = {}
-            now = datetime.now(get_tz(self._hass))
+            now = self.now
             result = self._check_usable_template.async_render(context) and (
                 now >= self._next_date_available
                 or (self._can_change_power and now >= self._next_date_available_power)
@@ -394,8 +393,7 @@ class ManagedDevice:
     @property
     def is_waiting(self):
         """A device is waiting if the device is waiting for the end of its cycle"""
-        now = datetime.now(get_tz(self._hass))
-        result = now < self._next_date_available
+        result = self.now < self._next_date_available
 
         if result:
             _LOGGER.debug("%s is waiting", self._name)
@@ -497,7 +495,6 @@ class ManagedDevice:
         """The battery soc"""
         return self._battery_soc_threshold
 
-
     def set_battery_soc(self, battery_soc):
         """Define the battery soc. This is used with is_usable
         to determine if the device is usable"""
@@ -516,3 +513,13 @@ class ManagedDevice:
                 "is_waiting": self.is_waiting,
             },
         )
+
+    # For testing purpose only
+    def _set_now(self, now: datetime):
+        """Set the now timestamp. This is only for tests purpose"""
+        self._now = now
+
+    @property
+    def now(self) -> datetime:
+        """Get now. The local datetime or the overloaded _set_now date"""
+        return self._now if self._now is not None else datetime.now(self._current_tz)
