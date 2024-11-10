@@ -241,7 +241,15 @@ solar_optimizer:
       activation_service: "switch/turn_on"
       deactivation_service: "switch/turn_off"
       battery_soc_threshold: 60
-
+    - name: "Equipement J"
+      entity_id: "switch.fake_switch_1"
+      power_max: 20
+      check_usable_template: "{{ True }}"
+      duration_min: 0.1
+      action_mode: "service_call"
+      activation_service: "switch/turn_on"
+      deactivation_service: "switch/turn_off"
+      battery_soc_threshold: 60
 
 
 

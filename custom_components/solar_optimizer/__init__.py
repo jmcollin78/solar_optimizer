@@ -1,9 +1,12 @@
 """Initialisation du package de l'intégration HACS Tuto"""
 import logging
+import asyncio
 import voluptuous as vol
 
-from homeassistant.const import EVENT_HOMEASSISTANT_START
+from homeassistant.const import EVENT_HOMEASSISTANT_START, SERVICE_RELOAD
 from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType
 import homeassistant.helpers.config_validation as cv
@@ -16,6 +19,12 @@ from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
+from homeassistant.helpers.service import async_register_admin_service
+from homeassistant.helpers.reload import (
+    async_setup_reload_service,
+    async_reload_integration_platforms,
+    _resetup_platform,
+)
 
 # from homeassistant.helpers.entity_component import EntityComponent
 
@@ -111,8 +120,20 @@ async def async_setup(
         hass, solar_optimizer_config
     )
 
-    hass.bus.async_listen_once("homeassistant_started", coordinator.on_ha_started)
+    async def _handle_reload(_):
+        """The reload callback"""
+        await reload_config(hass)
 
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        SERVICE_RELOAD,
+        _handle_reload,
+    )
+
+    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+
+    hass.bus.async_listen_once("homeassistant_started", coordinator.on_ha_started)
     return True
 
 
@@ -152,3 +173,14 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     # await async_setup_entry(hass, entry)
+
+
+async def reload_config(hass):
+    """Handle reload service call."""
+    _LOGGER.info("Service %s.reload called: reloading integration", DOMAIN)
+
+    # await async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
+    # await _resetup_platform(hass, DOMAIN, DOMAIN, None)
+    await async_setup_component(hass, DOMAIN, None)
+
+    # current_entries = hass.config_entries.async_entries(DOMAIN)
