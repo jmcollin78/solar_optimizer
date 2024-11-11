@@ -163,7 +163,7 @@ solar_optimizer:
       deactivation_service: "input_boolean/turn_off"
       max_on_time_per_day_min: 10
       min_on_time_per_day_min: 5
-      offpeak_time: "19:48"
+      offpeak_time: "14:00"
     - name: "Equipement B"
       entity_id: "input_boolean.fake_device_b"
       power_max: 500
@@ -173,7 +173,7 @@ solar_optimizer:
       activation_service: "input_boolean/turn_on"
       deactivation_service: "input_boolean/turn_off"
       min_on_time_per_day_min: 15
-      offpeak_time: "19:50"
+      offpeak_time: "13:50"
     - name: "Equipement C"
       entity_id: "input_boolean.fake_device_c"
       power_max: 800
