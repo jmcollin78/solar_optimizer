@@ -1,9 +1,7 @@
 """Initialisation du package de l'intégration HACS Tuto"""
 import logging
 import asyncio
-import re
 import voluptuous as vol
-from voluptuous.error import Invalid
 
 from homeassistant.const import EVENT_HOMEASSISTANT_START, SERVICE_RELOAD
 from homeassistant.core import HomeAssistant
@@ -32,20 +30,12 @@ from homeassistant.helpers.reload import (
 # from homeassistant.helpers.entity_component import EntityComponent
 
 
-from .const import DOMAIN, PLATFORMS, SERVICE_RESET_ON_TIME
+from .const import DOMAIN, PLATFORMS, SERVICE_RESET_ON_TIME, validate_time_format
 from .coordinator import SolarOptimizerCoordinator
 
 # from .input_boolean import async_setup_entry as async_setup_entry_input_boolean
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def validate_time_format(value):
-    """check is a string have format "hh:mm" with hh between 00 and 23 and mm between 00 et 59"""
-    if not re.match(r"^(?:[01]\d|2[0-3]):[0-5]\d$", value):
-        raise Invalid("The time value should be formatted like 'hh:mm'")
-    return value
-
 
 CONFIG_SCHEMA = vol.Schema(
     {
