@@ -26,6 +26,8 @@ DEVICE_MODEL = "Solar Optimizer device"
 INTEGRATION_MODEL = "Solar Optimizer"
 DEVICE_MANUFACTURER = "JM. COLLIN"
 
+SERVICE_RESET_ON_TIME = "reset_on_time"
+
 
 def get_tz(hass: HomeAssistant):
     """Get the current timezone"""

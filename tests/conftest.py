@@ -184,3 +184,59 @@ async def init_solar_optimizer_entry(hass):
     await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
+
+
+@pytest.fixture(name="config_2_devices_min_on_time_ok")
+def define_config_2_devices_min_on_time_ok():
+    """Define a configuration with 2 devices. One with min_on_time and offpeak, the other without"""
+
+    return {
+        "solar_optimizer": {
+            "algorithm": {
+                "initial_temp": 1000,
+                "min_temp": 0.1,
+                "cooling_factor": 0.95,
+                "max_iteration_number": 1000,
+            },
+            "devices": [
+                {
+                    "name": "Equipement A",
+                    "entity_id": "input_boolean.fake_device_a",
+                    "power_max": 1000,
+                    "check_usable_template": "{{ True }}",
+                    "duration_min": 2,
+                    "duration_stop_min": 1,
+                    "action_mode": "service_call",
+                    "activation_service": "input_boolean/turn_on",
+                    "deactivation_service": "input_boolean/turn_off",
+                    "battery_soc_threshold": 30,
+                    "max_on_time_per_day_min": 10,
+                    "min_on_time_per_day_min": 5,
+                    "offpeak_time": "23:00",
+                },
+                {
+                    "name": "Equipement B",
+                    "entity_id": "input_boolean.fake_device_b",
+                    "power_max": 2000,
+                    "check_usable_template": "{{ False }}",
+                    "duration_min": 1,
+                    "duration_stop_min": 2,
+                    "duration_power_min": 3,
+                    "action_mode": "service_call",
+                    "activation_service": "input_boolean/turn_on",
+                    "deactivation_service": "input_boolean/turn_off",
+                },
+            ],
+        }
+    }
+
+
+@pytest.fixture(name="init_solar_optimizer_with_2_devices_min_on_time_ok")
+async def init_solar_optimizer_with_2_devices_min_on_time_ok(
+    hass, config_2_devices_min_on_time_ok
+) -> SolarOptimizerCoordinator:
+    """Initialization of Solar Optimizer with 2 managed device"""
+    await async_setup_component(
+        hass, "solar_optimizer", config_2_devices_min_on_time_ok
+    )
+    return hass.data[DOMAIN]["coordinator"]

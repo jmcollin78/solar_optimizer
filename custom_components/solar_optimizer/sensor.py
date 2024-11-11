@@ -10,6 +10,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback, HomeAssistant, Event, State
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers import entity_platform
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,
@@ -36,6 +37,7 @@ from .const import (
     name_to_unique_id,
     DEVICE_MODEL,
     seconds_to_hms,
+    SERVICE_RESET_ON_TIME,
 )
 from .coordinator import SolarOptimizerCoordinator
 
@@ -70,6 +72,14 @@ async def async_setup_entry(
     async_add_entities(entities, False)
 
     await coordinator.configure(entry)
+
+    # Add services
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_RESET_ON_TIME,
+        {},
+        "service_reset_on_time",
+    )
 
 
 class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
@@ -339,3 +349,13 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     def get_attr_extra_state_attributes(self):
         """Get the extra state attributes for the entity"""
         return self._attr_extra_state_attributes
+
+    async def service_reset_on_time(self):
+        """Called by a service call:
+        service: sensor.reset_on_time
+        data:
+        target:
+            entity_id: solar_optimizer.on_time_today_solar_optimizer_<device name>
+        """
+        _LOGGER.info("%s - Calling service_reset_on_time", self)
+        await self._on_midnight()

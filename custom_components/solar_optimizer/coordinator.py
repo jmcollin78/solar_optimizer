@@ -175,11 +175,14 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             if not device:
                 continue
             is_active = device.is_active
-            if is_active and not state:
+            should_force_offpeak = device.should_be_forced_offpeak
+            if should_force_offpeak:
+                _LOGGER.debug("%s - we should force %s name", self, name)
+            if is_active and not state and not should_force_offpeak:
                 _LOGGER.debug("Extinction de %s", name)
                 should_log = True
                 await device.deactivate()
-            elif not is_active and state:
+            elif not is_active and (state or should_force_offpeak):
                 _LOGGER.debug("Allumage de %s", name)
                 should_log = True
                 await device.activate(requested_power)
