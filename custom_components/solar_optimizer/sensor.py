@@ -324,6 +324,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             "max_on_time_hms": seconds_to_hms(self._device.max_on_time_per_day_sec),
             "raz_time": self._coordinator.raz_time,
             "should_be_forced_offpeak": self._device.should_be_forced_offpeak,
+            "offpeak_time": self._device.offpeak_time,
         }
 
     @property

@@ -416,10 +416,17 @@ class ManagedDevice:
     @property
     def should_be_forced_offpeak(self) -> bool:
         """True is we are offpeak and the max_on_time is not exceeded"""
-        return (
-            self.now.time() >= self._offpeak_time
-            or self.now.time() < self._coordinator.raz_time
-        ) and self._on_time_sec < self._max_on_time_per_day_sec
+        if self._offpeak_time >= self._coordinator.raz_time:
+            return (
+                self.now.time() >= self._offpeak_time
+                or self.now.time() < self._coordinator.raz_time
+            ) and self._on_time_sec < self._max_on_time_per_day_sec
+        else:
+            return (
+                self.now.time() >= self._offpeak_time
+                and self.now.time() < self._coordinator.raz_time
+                and self._on_time_sec < self._max_on_time_per_day_sec
+            )
 
     @property
     def is_waiting(self):

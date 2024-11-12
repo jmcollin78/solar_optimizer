@@ -154,6 +154,38 @@ async def test_min_on_time_config_ko_2(
     assert coordinator is None
 
 
+@pytest.mark.parametrize(
+    "current_datetime, should_be_forced_offpeak",
+    [
+        (datetime(2024, 11, 10, 10, 00, 00), False),
+        (datetime(2024, 11, 10, 0, 59, 00), False),
+        (datetime(2024, 11, 10, 1, 0, 00), True),
+    ],
+)
+async def test_min_on_time_config_ko_3(
+    hass: HomeAssistant,
+    init_solar_optimizer_with_devices_offpeak_morning,
+    init_solar_optimizer_entry,
+    current_datetime,
+    should_be_forced_offpeak,
+):
+    """Testing min_in_time with min requires offpeak_time < raz_time"""
+
+    coordinator: SolarOptimizerCoordinator = (
+        init_solar_optimizer_with_devices_offpeak_morning
+    )
+
+    assert coordinator is not None
+
+    assert len(coordinator.devices) == 1
+    device = coordinator.devices[0]
+    assert device.offpeak_time == time(1, 0, 0)
+
+    device._set_now(current_datetime.replace(tzinfo=get_tz(hass)))
+
+    assert device.should_be_forced_offpeak is should_be_forced_offpeak
+
+
 async def test_nominal_use_min_on_time(
     hass: HomeAssistant,
     init_solar_optimizer_with_2_devices_min_on_time_ok,

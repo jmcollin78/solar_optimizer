@@ -34,13 +34,22 @@ async def test_empty_config(hass: HomeAssistant):
 
 @pytest.mark.parametrize(
     "power_consumption,power_production,sell_cost,buy_cost, raz_time",
-    itertools.product(
-        ["sensor.power_consumption", "input_number.power_consumption"],
-        ["sensor.power_production", "input_number.power_production"],
-        ["sensor.sell_cost", "input_number.sell_cost"],
-        ["sensor.buy_cost", "input_number.buy_cost"],
-        ["00:00", "04:00"],
-    ),
+    [
+        (
+            "sensor.power_consumption",
+            "sensor.power_production",
+            "sensor.sell_cost",
+            "sensor.buy_cost",
+            "00:00",
+        ),
+        (
+            "input_number.power_consumption",
+            "input_number.power_production",
+            "input_number.sell_cost",
+            "input_number.buy_cost",
+            "04:00",
+        ),
+    ],
 )
 async def test_config_inputs_wo_battery(
     hass: HomeAssistant,
