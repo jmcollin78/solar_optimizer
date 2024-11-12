@@ -416,6 +416,9 @@ class ManagedDevice:
     @property
     def should_be_forced_offpeak(self) -> bool:
         """True is we are offpeak and the max_on_time is not exceeded"""
+        if not self.is_usable:
+            return False
+
         if self._offpeak_time >= self._coordinator.raz_time:
             return (
                 self.now.time() >= self._offpeak_time

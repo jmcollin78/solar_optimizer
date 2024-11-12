@@ -183,7 +183,11 @@ async def test_min_on_time_config_ko_3(
 
     device._set_now(current_datetime.replace(tzinfo=get_tz(hass)))
 
-    assert device.should_be_forced_offpeak is should_be_forced_offpeak
+    with patch(
+        "custom_components.solar_optimizer.managed_device.ManagedDevice.is_usable",
+        return_value=True,
+    ):
+        assert device.should_be_forced_offpeak is should_be_forced_offpeak
 
 
 async def test_nominal_use_min_on_time(
@@ -268,41 +272,45 @@ async def test_nominal_use_min_on_time(
     #
     # 5. at 01:00 it should be possible to force offpeak
     #
-    now = datetime(2024, 11, 10, 1, 00, 00).replace(tzinfo=get_tz(hass))
-    device_a._set_now(now)
-    assert device_a.should_be_forced_offpeak is True
+    with patch(
+        "custom_components.solar_optimizer.managed_device.ManagedDevice.is_usable",
+        return_value=True,
+    ):
+        now = datetime(2024, 11, 10, 1, 00, 00).replace(tzinfo=get_tz(hass))
+        device_a._set_now(now)
+        assert device_a.should_be_forced_offpeak is True
 
-    #
-    # 6. at 04:59 it should be possible to force offpeak
-    #
-    now = datetime(2024, 11, 10, 4, 59, 00).replace(tzinfo=get_tz(hass))
-    device_a._set_now(now)
-    assert device_a.should_be_forced_offpeak is True
+        #
+        # 6. at 04:59 it should be possible to force offpeak
+        #
+        now = datetime(2024, 11, 10, 4, 59, 00).replace(tzinfo=get_tz(hass))
+        device_a._set_now(now)
+        assert device_a.should_be_forced_offpeak is True
 
-    #
-    # 6. at 05:01 it should be not possible to force offpeak
-    #
-    now = datetime(2024, 11, 10, 5, 1, 00).replace(tzinfo=get_tz(hass))
-    device_a._set_now(now)
-    assert device_a.should_be_forced_offpeak is False
+        #
+        # 6. at 05:01 it should be not possible to force offpeak
+        #
+        now = datetime(2024, 11, 10, 5, 1, 00).replace(tzinfo=get_tz(hass))
+        device_a._set_now(now)
+        assert device_a.should_be_forced_offpeak is False
 
-    #
-    # 7. when on_time is > max_on_time it should be not possible to force off_peak
-    #
-    # Come back in offpeak
-    now = datetime(2024, 11, 10, 0, 0, 00).replace(tzinfo=get_tz(hass))
-    device_a._set_now(now)
-    assert device_a.should_be_forced_offpeak is True
+        #
+        # 7. when on_time is > max_on_time it should be not possible to force off_peak
+        #
+        # Come back in offpeak
+        now = datetime(2024, 11, 10, 0, 0, 00).replace(tzinfo=get_tz(hass))
+        device_a._set_now(now)
+        assert device_a.should_be_forced_offpeak is True
 
-    await fake_input_bool.async_turn_on()
-    await hass.async_block_till_done()
+        await fake_input_bool.async_turn_on()
+        await hass.async_block_till_done()
 
-    now = now + timedelta(minutes=6)  # 6 minutes + 4 minutes already done
-    device_a._set_now(now)
-    await fake_input_bool.async_turn_off()
-    await hass.async_block_till_done()
+        now = now + timedelta(minutes=6)  # 6 minutes + 4 minutes already done
+        device_a._set_now(now)
+        await fake_input_bool.async_turn_off()
+        await hass.async_block_till_done()
 
-    assert device_a_on_time_sensor.state == 10 * 60
-    assert device_a._on_time_sec == 10 * 60
+        assert device_a_on_time_sensor.state == 10 * 60
+        assert device_a._on_time_sec == 10 * 60
 
-    assert device_a.should_be_forced_offpeak is False
+        assert device_a.should_be_forced_offpeak is False
