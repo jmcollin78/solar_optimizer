@@ -168,6 +168,8 @@ async def test_nominal_use_min_on_time(
     assert coordinator is not None
     assert coordinator.devices is not None
     assert len(coordinator.devices) == 2
+    # default value
+    assert coordinator.raz_time == time(5, 0, 0)
 
     device_a: ManagedDevice = coordinator.devices[0]
     assert device_a.min_on_time_per_day_sec == 5 * 60
@@ -232,8 +234,34 @@ async def test_nominal_use_min_on_time(
     assert device_a.should_be_forced_offpeak is True
 
     #
-    # 5. when on_time is > max_on_time it should be not possible to force off_peak
+    # 5. at 01:00 it should be possible to force offpeak
     #
+    now = datetime(2024, 11, 10, 1, 00, 00).replace(tzinfo=get_tz(hass))
+    device_a._set_now(now)
+    assert device_a.should_be_forced_offpeak is True
+
+    #
+    # 6. at 04:59 it should be possible to force offpeak
+    #
+    now = datetime(2024, 11, 10, 4, 59, 00).replace(tzinfo=get_tz(hass))
+    device_a._set_now(now)
+    assert device_a.should_be_forced_offpeak is True
+
+    #
+    # 6. at 05:01 it should be not possible to force offpeak
+    #
+    now = datetime(2024, 11, 10, 5, 1, 00).replace(tzinfo=get_tz(hass))
+    device_a._set_now(now)
+    assert device_a.should_be_forced_offpeak is False
+
+    #
+    # 7. when on_time is > max_on_time it should be not possible to force off_peak
+    #
+    # Come back in offpeak
+    now = datetime(2024, 11, 10, 0, 0, 00).replace(tzinfo=get_tz(hass))
+    device_a._set_now(now)
+    assert device_a.should_be_forced_offpeak is True
+
     await fake_input_bool.async_turn_on()
     await hass.async_block_till_done()
 

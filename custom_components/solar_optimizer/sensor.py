@@ -170,6 +170,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
                     "max_on_time_hms",
                     "on_time_hms",
                     "raz_time",
+                    "should_be_forced_offpeak",
                 }
             )
         )
@@ -232,7 +233,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         self._attr_native_value = 0
         old_state = await self.async_get_last_state()
         if old_state is not None:
-            if old_state.state is not None:
+            if old_state.state is not None and old_state.state != "unknown":
                 self._attr_native_value = round(float(old_state.state))
 
             old_value = old_state.attributes.get("last_datetime_on")
@@ -301,7 +302,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     async def _on_update_on_time(self, _=None) -> None:
         """Called priodically to update the on_time sensor"""
         now = self._device.now
-        _LOGGER.info("Call of _on_update_on_time at %s", now)
+        _LOGGER.debug("Call of _on_update_on_time at %s", now)
 
         if self._last_datetime_on is not None:
             self._attr_native_value += round(
@@ -322,6 +323,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             "on_time_hms": seconds_to_hms(self._attr_native_value),
             "max_on_time_hms": seconds_to_hms(self._device.max_on_time_per_day_sec),
             "raz_time": self._coordinator.raz_time,
+            "should_be_forced_offpeak": self._device.should_be_forced_offpeak,
         }
 
     @property

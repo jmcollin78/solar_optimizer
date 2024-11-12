@@ -8,4 +8,4 @@ reset_on_time:
     target:
         entity:
             integration: solar_optimizer
-    fields:
+    fields: []

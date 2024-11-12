@@ -129,12 +129,13 @@ class ManagedDevice:
     _min_on_time_per_day_sec: int
     _offpeak_time: time
 
-    def __init__(self, hass: HomeAssistant, device_config):
+    def __init__(self, hass: HomeAssistant, device_config, coordinator):
         """Initialize a manageable device"""
         self._now = None  # For testing purpose only
         self._current_tz = get_tz(hass)
 
         self._hass = hass
+        self._coordinator = coordinator
         self._name = device_config.get("name")
         self._unique_id = name_to_unique_id(self._name)
         self._entity_id = device_config.get("entity_id")
@@ -417,8 +418,8 @@ class ManagedDevice:
         """True is we are offpeak and the max_on_time is not exceeded"""
         return (
             self.now.time() >= self._offpeak_time
-            and self._on_time_sec < self._max_on_time_per_day_sec
-        )
+            or self.now.time() < self._coordinator.raz_time
+        ) and self._on_time_sec < self._max_on_time_per_day_sec
 
     @property
     def is_waiting(self):

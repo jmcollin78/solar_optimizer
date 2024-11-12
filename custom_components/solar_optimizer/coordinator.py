@@ -56,7 +56,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         try:
             for _, device in enumerate(config.get("devices")):
                 _LOGGER.debug("Configuration of manageable device: %s", device)
-                self._devices.append(ManagedDevice(hass, device))
+                self._devices.append(ManagedDevice(hass, device, self))
         except Exception as err:
             _LOGGER.error(err)
             _LOGGER.error(
