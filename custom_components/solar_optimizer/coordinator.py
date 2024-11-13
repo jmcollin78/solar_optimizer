@@ -1,7 +1,7 @@
 """ The data coordinator class """
 import logging
 import math
-from datetime import timedelta
+from datetime import datetime, timedelta, time
 
 
 from homeassistant.core import HomeAssistant  # callback
@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id
+from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, DEFAULT_RAZ_TIME
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 
@@ -40,6 +40,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     _battery_soc_entity_id: str
     _smooth_production: bool
     _last_production: float
+    _raz_time: time
 
     _algo: SimulatedAnnealingAlgorithm
 
@@ -55,7 +56,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         try:
             for _, device in enumerate(config.get("devices")):
                 _LOGGER.debug("Configuration of manageable device: %s", device)
-                self._devices.append(ManagedDevice(hass, device))
+                self._devices.append(ManagedDevice(hass, device, self))
         except Exception as err:
             _LOGGER.error(err)
             _LOGGER.error(
@@ -90,6 +91,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_soc_entity_id = config.data.get("battery_soc_entity_id")
         self._smooth_production = config.data.get("smooth_production") is True
         self._last_production = 0.0
+
+        self._raz_time = datetime.strptime(
+            config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
+        ).time()
 
         # Do not calculate immediatly because switch state are not restored yet. Wait for homeassistant_started event
         # which is captured in onHAStarted method
@@ -175,11 +180,14 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             if not device:
                 continue
             is_active = device.is_active
-            if is_active and not state:
+            should_force_offpeak = device.should_be_forced_offpeak
+            if should_force_offpeak:
+                _LOGGER.debug("%s - we should force %s name", self, name)
+            if is_active and not state and not should_force_offpeak:
                 _LOGGER.debug("Extinction de %s", name)
                 should_log = True
                 await device.deactivate()
-            elif not is_active and state:
+            elif not is_active and (state or should_force_offpeak):
                 _LOGGER.debug("Allumage de %s", name)
                 should_log = True
                 await device.activate(requested_power)
@@ -226,3 +234,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             if device.unique_id == uid:
                 return device
         return None
+
+    @property
+    def raz_time(self) -> time:
+        """Get the raz time with default to DEFAULT_RAZ_TIME"""
+        return self._raz_time

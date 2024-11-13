@@ -1,6 +1,6 @@
 """ A sensor entity that holds the result of the recuit simule algorithm """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from homeassistant.const import (
     UnitOfPower,
     UnitOfTime,
@@ -10,6 +10,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback, HomeAssistant, Event, State
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers import entity_platform
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,
@@ -36,8 +37,10 @@ from .const import (
     name_to_unique_id,
     DEVICE_MODEL,
     seconds_to_hms,
+    SERVICE_RESET_ON_TIME,
 )
 from .coordinator import SolarOptimizerCoordinator
+from .managed_device import ManagedDevice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,10 +53,13 @@ async def async_setup_entry(
     # Sets the config entries values to SolarOptimizer coordinator
     coordinator: SolarOptimizerCoordinator = hass.data[DOMAIN]["coordinator"]
 
+    await coordinator.configure(entry)
+
     entities = []
     for _, device in enumerate(coordinator.devices):
         entity = TodayOnTimeSensor(
             hass,
+            coordinator,
             device,
         )
         if entity is not None:
@@ -69,7 +75,13 @@ async def async_setup_entry(
 
     async_add_entities(entities, False)
 
-    await coordinator.configure(entry)
+    # Add services
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_RESET_ON_TIME,
+        {},
+        "service_reset_on_time",
+    )
 
 
 class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
@@ -157,12 +169,19 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
                     "max_on_time_per_day_min",
                     "max_on_time_hms",
                     "on_time_hms",
+                    "raz_time",
+                    "should_be_forced_offpeak",
                 }
             )
         )
     )
 
-    def __init__(self, hass: HomeAssistant, device) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        coordinator: SolarOptimizerCoordinator,
+        device: ManagedDevice,
+    ) -> None:
         """Initialize the sensor"""
         self.hass = hass
         idx = name_to_unique_id(device.name)
@@ -173,6 +192,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         self._attr_native_value = None
         self._entity_id = device.entity_id
         self._device = device
+        self._coordinator = coordinator
         self._last_datetime_on = None
 
     async def async_added_to_hass(self) -> None:
@@ -189,9 +209,14 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         self.async_on_remove(listener_cancel)
 
         # Add listener to midnight to reset the counter
+        raz_time: time = self._coordinator.raz_time
         self.async_on_remove(
             async_track_time_change(
-                hass=self.hass, action=self._on_midnight, hour=0, minute=0, second=0
+                hass=self.hass,
+                action=self._on_midnight,
+                hour=raz_time.hour,
+                minute=raz_time.minute,
+                second=0,
             )
         )
 
@@ -208,7 +233,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         self._attr_native_value = 0
         old_state = await self.async_get_last_state()
         if old_state is not None:
-            if old_state.state is not None:
+            if old_state.state is not None and old_state.state != "unknown":
                 self._attr_native_value = round(float(old_state.state))
 
             old_value = old_state.attributes.get("last_datetime_on")
@@ -277,7 +302,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     async def _on_update_on_time(self, _=None) -> None:
         """Called priodically to update the on_time sensor"""
         now = self._device.now
-        _LOGGER.info("Call of _on_update_on_time at %s", now)
+        _LOGGER.debug("Call of _on_update_on_time at %s", now)
 
         if self._last_datetime_on is not None:
             self._attr_native_value += round(
@@ -297,6 +322,9 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             "max_on_time_per_day_sec": self._device.max_on_time_per_day_sec,
             "on_time_hms": seconds_to_hms(self._attr_native_value),
             "max_on_time_hms": seconds_to_hms(self._device.max_on_time_per_day_sec),
+            "raz_time": self._coordinator.raz_time,
+            "should_be_forced_offpeak": self._device.should_be_forced_offpeak,
+            "offpeak_time": self._device.offpeak_time,
         }
 
     @property
@@ -339,3 +367,13 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     def get_attr_extra_state_attributes(self):
         """Get the extra state attributes for the entity"""
         return self._attr_extra_state_attributes
+
+    async def service_reset_on_time(self):
+        """Called by a service call:
+        service: sensor.reset_on_time
+        data:
+        target:
+            entity_id: solar_optimizer.on_time_today_solar_optimizer_<device name>
+        """
+        _LOGGER.info("%s - Calling service_reset_on_time", self)
+        await self._on_midnight()

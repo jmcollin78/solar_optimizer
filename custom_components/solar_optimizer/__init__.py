@@ -7,6 +7,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_START, SERVICE_RELOAD
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType
 import homeassistant.helpers.config_validation as cv
@@ -29,7 +30,7 @@ from homeassistant.helpers.reload import (
 # from homeassistant.helpers.entity_component import EntityComponent
 
 
-from .const import DOMAIN, PLATFORMS
+from .const import DOMAIN, PLATFORMS, SERVICE_RESET_ON_TIME, validate_time_format
 from .coordinator import SolarOptimizerCoordinator
 
 # from .input_boolean import async_setup_entry as async_setup_entry_input_boolean
@@ -90,6 +91,8 @@ CONFIG_SCHEMA = vol.Schema(
                                 "battery_soc_threshold", default=0
                             ): vol.Coerce(float),
                             vol.Optional("max_on_time_per_day_min"): vol.Coerce(int),
+                            vol.Optional("min_on_time_per_day_min"): vol.Coerce(int),
+                            vol.Optional("offpeak_time"): validate_time_format,
                         }
                     ]
                 ),

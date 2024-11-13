@@ -1,5 +1,5 @@
 {
-    "title": "solar_optimizer",
+    "title": "Solar Optimizer configuration",
     "config": {
         "flow_title": "Solar Optimizer configuration",
         "step": {
@@ -14,7 +14,8 @@
                     "buy_cost_entity_id": "Energy buy price",
                     "sell_tax_percent_entity_id": "Sell taxe percent",
                     "smooth_production": "Smooth the solar production",
-                    "battery_soc_entity_id": "Battery soc"
+                    "battery_soc_entity_id": "Battery soc",
+                    "raz_time": "Reset counter time"
                 },
                 "data_description": {
                     "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
@@ -24,9 +25,13 @@
                     "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
-                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty"
+                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty",
+                    "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation"
                 }
             }
+        },
+        "error": {
+            "format_time_invalid": "Format of time should be HH:MM"
         }
     },
     "options": {
@@ -43,7 +48,8 @@
                     "buy_cost_entity_id": "Energy buy price",
                     "sell_tax_percent_entity_id": "Sell taxe percent",
                     "smooth_production": "Smooth the solar production",
-                    "battery_soc_entity_id": "Battery soc"
+                    "battery_soc_entity_id": "Battery soc",
+                    "raz_time": "Heure de remise à zéro"
                 },
                 "data_description": {
                     "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
@@ -53,9 +59,13 @@
                     "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
-                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty"
+                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty",
+                    "raz_time": "Heure de remise à zéro des compteurs de temps passés actifs. Devrait être avant la première exposition au soleil mais pas trop tôt pour laisser du temps à l'activation de nuit"
                 }
             }
+        },
+        "error": {
+            "format_time_invalid": "Format of time should be HH:MM"
         }
     }
 }

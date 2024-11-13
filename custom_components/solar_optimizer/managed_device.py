@@ -1,6 +1,6 @@
 """ A ManagedDevice represent a device than can be managed by the optimisatiion algorithm"""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import Template
@@ -126,13 +126,16 @@ class ManagedDevice:
     _battery_soc_threshold: float
     _max_on_time_per_day_sec: int
     _on_time_sec: int
+    _min_on_time_per_day_sec: int
+    _offpeak_time: time
 
-    def __init__(self, hass: HomeAssistant, device_config):
+    def __init__(self, hass: HomeAssistant, device_config, coordinator):
         """Initialize a manageable device"""
         self._now = None  # For testing purpose only
         self._current_tz = get_tz(hass)
 
         self._hass = hass
+        self._coordinator = coordinator
         self._name = device_config.get("name")
         self._unique_id = name_to_unique_id(self._name)
         self._entity_id = device_config.get("entity_id")
@@ -186,12 +189,32 @@ class ManagedDevice:
         )
         self._on_time_sec = 0
 
+        self._min_on_time_per_day_sec = (
+            int(device_config.get("min_on_time_per_day_min") or 0) * 60
+        )
+
+        self._offpeak_time = datetime.strptime(
+            device_config.get("offpeak_time") or "23:59", "%H:%M"
+        ).time()
+
         if self.is_active:
             self._requested_power = self._current_power = (
                 self._power_max if self._can_change_power else self._power_min
             )
 
         self._enable = True
+
+        # Some checks
+        # min_on_time_per_day_sec requires an offpeak_time
+        if self._min_on_time_per_day_sec > 0 and self._offpeak_time == time(23, 59):
+            msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec requires offpeak_time value"
+            _LOGGER.error("%s - %s", self, msg)
+            raise ConfigurationError(msg)
+
+        if self._min_on_time_per_day_sec > self._max_on_time_per_day_sec:
+            msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec should < max_on_time_per_day_sec"
+            _LOGGER.error("%s - %s", self, msg)
+            raise ConfigurationError(msg)
 
     async def _apply_action(self, action_type: str, requested_power=None):
         """Apply an action to a managed device.
@@ -391,6 +414,24 @@ class ManagedDevice:
         return result
 
     @property
+    def should_be_forced_offpeak(self) -> bool:
+        """True is we are offpeak and the max_on_time is not exceeded"""
+        if not self.is_usable:
+            return False
+
+        if self._offpeak_time >= self._coordinator.raz_time:
+            return (
+                self.now.time() >= self._offpeak_time
+                or self.now.time() < self._coordinator.raz_time
+            ) and self._on_time_sec < self._max_on_time_per_day_sec
+        else:
+            return (
+                self.now.time() >= self._offpeak_time
+                and self.now.time() < self._coordinator.raz_time
+                and self._on_time_sec < self._max_on_time_per_day_sec
+            )
+
+    @property
     def is_waiting(self):
         """A device is waiting if the device is waiting for the end of its cycle"""
         result = self.now < self._next_date_available
@@ -484,6 +525,16 @@ class ManagedDevice:
     def max_on_time_per_day_sec(self) -> int:
         """The max_on_time_per_day_sec configured"""
         return self._max_on_time_per_day_sec
+
+    @property
+    def min_on_time_per_day_sec(self) -> int:
+        """The min_on_time_per_day_sec configured"""
+        return self._min_on_time_per_day_sec
+
+    @property
+    def offpeak_time(self) -> int:
+        """The offpeak_time configured"""
+        return self._offpeak_time
 
     @property
     def battery_soc(self) -> int:

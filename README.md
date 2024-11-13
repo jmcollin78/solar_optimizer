@@ -24,7 +24,8 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
-> * **release 2.0.0** :
+> * **release 2.1.0** :
+> - added a minimum duration of ignition during off-peak hours. Allows you to manage equipment that must have a minimum of ignition per day such as water heaters or chargers (cars, battery, ...). If the sunshine has not reached the required duration, then the equipment will turn on during off-peak hours. You can also define at what time the ignition counters are reset to zero, which allows you to take advantage of all off-peak hours> * **release 2.0.0** :
 > - added a device per controlled equipment to group the entities,
 > - added an ignition time counter for each device. When the controlled switch goes to 'Off', the time counter is incremented by the time spent 'On', in seconds. This counter is reset to zero every day at midnight.
 > - added a maximum time to 'On' in the configuration (in minutes). When this duration is exceeded, the equipment is no longer usable by the algorithm (is_usable = off) until the next reset. This offers the possibility of not exceeding a maximum ignition time per day, even when solar power is available.
@@ -70,7 +71,9 @@ If a battery is specified when configuring the integration and if the threshold 
 
 A maximum daily usage time is optionally configurable. If it is valued and if the duration of use of the equipment is exceeded, then the equipment will not be usable by the algorithm and therefore leaves power for other equipment.
 
-These 4 rules allow the algorithm to only order what is really useful at a time t. These rules are re-evaluated at each cycle.
+A minimum daily usage time is also optionally configurable. This parameter ensures that the equipment will be on for a certain minimum duration. You specify at what time the off-peak hours start (`offpeak_time`) and the minimum duration in minutes (`min_on_time_per_day_min`). If at the time indicated by `offpeak_time`, the minimum activation duration has not been reached, then the equipment is activated until the change of day (configurable in the integration and 05:00 by default) or until the maximum usage is reached (`max_on_time_per_day_min`) or during all the off-peak hours if `max_on_time_per_day_min` is not set. This ensures that the water heater or the car will be charged the next morning even if the solar production has not allowed the device to be recharged. It is up to you to invent the uses of this function.
+
+These 5 rules allow the algorithm to only order what is really useful at a time t. These rules are re-evaluated at each cycle.
 
 # How do we install it?
 ## HACS installation (recommended)
@@ -92,8 +95,9 @@ You must specify:
 1. the sensor which gives the instantaneous net consumption of the dwelling (it must be negative if production exceeds consumption). This figure is indicated in Watt,
 2. the sensor which gives the instantaneous photovoltaic production in Watt too,
 3. a sensor or input_number which gives the cost of the imported kwh,
-3. a sensor or input_number which gives the price of the exported kwh (depends on your contract),
-3. a sensor or input_number which gives the applicable tax on the exported kwh (depends on your contract)
+4. a sensor or input_number which gives the price of the exported kwh (depends on your contract),
+5. a sensor or input_number which gives the applicable tax on the exported kwh (depends on your contract)
+6. the start time of the day. At this time the equipment usage counters are reset to zero. The default value is 05:00. It must be before the first production and as late as possible for activations during off-peak hours. See above.
 
 These 5 pieces of information are necessary for the algorithm to work, so they are all mandatory. The fact that they are sensors or input_number allows to have values that are re-evaluated at each cycle. Consequently, switching to off-peak hours can modify the calculation and therefore the states of the equipment since the import becomes less expensive. So everything is dynamic and recalculated at each cycle.
 
@@ -121,6 +125,8 @@ devices:
      deactivation_service: "<service name>"
      battery_soc_threshold: <the state of charge minimal to use this device>
      max_on_time_per_day_min: <the maximum time on 'on' per day in minutes>
+     offpeak_time: <start time of off-peak hours>
+     min_on_day_per_day_min: <the minimal time on 'on' per day in minutes>
 ```
 
 Note: parameters under `algorithm` should not be touched unless you know exactly what you are doing.
@@ -140,6 +146,8 @@ Under `devices` you must declare all the equipment that will be controlled by So
 | `deactivation_service` | only if action_mode="service_call" | the service to call to deactivate the equipment in the form "domain/service" | "switch/turn_off" | deactivation will trigger the "switch/turn_off" service on the entity "entity_id" |
 | `battery_soc_threshold`  | tous | minimal percentage of charge of the solar battery to enable this device            | 30                                       |                                                                                                     |
 | `max_on_time_per_day_min` | all | the maximum number of minutes in the on position for this equipment. Beyond that, the equipment is no longer usable by the algorithm | 10 | The equipment will be on for a maximum of 10 minutes per day |
+| `offpeak_time` | all | The start time of off-peak hours in hh:mm format | 22:00 | The equipment can be switched on at 22:00 if the production of the day has not been sufficient |
+| `min_on_time_per_day_min` | all | the minimum number of minutes in the on position for this equipment. If at the start of off-peak hours, this minimum is not reached then the equipment will be switched on up to the start of the day or the `max_on_time_per_day_min` | 5 | The equipment will be switched on for a minimum of 5 minutes per day |
 
 For variable power equipment, the following attributes must be valued:
 
@@ -174,7 +182,11 @@ devices:
      # We authorize the pump to start if there is 10% battery in the solar installation
      battery_soc_threshold: 10
      # One hour per day maximum
-    max_on_time_per_day_min: 60
+     max_on_time_per_day_min: 60
+     # 1/2h per day minimum ...
+     min_on_time_per_day_min: 30
+     # ... starting at 22:30
+     offpeak_time: "22:30"
 
    - name: "Tesla Recharge"
      entity_id: "switch.cloucloute_charger"
@@ -204,6 +216,10 @@ devices:
      convert_power_divide_factor: 660
      # We do not start a charge if the battery of the solar installation is not at least 50% charged
      battery_soc_threshold: 50
+     # 4h par day minimum ...
+     min_on_time_per_day_min: 240
+     # ... starting at 23:00
+     offpeak_time: "22:00"
 ...
 ```
 Any change in the configuration requires a stop / restart of the integration (or of Home Assistant) to be taken into account.

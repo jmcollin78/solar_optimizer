@@ -1,5 +1,8 @@
 """ Les constantes pour l'intégration Solar Optimizer """
+import re
+
 from slugify import slugify
+from voluptuous.error import Invalid
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -9,6 +12,7 @@ DOMAIN = "solar_optimizer"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
 DEFAULT_REFRESH_PERIOD_SEC = 300
+DEFAULT_RAZ_TIME = "05:00"
 
 CONF_ACTION_MODE_SERVICE = "service_call"
 CONF_ACTION_MODE_EVENT = "event"
@@ -25,6 +29,10 @@ EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE = (
 DEVICE_MODEL = "Solar Optimizer device"
 INTEGRATION_MODEL = "Solar Optimizer"
 DEVICE_MANUFACTURER = "JM. COLLIN"
+
+SERVICE_RESET_ON_TIME = "reset_on_time"
+
+TIME_REGEX = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
 
 
 def get_tz(hass: HomeAssistant):
@@ -47,6 +55,13 @@ def seconds_to_hms(seconds):
         return f"{hours}:{minutes:02d}:{secs:02d}"
     else:
         return f"{minutes}:{secs:02d}"
+
+
+def validate_time_format(value: str) -> str:
+    """check is a string have format "hh:mm" with hh between 00 and 23 and mm between 00 et 59"""
+    if not re.match(TIME_REGEX, value):
+        raise Invalid("The time value should be formatted like 'hh:mm'")
+    return value
 
 
 class ConfigurationError(Exception):

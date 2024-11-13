@@ -24,6 +24,8 @@
 
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 2.1.0** :
+>    - ajout d'une durée minimale d'allumage en heure creuses. Permet de gérer les équipements qui doivent avoir un minimum d'allumage par jour comme les chauffes-eau ou les chargeurs (voitures, batteries, ……). Si l'ensoleillement n'a pas durée d'atteindre la durée requise, alors l'équipement s'allumera pendant les heures creuses. Vous pouvez en plus définir à quelle heure les compteurs d'allumage sont remis à zéro ce qui permet de profiter des toutes les heures creuses
 > * **release 2.0.0** :
 >    - ajout d'un appareil (device) par équipement piloté pour regrouper les entités,
 >    - ajout d'un compteur de temps d'allumage pour chaque appareil. Lorsque le switch commandé passe à 'Off', le compteur de temps est incrémenté du temps passé à 'On', en secondes. Ce compteur est remis à zéro tous les jours à minuit.
@@ -70,7 +72,9 @@ Si une batterie est spécifiée lors du paramétrage de l'intégration et si le 
 
 Un temps d'utilisation maximal journalier est paramétrable en facultatif. Si il est valorisé et si la durée d'utilisation de l'équipement est dépasée, alors l'équipement ne sera pas utilisable par l'algorithme et laisse donc de la puissance pour les autres équipements.
 
-Ces 4 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
+Un temps d'utilisation minimal journalier est aussi paramétrable en facultatif. Ce paramètre permet d'assurer que l'équipement sera allumé pendant une certaine durée minimale. Vous spécifiez à quelle heure commence les heures creuses, (`offpeak_time`) et la durée minimale en minutes (`min_on_time_per_day_min`). Si à l'heure indiquée par `offpeak_time`, la durée minimale d'activation n'a pas été atteinte, alors l'équipement est activé jusqu'au changement de jour (paramètrable dans l'intégration et 05:00 par défaut) ou jusqu'à ce que le maximum d'utilisation soit atteint (`max_on_time_per_day_min`) ou pendant toute la durée des heures creuses si `max_on_time_per_day_min` n'est pas précisé. Vous assurez ainsi que le chauffe-eau ou la voiture sera chargée le lendemain matin même si la production solaire n'a pas permise de recharger l'appareil. A vous d'inventer les usages de cette fonction.
+
+Ces 5 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
 
 # Comment on l'installe ?
 ## HACS installation (recommendé)
@@ -92,8 +96,10 @@ Vous devez spécifier :
 1. le sensor qui donne la consommation nette instantanée du logement (elle doit être négative si la production dépasse la consommation). Ce chiffre est indiqué en Watt,
 2. le sensor qui donne la production photovoltaïque instantanée en Watt aussi,
 3. un sensor ou input_number qui donne le cout du kwh importée,
-3. un sensor ou input_number qui donne le prix du kwh exortée (dépend de votre contrat),
-3. un sensor ou input_number qui donne la taxe applicable sur les kwh exortée (dépend de votre contrat)
+4. un sensor ou input_number qui donne le prix du kwh exortée (dépend de votre contrat),
+5. un sensor ou input_number qui donne la taxe applicable sur les kwh exortée (dépend de votre contrat)
+6. l'heure de début de journée. A cette heure les compteurs d'uitlisation des équipements sont remis à zéro. La valeur par défaut est 05:00. Elle doit être avant la première production et le plus tard possible pour les activations en heures creuses. Cf. ci-dessus.
+
 
 Ces 5 informations sont nécessaires à l'algorithme pour fonctionner, elles sont donc toutes obligatoires. Le fait que ce soit des sensor ou input_number permet d'avoir des valeurs qui sont réévaluées à chaque cycle. En conséquence le passage en heure creuse peut modifier le calcul et donc les états des équipements puisque l'import devient moins cher. Donc tout est dynamique et recalculé à chaque cycle.
 
@@ -121,6 +127,8 @@ devices:
     deactivation_service: "switch/turn_off"
     battery_soc_threshold: <l'état de charge minimal pour utiliser cet équipement>
     max_on_time_per_day_min: <la durée maximamle d'allumage par jour en minutes>
+    offpeak_time: <l'heure de début des heures creuses>
+    min_on_day_per_day_min: <la durée minimale d'allumage par jour en minutes>
 ```
 
 Note: les paramètres sous `algorithm` ne doivent pas être touchés sauf si vous savez exactement ce que vous faites.
@@ -140,6 +148,8 @@ Sous `devices` il faut déclarer tous les équipements qui seront commandés par
 | `deactivation_service`  | uniquement si action_mode="service_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service"                | "switch/turn_off"                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id"                                                                                                    |
 | `battery_soc_threshold`  | tous | le pourcentage minimal de charge de la batterie pour que l'équipement soit utilisable            | 30                                       |                                                                                                     |
 | `max_on_time_per_day_min`  | tous | le nombre de minutes maximal en position allumé pour cet équipement. Au delà, l'équipement n'est plus utilisable par l'algorithme           | 10                                       |  L'équipement est sera allumé au maximum 10 minutes par jour                                                                                                    |
+| `offpeak_time`  | tous | L'heure de début des heures creuses au format hh:mm       | 22:00                                       |  L'équipement pourra être allumé à 22h00 si la production de la journeé n'a pas été suffisante                                                                                                   |
+| `min_on_time_per_day_min`  | tous | le nombre de minutes minimale en position allumé pour cet équipement. Si lors du démarrage des heures creuses, ce minimum n'est pas atteint alors l'équipement sera allumé à concurrence du début de journée ou du `max_on_time_per_day_min`           | 5                                       |  L'équipement est sera allumé au minimum 5 minutes par jour                                                                                                    |
 
 Pour les équipements à puissance variable, les attributs suivants doivent être valorisés :
 
@@ -175,6 +185,10 @@ devices:
     battery_soc_threshold: 10
     # Une heure par jour maximum
     max_on_time_per_day_min: 60
+    # 1/2h par jour minimum ...
+    min_on_time_per_day_min: 30
+    # ... à partir de 22:30
+    offpeak_time: "22:30"
 
   - name: "Recharge Tesla"
     entity_id: "switch.testla_charger"
@@ -204,6 +218,10 @@ devices:
     convert_power_divide_factor: 660
     # On ne démarre pas une charge si la batterie de l'installation solaire n'est pas chargée à au moins 50%
     battery_soc_threshold: 50
+    # 4h par jour minimum ...
+    min_on_time_per_day_min: 240
+    # ... à partir de 23:00
+    offpeak_time: "22:00"
 ...
 ```
 Tout changement dans la configuration nécessite un arrêt / relance de l'intégration (ou de Home Assistant) pour être pris en compte.
