@@ -193,9 +193,13 @@ class ManagedDevice:
             int(device_config.get("min_on_time_per_day_min") or 0) * 60
         )
 
-        self._offpeak_time = datetime.strptime(
-            device_config.get("offpeak_time") or "23:59", "%H:%M"
-        ).time()
+        offpeak_time = device_config.get("offpeak_time", None)
+        self._offpeak_time = None
+
+        if offpeak_time:
+            self._offpeak_time = datetime.strptime(
+                device_config.get("offpeak_time"), "%H:%M"
+            ).time()
 
         if self.is_active:
             self._requested_power = self._current_power = (
@@ -206,7 +210,7 @@ class ManagedDevice:
 
         # Some checks
         # min_on_time_per_day_sec requires an offpeak_time
-        if self._min_on_time_per_day_sec > 0 and self._offpeak_time == time(23, 59):
+        if self._min_on_time_per_day_sec > 0 and self._offpeak_time is None:
             msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec requires offpeak_time value"
             _LOGGER.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
@@ -373,12 +377,8 @@ class ManagedDevice:
 
         return result
 
-    @property
-    def is_usable(self) -> bool:
-        """A device is usable for optimisation if the check_usable_template returns true and
-        if the device is not waiting for the end of its cycle and if the battery_soc_threshold is >= battery_soc
-        and the _max_on_time_per_day_sec is not exceeded"""
-
+    def check_usable(self, check_battery=True) -> bool:
+        """Check if the device is usable. The battery is checked optionally"""
         if self._on_time_sec >= self._max_on_time_per_day_sec:
             _LOGGER.debug(
                 "%s is not usable due to max_on_time_per_day_min exceeded %d >= %d",
@@ -398,7 +398,8 @@ class ManagedDevice:
                 _LOGGER.debug("%s is not usable", self._name)
 
             if (
-                result
+                check_battery
+                and result
                 and self._battery_soc is not None
                 and self._battery_soc_threshold is not None
             ):
@@ -414,9 +415,16 @@ class ManagedDevice:
         return result
 
     @property
+    def is_usable(self) -> bool:
+        """A device is usable for optimisation if the check_usable_template returns true and
+        if the device is not waiting for the end of its cycle and if the battery_soc_threshold is >= battery_soc
+        and the _max_on_time_per_day_sec is not exceeded"""
+        return self.check_usable(True)
+
+    @property
     def should_be_forced_offpeak(self) -> bool:
         """True is we are offpeak and the max_on_time is not exceeded"""
-        if not self.is_usable:
+        if not self.check_usable(False) or self._offpeak_time is None:
             return False
 
         if self._offpeak_time >= self._coordinator.raz_time:
