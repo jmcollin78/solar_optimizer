@@ -78,6 +78,8 @@ These 5 rules allow the algorithm to only order what is really useful at a time 
 # How do we install it?
 ## HACS installation (recommended)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jmcollin78&repository=solar_optimizer&category=integration)
+
 1. Install [HACS](https://hacs.xyz/). This way you get updates automatically.
 2. Add this Github repo as a custom repo in HACS settings.
 3. Find and install "Solar Optimizer" in HACS and click "Install".
