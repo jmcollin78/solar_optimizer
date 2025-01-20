@@ -95,8 +95,8 @@ You must specify:
 1. the sensor which gives the instantaneous net consumption of the dwelling (it must be negative if production exceeds consumption). This figure is indicated in Watt,
 2. the sensor which gives the instantaneous photovoltaic production in Watt too,
 3. a sensor or input_number which gives the cost of the imported kwh (require: positive number, not zero),
-4. a sensor or input_number which gives the price of the exported kwh (require: positive number, not zero)(depends on your contract),
-5. a sensor or input_number which gives the applicable tax on the exported kwh (depends on your contract)
+4. a sensor or input_number which gives the price of the exported kwh (require: positive number, not zero)(depends on your contract), can re-use same sensor/input_number as imported kwh if no have a resale contract.
+5. a sensor or input_number which gives the applicable tax on the exported kwh (require: postive number or zero)(depends on your contract)
 6. the start time of the day. At this time the equipment usage counters are reset to zero. The default value is 05:00. It must be before the first production and as late as possible for activations during off-peak hours. See above.
 
 These 5 pieces of information are necessary for the algorithm to work, so they are all mandatory. The fact that they are sensors or input_number allows to have values that are re-evaluated at each cycle. Consequently, switching to off-peak hours can modify the calculation and therefore the states of the equipment since the import becomes less expensive. So everything is dynamic and recalculated at each cycle.
