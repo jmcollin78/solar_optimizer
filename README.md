@@ -94,8 +94,8 @@ When adding the Solar Optimizer integration, the following settings page opens:
 You must specify:
 1. the sensor which gives the instantaneous net consumption of the dwelling (it must be negative if production exceeds consumption). This figure is indicated in Watt,
 2. the sensor which gives the instantaneous photovoltaic production in Watt too,
-3. a sensor or input_number which gives the cost of the imported kwh,
-4. a sensor or input_number which gives the price of the exported kwh (depends on your contract),
+3. a sensor or input_number which gives the cost of the imported kwh (require: positive number, not zero),
+4. a sensor or input_number which gives the price of the exported kwh (require: positive number, not zero)(depends on your contract),
 5. a sensor or input_number which gives the applicable tax on the exported kwh (depends on your contract)
 6. the start time of the day. At this time the equipment usage counters are reset to zero. The default value is 05:00. It must be before the first production and as late as possible for activations during off-peak hours. See above.
 
