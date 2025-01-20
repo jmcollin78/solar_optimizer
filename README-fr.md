@@ -96,8 +96,8 @@ Vous devez spécifier :
 1. le sensor qui donne la consommation nette instantanée du logement (elle doit être négative si la production dépasse la consommation). Ce chiffre est indiqué en Watt,
 2. le sensor qui donne la production photovoltaïque instantanée en Watt aussi,
 3. un sensor ou input_number qui donne le cout du kwh importée (requis: nombre strictement positif),
-4. un sensor ou input_number qui donne le prix du kwh exportée (requis: nombre strictement positif)(dépend de votre contrat),
-5. un sensor ou input_number qui donne la taxe applicable sur les kwh exportée (dépend de votre contrat)
+4. un sensor ou input_number qui donne le prix du kwh exportée (requis: nombre strictement positif)(dépend de votre contrat), on peut utiliser la même valeur/sensor que l'importée si pas de contrat de revente,
+5. un sensor ou input_number qui donne la taxe applicable sur les kwh exportée (chiffre postifi ou 0) (dépend de votre contrat)
 6. l'heure de début de journée. A cette heure les compteurs d'uitlisation des équipements sont remis à zéro. La valeur par défaut est 05:00. Elle doit être avant la première production et le plus tard possible pour les activations en heures creuses. Cf. ci-dessus.
 
 
