@@ -148,7 +148,7 @@ Under `devices` you must declare all the equipment that will be controlled by So
 | `deactivation_service` | only if action_mode="service_call" | the service to call to deactivate the equipment in the form "domain/service" | "switch/turn_off" | deactivation will trigger the "switch/turn_off" service on the entity "entity_id" |
 | `battery_soc_threshold`  | tous | minimal percentage of charge of the solar battery to enable this device            | 30                                       |                                                                                                     |
 | `max_on_time_per_day_min` | all | the maximum number of minutes in the on position for this equipment. Beyond that, the equipment is no longer usable by the algorithm | 10 | The equipment will be on for a maximum of 10 minutes per day |
-| `offpeak_time` | all | The start time of off-peak hours in hh:mm format | 22:00 | The equipment can be switched on at 22:00 if the production of the day has not been sufficient |
+| `offpeak_time` | all | The start time of off-peak hours in hh:mm format | 22:00 | The equipment can be switched on at 22:00 if the production of the day has not been sufficient | "23:30" |
 | `min_on_time_per_day_min` | all | the minimum number of minutes in the on position for this equipment. If at the start of off-peak hours, this minimum is not reached then the equipment will be switched on up to the start of the day or the `max_on_time_per_day_min` | 5 | The equipment will be switched on for a minimum of 5 minutes per day |
 
 For variable power equipment, the following attributes must be valued:
