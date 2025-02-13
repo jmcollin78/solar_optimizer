@@ -128,7 +128,7 @@ devices:
      battery_soc_threshold: <the state of charge minimal to use this device>
      max_on_time_per_day_min: <the maximum time on 'on' per day in minutes>
      offpeak_time: <start time of off-peak hours>
-     min_on_day_per_day_min: <the minimal time on 'on' per day in minutes>
+     min_on_time_per_day_min: <the minimal time on 'on' per day in minutes>
 ```
 
 Note: parameters under `algorithm` should not be touched unless you know exactly what you are doing.
