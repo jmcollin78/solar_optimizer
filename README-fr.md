@@ -128,7 +128,7 @@ devices:
     battery_soc_threshold: <l'état de charge minimal pour utiliser cet équipement>
     max_on_time_per_day_min: <la durée maximamle d'allumage par jour en minutes>
     offpeak_time: <l'heure de début des heures creuses>
-    min_on_day_per_day_min: <la durée minimale d'allumage par jour en minutes>
+    min_on_time_per_day_min: <la durée minimale d'allumage par jour en minutes>
 ```
 
 Note: les paramètres sous `algorithm` ne doivent pas être touchés sauf si vous savez exactement ce que vous faites.
