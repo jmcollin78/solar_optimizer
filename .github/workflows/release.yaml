@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write  # Add this line to set the required permissions
+
 jobs:
   release:
     name: Prepare release
