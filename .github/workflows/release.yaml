@@ -5,7 +5,8 @@ on:
     types: [published]
 
 permissions:
-  contents: write  # Add this line to set the required permissions
+  contents: write
+  id-token: write
 
 jobs:
   release:
