@@ -232,11 +232,45 @@ L'intégration, une fois correctement configurée, créée un appareil (device) 
 2. un sensor nommé "best_objective" qui est la valeur de la fonction de coût (cf. fonctionnement de l'algo),
 3. un switch par équipements nommé `switch.enable_solar_optimizer_<name>` déclarés dans le configuration.yaml. Si le switch est "Off", l'algorithme ne considérera pas cet équipement pour le calcul. Ca permet de manuellement sortir un équipement de la liste sans avoir à modifier la liste. Ce switch contient des attributs additionnels qui permettent de suivre l'état interne de l'équipement vu de l'algorithme.
 
-# En complément
-En complément, le code Lovelace suivant permet de controller chaque équipement déclaré :
-```
+# Une carte pour vos dashboard en complément
+En complément, les codessuivant Lovelace suivant permet de controller chaque équipement déclaré.
+Les étapes à suivre sont :
+1. Avec HACS, installez les plugins nommés `streamline-card`, `expander-card` et `mushroom-template` si vous ne les avez pas déjà,
+2. Installez les templates pour `streamline` en tête de votre code Lovelace,
+3. Installez une carte par équipement géré par Solar Optimizer qui référence le template `streammline``
+
+## Installez les plugins
+Lisez la documentation du plugin [ici](https://github.com/brunosabot/streamline-card) pour vous familiariser avec cet excellent plugin.
+Suivez la procédure d'installation qui consiste à installer un nouveau dépôt Github de type `Dashboard` et à installer le plugin.
+
+Vous devez avoir dans la partie "Téléchargé" vos plugins de visibles :
+
+![HACS Plugin](images/install-hacs-streamline.png)
+
+Faites de même avec les plugins `expander-card` et `mushroom-template`.
+
+## Installez les templates
+Pour installer les templates vous devez aller sur votre dashboard, vous mettre en édition et cliquer sur les trois points dans le menu en haut à droite :
+
+![dahsboard edit](images/dashboard-edit.png)
+
+puis
+
+![dashboard edit 2](images/dashboard-edit2.png)
+
+puis
+
+![dashboard edit 3](images/dashboard-edit3.png)
+
+Vous arrivez alors en édition manuelle de votre dashboard Lovelace.
+
+Attention : le yaml est susceptible. L'indentation doit être scrupuleusement respectée.
+
+Copier/coller le texte ci-dessous (cliquez sur le bouton copier pour tout prendre sans risque) tout au début 1 ligne, 1 colonne.
+
+```yaml
 # A mettre en début de page sur le front
-decluttering_templates:
+streamline_templates:
   managed_device_power:
     default: null
     card:
@@ -252,11 +286,14 @@ decluttering_templates:
           'max_on_time_hms')}} )
         icon: '[[icon]]'
         badge_icon: >-
-          {% if is_state_attr('[[device]]','is_enabled', True) %}mdi:check{%
-          else %}mdi:cancel{% endif %}
+          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
+          True) %}mdi:power-sleep{% elif
+          is_state_attr('[[device]]','is_enabled', True) %}mdi:check{% else
+          %}mdi:cancel{% endif %}
         badge_color: >-
-          {% if is_state_attr('[[device]]', 'is_usable', True) and
-          is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
+          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
+          True) %}#003366{% elif is_state_attr('[[device]]', 'is_usable', True)
+          and is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
           is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
           is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
           is_state_attr('[[device]]', 'is_usable', False) or
@@ -294,10 +331,19 @@ decluttering_templates:
             'next_date_available_power')) - as_timestamp(now())) / 60) | int }}
             min<br> **Utilisable** : {{ state_attr('[[device]]', 'is_usable')
             }}<br> **Est en attente**  : {{ state_attr('[[device]]',
-            'is_waiting') }}<br> **Puissance requise** : {{
+            'is_waiting') }}<br> **Est forcé en heures creuses**  : {{
+            state_attr('[[on_time_entity]]', 'should_be_forced_offpeak') }}<br>
+            **Heures creuses**  : {{ state_attr('[[on_time_entity]]',
+            'offpeak_time') }}<br> **Puissance requise** : {{
             state_attr('[[device]]', 'requested_power') }} W<br> **Puissance
             courante** : {{ state_attr('[[device]]', 'current_power') }} W
           title: Infos
+        - type: history-graph
+          hours: 24
+          entities:
+            - entity: '[[device]]'
+            - entity: '[[enable_entity]]'
+            - entity: '[[power_entity]]'
   managed_device:
     default: null
     card:
@@ -313,11 +359,14 @@ decluttering_templates:
           state_attr('[[on_time_entity]]', 'max_on_time_hms')}} )
         icon: '[[icon]]'
         badge_icon: >-
-          {% if is_state_attr('[[device]]','is_enabled', True) %}mdi:check{%
-          else %}mdi:cancel{% endif %}
+          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
+          True) %}mdi:power-sleep{% elif
+          is_state_attr('[[device]]','is_enabled', True) %}mdi:check{% else
+          %}mdi:cancel{% endif %}
         badge_color: >-
-          {% if is_state_attr('[[device]]', 'is_usable', True) and
-          is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
+          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
+          True) %}#003366{% elif is_state_attr('[[device]]', 'is_usable', True)
+          and is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
           is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
           is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
           is_state_attr('[[device]]', 'is_usable', False) or
@@ -352,54 +401,78 @@ decluttering_templates:
             'next_date_available')) - as_timestamp(now())) / 60) | int }}
             min<br> **Utilisable** : {{ state_attr('[[device]]', 'is_usable')
             }}<br> **Est en attente**  : {{ state_attr('[[device]]',
-            'is_waiting') }}<br> **Puissance requise** : {{
+            'is_waiting') }}<br> **Est forcé en heures creuses**  : {{
+            state_attr('[[on_time_entity]]', 'should_be_forced_offpeak') }}<br>
+            **Heures creuses**  : {{ state_attr('[[on_time_entity]]',
+            'offpeak_time') }}<br> **Puissance requise** : {{
             state_attr('[[device]]', 'requested_power') }} W<br> **Puissance
             courante** : {{ state_attr('[[device]]', 'current_power') }} W
-  enable_template:
-    default: null
-    card:
-      type: custom:mushroom-chips-card
-      chips:
-        - type: entity
-          entity: '[[enable_entity]]'
-          double_tap_action:
-            action: more-info
-          tap_action:
-            action: toggle
-          hold_action:
-            action: more-info
-          icon_color: green
-          content_info: none
+        - type: history-graph
+          hours: 24
+          entities:
+            - entity: '[[device]]'
+            - entity: '[[enable_entity]]'
+            - entity: '[[power_entity]]'
 ```
 
-puis à utiliser de la façon suivante :
-```
-          - type: vertical-stack
-            cards:
-              - type: custom:decluttering-card
-                template: managed_device_power
-                variables:
-                  - device: switch.solar_optimizer_recharge_tesla
-                  - secondary_infos: >-
-                      {{ states('sensor.total_puissance_instantanee_twc_w') }} W
-                      ({{ states('number.tesla_charging_amps')}} A)
-                  - icon: mdi:ev-station
-                  - enable_entity: switch.enable_solar_optimizer_recharge_tesla
-                  - on_time_entity: sensor.on_time_today_solar_optimizer_recharge_tesla
-              - type: custom:decluttering-card
-                template: managed_device
-                variables:
-                  - device: switch.solar_optimizer_prise_recharge_voiture_garage
-                  - secondary_infos: '{{ states(''sensor.prise_garage_voiture_power'') }} W'
-                  - icon: mdi:power-socket-fr
-                  - enable_entity: >-
-                      switch.enable_solar_optimizer_prise_recharge_voiture_garage
-                  - on_time_entity: sensor.on_time_today_solar_optimizer_prise_recharge_voiture_garage
-```
+Vous devez avoir une page qui ressemble à ça :
+
+![dashboard edit 4](images/dashboard-edit4.png)
+
+Cliquez alors sur Enregistrer puis Terminer. Les templates sont maintenant installés, il ne reste plus qu'à les utiliser.
+
+## Ajoutez une carte par équipements
+
+Pour utiliser les templates installés à l'étape précédente, vous devez :
+1. Editer un dashboard ou vous voulez ajouter la carte,
+2. cliquer sur 'Ajouter une carte' en bas à droite,
+3. sélectionner la carte nommée Streamline Card comme ceci :
+
+![dashboard edit 4](images/add-card-1.png)
+
+4. remplir les champs de la façon suivante :
+
+![dashboard edit 4](images/add-card-2.png)
+
+Vous devez choisir le template `managed_device` pour un équipement non muni d'une modulation de puissance ou `managed_device_power` sinon.
+Saisissez ensuite les différents attributs.
+Un exemple complet pour un équipement 'non power' :
+
+![dashboard edit 4](images/add-card-3.png)
+
+et pour un équipement avec modulation de puissance :
+
+![dashboard edit 4](images/add-card-4.png)
+
 Vous obtiendrez alors un composant permettant d'interagir avec l'équipement qui ressemble à ça :
 
 ![Lovelace equipements](https://github.com/jmcollin78/solar_optimizer/blob/main/images/lovelace-eqts.png?raw=true)
 
+## Utilisation de la carte
+La carte ainsi obtenue permet de voir l'état d'utilisation de l'équipement et d'interagir avec lui. Ouvrez la carte en appuyant sur le 'V' et vous obtenez ça :
+
+![use card 1](images/use-card-1.png)
+
+### Couleur de l'icône
+
+| Couleur | Signification | Exemple |
+|---------|---------|---------|
+| Gris | Equipement éteint | ![use card 2](images/use-card-2.png) |
+| Jaune | Equipement allumé | ![use card 3](images/use-card-3.png) |
+
+### Badge
+
+| Icone / Couleur | Signification | Exemple |
+|---------|---------|---------|
+| Coche verte | Equipement éteint en attente de production  | ![use card 4](images/use-card-green-check.png) |
+| Coche bleue | Equipement éteint non disponible (`check-usable` renvoie faux) | ![use card 4](images/use-card-blue-check.png) |
+| Coche orange | Equipement éteint en attente du délai enttre 2  | ![use card 4](images/use-card-orange-check.png) |
+| Annulation rouge | Equipement éteint non autorisé par l'utilisation `enable` est faux | ![use card 4](images/use-card-red-cancel.png) |
+| Lune Bleu nuit | Equipement allumé en heures creuses | ![use card 4](images/use-card-blue-moon.png) |
+
+### Action sur la carte
+Cliquez sur la carte de l'équipement et ça forcera son allumage ou son extinction.
+Cliquez sur le bouton `Enable` et ça autorisera ou non l'utilisation de l'équipement par l'algorithme de Solar Optimizer.
 
 # Les contributions sont les bienvenues !
 
