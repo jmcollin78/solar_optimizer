@@ -3,7 +3,7 @@
 {
 	"name": "Solar Optimizer",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:0-3.11",
+	"image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye",
 	"appPort": [
 		"9123:8123"
 	],
@@ -19,7 +19,10 @@
 				"ms-python.python",
 				"github.vscode-pull-request-github",
 				"ryanluker.vscode-coverage-gutters",
-				"ms-python.vscode-pylance"
+				"ms-python.vscode-pylance",
+				"github.vscode-github-actions",
+				"github.copilot",
+				"github.vscode-pull-request-github"
 			],
 
 			"settings": {
