@@ -11,19 +11,32 @@
 	"postCreateCommand": "pip install -r requirements.txt ; pip install -r requirements_dev.txt",
 
 	"mounts": [
-		"source=/Users/jmcollin/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
 	],
 
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"ms-python.python",
-				"github.vscode-pull-request-github",
-				"ryanluker.vscode-coverage-gutters",
-				"ms-python.vscode-pylance",
-				"github.vscode-github-actions",
-				"github.copilot",
-				"github.vscode-pull-request-github"
+                "ms-python.pylint",
+                "ms-python.isort",
+                "ms-python.black-formatter",
+                "visualstudioexptteam.vscodeintellicode",
+                "redhat.vscode-yaml",
+                "github.vscode-pull-request-github",
+                "ryanluker.vscode-coverage-gutters",
+                "ferrierbenjamin.fold-unfold-all-icone",
+                "LittleFoxTeam.vscode-python-test-adapter",
+                "donjayamanne.githistory",
+                "waderyan.gitblame",
+                "keesschollaart.vscode-home-assistant",
+                "vscode.markdown-math",
+                "yzhang.markdown-all-in-one",
+                "github.vscode-github-actions",
+                "azuretools.vscode-docker",
+                "huizhou.githd",
+                "github.copilot",
+                "github.copilot-chat"
 			],
 
 			"settings": {
