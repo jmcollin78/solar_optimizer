@@ -4,8 +4,8 @@
         "flow_title": "Solar Optimizer configuration",
         "step": {
             "user": {
-                "title": "General parameters",
-                "description": "Give the general parameters",
+                "title": "Type de configuration",
+                "description": "Donnez le type de configuration",
                 "data": {
                     "refresh_period_sec": "Refresh period",
                     "power_consumption_entity_id": "Net power consumption",
@@ -37,9 +37,9 @@
     "options": {
         "flow_title": "Solar Optimizer options configuration",
         "step": {
-            "init": {
-                "title": "General parameters",
-                "description": "Give the general parameters",
+            "user": {
+                "title": "Type de configuration",
+                "description": "Donnez le type de configuration",
                 "data": {
                     "refresh_period_sec": "Refresh period",
                     "power_consumption_entity_id": "Net power consumption",
@@ -62,6 +62,49 @@
                     "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty",
                     "raz_time": "Heure de remise à zéro des compteurs de temps passés actifs. Devrait être avant la première exposition au soleil mais pas trop tôt pour laisser du temps à l'activation de nuit"
                 }
+            },
+            "device": {
+                "title": "Paramètres de l'équipement",
+                "description": "Donnez les paramètres de l'équipement",
+                "data": {
+                    "name": "Nom",
+                    "entity_id": "Entity id",
+                    "power_max": "Puissance maximale",
+                    "check_usable_template": "Template d'utilisabilité",
+                    "check_active_template": "Template d'activation",
+                    "duration_min": "Durée mininale d'allumage",
+                    "duration_stop_min": "Durée mininale d'extinction",
+                    "action_mode": "Mode d'action",
+                    "activation_service": "Service d'activation",
+                    "deactivation_service": "Service d'extinction"
+                },
+                "data_description": {
+                    "name": "Nom de l'équipement",
+                    "entity_id": "Entity id de l'équipement",
+                    "power_max": "La puissance maximale de l'équipement lorsqu'il est activé",
+                    "check_usable_template": "Le template pour vérifier si l'équipement est utilisable. Exemple `True ` ou `states('sensor.my_sensor') | float > 10` (n'oubliez pas les doubles accolades)",
+                    "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
+                    "duration_min": "La durée minimale de l'équipement lorsqu'il est allumé en minutes",
+                    "duration_stop_min": "La durée minimale de l'équipement lorsqu'il est éteint en minutes",
+                    "action_mode": "Le mode d'action. `service` pour appeler un service ou `event` pour envoyer un événement afin de l'allumer ou de l'éteindre",
+                    "activation_service": "Le service pour allumer l'équipement. Exemple `switch/turn_on` ou `climate/set_hvac_mode:cool`",
+                    "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode:off`"
+                }
+            }
+        }
+    },
+    "selector": {
+        "device_type": {
+            "options": {
+                "central_config": "Configuration commune",
+                "device_type": "Equipement normal de type on/off",
+                "powered_device_type": "Equipement avec puissance variable"
+            }
+        },
+        "action_mode": {
+            "options": {
+                "service_call": "Appel d'action",
+                "event": "Evènement"
             }
         },
         "error": {

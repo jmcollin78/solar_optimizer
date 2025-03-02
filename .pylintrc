@@ -1,8 +1,7 @@
 [MESSAGES CONTROL]
-max-line-length=200
-# disable = line-too-long
 
 [FORMAT]
+max-line-length=180
 
 [TYPECHECK]
 

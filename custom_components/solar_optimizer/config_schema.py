@@ -1,0 +1,118 @@
+""" Alls constants for the Solar Optimizer integration. """
+
+import voluptuous as vol
+
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import selector
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
+from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
+from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
+from homeassistant.components.humidifier import DOMAIN as HUMIDIFIER_DOMAIN
+from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
+
+
+from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
+
+types_schema_devices = vol.Schema(
+    {
+        vol.Required(
+            CONF_DEVICE_TYPE, default=CONF_DEVICE
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=CONF_DEVICE_TYPES,
+                translation_key="device_type",
+                mode="list",
+            )
+        )
+    }
+)
+
+central_config_schema = vol.Schema(
+    {
+        vol.Required(CONF_REFRESH_PERIOD_SEC, default=300): int,
+        vol.Required(CONF_POWER_CONSUMPTION_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
+        ),
+        vol.Required(CONF_POWER_PRODUCTION_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
+        ),
+        vol.Required(CONF_SELL_COST_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+        ),
+        vol.Required(CONF_BUY_COST_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+        ),
+        vol.Required(CONF_SELL_TAX_PERCENT_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+        ),
+        vol.Optional(CONF_SMOOTH_PRODUCTION, default=True): cv.boolean,
+        vol.Optional("battery_soc_entity_id"): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
+        ),
+        vol.Optional("raz_time", default=DEFAULT_RAZ_TIME): str,
+    }
+)
+
+managed_device_schema = vol.Schema(
+    {
+        vol.Required(CONF_NAME): str,
+        vol.Required(CONF_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    INPUT_BOOLEAN_DOMAIN,
+                    SWITCH_DOMAIN,
+                    HUMIDIFIER_DOMAIN,
+                    CLIMATE_DOMAIN,
+                ]
+            )
+        ),
+        vol.Required(CONF_POWER_MAX): vol.Coerce(float),
+        vol.Optional(CONF_CHECK_USABLE_TEMPLATE, default="{{ True }}"): str,
+        vol.Optional(CONF_CHECK_ACTIVE_TEMPLATE): str,
+        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
+        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
+        vol.Optional(CONF_ACTION_MODE, default=CONF_ACTION_MODE_SERVICE): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=CONF_ACTION_MODES,
+                translation_key="action_mode",
+                mode="dropdown",
+            )
+        ),
+        vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
+        vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
+    }
+)
+
+power_managed_device_schema = vol.Schema(
+    {
+        vol.Required("name"): str,
+        vol.Required("entity_id"): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    INPUT_BOOLEAN_DOMAIN,
+                    SWITCH_DOMAIN,
+                    HUMIDIFIER_DOMAIN,
+                    CLIMATE_DOMAIN,
+                ]
+            )
+        ),
+        vol.Optional("power_entity_id"): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN])
+        ),
+        vol.Required("power_max"): vol.Coerce(float),
+        vol.Optional("power_min"): vol.Coerce(float),
+        vol.Optional("power_step"): vol.Coerce(float),
+        vol.Optional("check_usable_template"): str,
+        vol.Optional("check_active_template"): str,
+        vol.Optional("duration_min"): vol.Coerce(float),
+        vol.Optional("duration_stop_min"): vol.Coerce(float),
+        vol.Optional("duration_power_min"): vol.Coerce(float),
+        vol.Optional("action_mode"): str,
+        vol.Required("activation_service"): str,
+        vol.Required("deactivation_service"): str,
+        vol.Optional("change_power_service"): str,
+        vol.Optional("convert_power_divide_factor"): vol.Coerce(float),
+    }
+)
