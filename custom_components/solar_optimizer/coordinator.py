@@ -1,6 +1,8 @@
 """ The data coordinator class """
+
 import logging
 import math
+from typing import Any
 from datetime import timedelta
 
 
@@ -12,7 +14,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id
+from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 
@@ -32,43 +34,50 @@ def get_safe_float(hass, entity_id: str):
 class SolarOptimizerCoordinator(DataUpdateCoordinator):
     """The coordinator class which is used to coordinate all update"""
 
-    _devices: list[ManagedDevice]
-    _power_consumption_entity_id: str
-    _power_production_entity_id: str
-    _sell_cost_entity_id: str
-    _buy_cost_entity_id: str
-    _sell_tax_percent_entity_id: str
-    _smooth_production: bool
-    _last_production: float
-
-    _algo: SimulatedAnnealingAlgorithm
+    hass: HomeAssistant
 
     def __init__(self, hass: HomeAssistant, config):
         """Initialize the coordinator"""
-        super().__init__(
-            hass,
-            _LOGGER,
-            name="Solar Optimizer",
-            # update_interval=timedelta(seconds=refresh_period_sec),
-        )  # pylint : disable=line-too-long
-        self._devices = []
-        try:
-            for _, device in enumerate(config.get("devices")):
-                _LOGGER.debug("Configuration of manageable device: %s", device)
-                self._devices.append(ManagedDevice(hass, device))
-        except Exception as err:
-            _LOGGER.error(err)
-            _LOGGER.error(
-                "Your 'devices' configuration is wrong. SolarOptimizer will not be operational until you fix it"
-            )
-            raise err
+        SolarOptimizerCoordinator.hass = hass
+        self._devices: list[ManagedDevice] = []
+        self._power_consumption_entity_id: str = None
+        self._power_production_entity_id: str = None
+        self._sell_cost_entity_id: str = None
+        self._buy_cost_entity_id: str = None
+        self._sell_tax_percent_entity_id: str = None
+        self._smooth_production: bool = True
+        self._last_production: float = 0.0
+
+        self._central_config_done = False
+
+        super().__init__(hass, _LOGGER, name="Solar Optimizer")
+
+        # self._devices = []
+        # try:
+        #    for _, device in enumerate(config.get("devices")):
+        #        _LOGGER.debug("Configuration of manageable device: %s", device)
+        #        self._devices.append(ManagedDevice(hass, device))
+        # except Exception as err:
+        #    _LOGGER.error(err)
+        #    _LOGGER.error(
+        #        "Your 'devices' configuration is wrong. SolarOptimizer will not be operational until you fix it"
+        #    )
+        #    raise err
 
         algo_config = config.get("algorithm")
+        if algo_config:
+            init_temp = float(algo_config.get("initial_temp", 1000))
+            min_temp = float(algo_config.get("min_temp", 0.1))
+            cooling_factor = float(algo_config.get("cooling_factor", 0.95))
+            max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
+        else:
+            init_temp = 1000
+            min_temp = 0.1
+            cooling_factor = 0.95
+            max_iteration_number = 1000
+
         self._algo = SimulatedAnnealingAlgorithm(
-            float(algo_config.get("initial_temp")),
-            float(algo_config.get("min_temp")),
-            float(algo_config.get("cooling_factor")),
-            int(algo_config.get("max_iteration_number")),
+            init_temp, min_temp, cooling_factor, max_iteration_number
         )
         self.config = config
 
@@ -90,6 +99,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._smooth_production = config.data.get("smooth_production") is True
         self._last_production = 0.0
 
+        self._central_config_done = True
+
         # Do not calculate immediatly because switch state are not restored yet. Wait for homeassistant_started event
         # which is captured in onHAStarted method
         # await self.async_config_entry_first_refresh()
@@ -97,7 +108,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     async def on_ha_started(self, _) -> None:
         """Listen the homeassistant_started event to initialize the first calculation"""
         _LOGGER.info("First initialization of Solar Optimizer")
-        await self.async_config_entry_first_refresh()
+        # This throws an error. Let's see how it works without it
+        # TODO await self.async_config_entry_first_refresh()
 
     async def _async_update_data(self):
         _LOGGER.info("Refreshing Solar Optimizer calculation")
@@ -203,6 +215,18 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         return calculated_data
 
+    @classmethod
+    def get_coordinator(cls) -> Any:
+        """Get the coordinator from the hass.data"""
+        return SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN][
+            "coordinator"
+        ]
+
+    @property
+    def is_central_config_done(self) -> bool:
+        """Return True if the central config is done"""
+        return self._central_config_done
+
     @property
     def devices(self) -> list[ManagedDevice]:
         """Get all the managed device"""
@@ -221,3 +245,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             if device.unique_id == uid:
                 return device
         return None
+
+    def add_device(self, device: ManagedDevice):
+        """Add a new device to the list of managed device"""
+        self._devices.append(device)
