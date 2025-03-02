@@ -131,20 +131,20 @@ input_number:
     mode: slider
     step: 1
 
-#template:
-#  - trigger:
-#      - platform: time_pattern
-#        # This will update every night
-#        seconds: "/2"
-#    sensor:
-#      - name: "Next availability Tesla (sec)"
-#        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available')) - as_timestamp(now())) | int(0) }}"
-#        unit_of_measurement: "s"
-#        state_class: measurement
-#      - name: "Next availability Tesla Power (sec)"
-#        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available_power')) - as_timestamp(now())) | int(0) }}"
-#        unit_of_measurement: "s"
-#        state_class: measurement
+template:
+  - trigger:
+      - platform: time_pattern
+        # This will update every night
+        seconds: "/2"
+    sensor:
+      - name: "Next availability Tesla (sec)"
+        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available')) - as_timestamp(now())) | int(0) }}"
+        unit_of_measurement: "s"
+        state_class: measurement
+      - name: "Next availability Tesla Power (sec)"
+        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available_power')) - as_timestamp(now())) | int(0) }}"
+        unit_of_measurement: "s"
+        state_class: measurement
 
 solar_optimizer:
   algorithm:

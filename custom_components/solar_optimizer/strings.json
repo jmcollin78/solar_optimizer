@@ -57,7 +57,7 @@
                 "data_description": {
                     "name": "The name of the device",
                     "entity_id": "The entity_id of the device",
-                    "power_max": "The maximum power of the device when activated",
+                    "power_max": "The power of the device when activated",
                     "check_usable_template": "The template to check if the device is usable. Example `True ` or `states('sensor.my_sensor') | float > 10` (don't forgeet double accolades)",
                     "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
                     "duration_min": "The minimum duration of the device when turned on in minutes",
@@ -65,6 +65,46 @@
                     "action_mode": "The action mode of the device. `service` to service call a service to turn on or off or `event` to send an event to turn on or off",
                     "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode:cool`",
                     "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode:off`"
+                }
+            },
+            "powered_device": {
+                "title": "Powered device parameters",
+                "description": "Give the powered device parameters",
+                "data": {
+                    "name": "Device name",
+                    "entity_id": "Device entity id",
+                    "power_max": "Device max power",
+                    "power_min": "Device min power",
+                    "power_step": "Device power step",
+                    "check_usable_template": "Usable template",
+                    "check_active_template": "Active template",
+                    "duration_min": "Duration min",
+                    "duration_stop_min": "Duration stop min",
+                    "action_mode": "Action mode",
+                    "activation_service": "Activation service",
+                    "deactivation_service": "Deactivation service",
+                    "power_entity_id": "Power entity id",
+                    "duration_power_min": "Duration of power change",
+                    "change_power_service": "Power change service",
+                    "convert_power_divide_factor": "Divide factor"
+                },
+                "data_description": {
+                    "name": "The name of the device",
+                    "entity_id": "The entity_id of the device",
+                    "power_max": "The maximum power consumption of the device when activated",
+                    "power_min": "The min power consumption of the device when activated",
+                    "power_step": "The step of power for the device",
+                    "check_usable_template": "The template to check if the device is usable. Example `True ` or `states('sensor.my_sensor') | float > 10` (don't forgeet double accolades)",
+                    "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
+                    "duration_min": "The minimum duration of the device when turned on in minutes",
+                    "duration_stop_min": "The minimum duration of the device when turned off in minutes",
+                    "action_mode": "The action mode of the device. `service` to service call a service to turn on or off or `event` to send an event to turn on or off",
+                    "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode:cool`",
+                    "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode:off`",
+                    "power_entity_id": "The entity id of the power sensor",
+                    "duration_power_min": "The minimal duration of each power change in minutes",
+                    "change_power_service": "The service used to change the power. Example `number/set_value`",
+                    "convert_power_divide_factor": "The divide factor to convert power into units of the power device. If conversion from power to ampere, the divisor should be 220"
                 }
             }
         },
@@ -137,6 +177,46 @@
                     "action_mode": "The action mode of the device. `service` to service call a service to turn on or off or `event` to send an event to turn on or off",
                     "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode:cool`",
                     "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode:off`"
+                }
+            },
+            "powered_device": {
+                "title": "Powered device parameters",
+                "description": "Give the powered device parameters",
+                "data": {
+                    "name": "Device name",
+                    "entity_id": "Device entity id",
+                    "power_max": "Device max power",
+                    "power_min": "Device min power",
+                    "power_step": "Device power step",
+                    "check_usable_template": "Usable template",
+                    "check_active_template": "Active template",
+                    "duration_min": "Duration min",
+                    "duration_stop_min": "Duration stop min",
+                    "action_mode": "Action mode",
+                    "activation_service": "Activation service",
+                    "deactivation_service": "Deactivation service",
+                    "power_entity_id": "Power entity id",
+                    "duration_power_min": "Duration of power change",
+                    "change_power_service": "Power change service",
+                    "convert_power_divide_factor": "Divide factor"
+                },
+                "data_description": {
+                    "name": "The name of the device",
+                    "entity_id": "The entity_id of the device",
+                    "power_max": "The maximum power consumption of the device when activated",
+                    "power_min": "The min power consumption of the device when activated",
+                    "power_step": "The step of power for the device",
+                    "check_usable_template": "The template to check if the device is usable. Example `True ` or `states('sensor.my_sensor') | float > 10` (don't forgeet double accolades)",
+                    "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
+                    "duration_min": "The minimum duration of the device when turned on in minutes",
+                    "duration_stop_min": "The minimum duration of the device when turned off in minutes",
+                    "action_mode": "The action mode of the device. `service` to service call a service to turn on or off or `event` to send an event to turn on or off",
+                    "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode:cool`",
+                    "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode:off`",
+                    "power_entity_id": "The entity id of the power sensor",
+                    "duration_power_min": "The minimal duration of each power change in minutes",
+                    "change_power_service": "The service used to change the power. Example `number/set_value`",
+                    "convert_power_divide_factor": "The divide factor to convert power into units of the power device. If conversion from power to ampere, the divisor should be 220"
                 }
             }
         }

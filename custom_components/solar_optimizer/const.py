@@ -61,6 +61,12 @@ CONF_DURATION_STOP_MIN = "duration_stop_min"
 CONF_ACTION_MODE = "action_mode"
 CONF_ACTIVATION_SERVICE = "activation_service"
 CONF_DEACTIVATION_SERVICE = "deactivation_service"
+CONF_POWER_MIN = "power_min"
+CONF_POWER_STEP = "power_step"
+CONF_POWER_ENTITY_ID = "power_entity_id"
+CONF_DURATION_POWER_MIN = "duration_power_min"
+CONF_CHANGE_POWER_SERVICE = "change_power_service"
+CONF_CONVERT_POWER_DIVIDE_FACTOR = "convert_power_divide_factor"
 
 
 def get_tz(hass: HomeAssistant):

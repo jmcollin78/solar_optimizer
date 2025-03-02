@@ -87,8 +87,8 @@ managed_device_schema = vol.Schema(
 
 power_managed_device_schema = vol.Schema(
     {
-        vol.Required("name"): str,
-        vol.Required("entity_id"): selector.EntitySelector(
+        vol.Required(CONF_NAME): str,
+        vol.Required(CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
                     INPUT_BOOLEAN_DOMAIN,
@@ -98,21 +98,47 @@ power_managed_device_schema = vol.Schema(
                 ]
             )
         ),
-        vol.Optional("power_entity_id"): selector.EntitySelector(
+        vol.Optional(CONF_POWER_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN])
         ),
-        vol.Required("power_max"): vol.Coerce(float),
-        vol.Optional("power_min"): vol.Coerce(float),
-        vol.Optional("power_step"): vol.Coerce(float),
-        vol.Optional("check_usable_template"): str,
-        vol.Optional("check_active_template"): str,
-        vol.Optional("duration_min"): vol.Coerce(float),
-        vol.Optional("duration_stop_min"): vol.Coerce(float),
-        vol.Optional("duration_power_min"): vol.Coerce(float),
-        vol.Optional("action_mode"): str,
-        vol.Required("activation_service"): str,
-        vol.Required("deactivation_service"): str,
-        vol.Optional("change_power_service"): str,
-        vol.Optional("convert_power_divide_factor"): vol.Coerce(float),
+        vol.Optional(CONF_POWER_MIN, default=220): vol.Coerce(float),
+        vol.Required(CONF_POWER_MAX): vol.Coerce(float),
+        vol.Optional(CONF_POWER_STEP, default=220): vol.Coerce(float),
+        vol.Optional(CONF_CHECK_USABLE_TEMPLATE, default="{{ True }}"): str,
+        vol.Optional(CONF_CHECK_ACTIVE_TEMPLATE): str,
+        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
+            )
+        ),
+        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
+            )
+        ),
+        vol.Optional(CONF_DURATION_POWER_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
+            )
+        ),
+        vol.Optional(
+            CONF_ACTION_MODE, default=CONF_ACTION_MODE_SERVICE
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=CONF_ACTION_MODES,
+                translation_key="action_mode",
+                mode="dropdown",
+            )
+        ),
+        vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
+        vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
+        vol.Optional(CONF_CHANGE_POWER_SERVICE): str,
+        vol.Optional(
+            CONF_CONVERT_POWER_DIVIDE_FACTOR, default=220
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1.0, max=9999, step=0.1, mode=selector.NumberSelectorMode.BOX
+            )
+        ),
     }
 )
