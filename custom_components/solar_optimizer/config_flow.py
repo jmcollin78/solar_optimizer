@@ -224,11 +224,6 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
         """Get options flow for this handler"""
         return SolarOptimizerOptionsFlow(config_entry)
 
-    async def validate_input(self, data: dict) -> None:
-        """Validate the user input allows us to connect."""
-        validate_time_format(data.get("raz_time"))
-
-
 class SolarOptimizerConfigFlow(
     SolarOptimizerBaseConfigFlow, ConfigFlow, domain=SOLAR_OPTIMIZER_DOMAIN
 ):

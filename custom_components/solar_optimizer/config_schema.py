@@ -71,9 +71,19 @@ managed_device_schema = vol.Schema(
         vol.Required(CONF_POWER_MAX): vol.Coerce(float),
         vol.Optional(CONF_CHECK_USABLE_TEMPLATE, default="{{ True }}"): str,
         vol.Optional(CONF_CHECK_ACTIVE_TEMPLATE): str,
-        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
-        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
-        vol.Optional(CONF_ACTION_MODE, default=CONF_ACTION_MODE_SERVICE): selector.SelectSelector(
+        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
+            )
+        ),
+        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
+            )
+        ),
+        vol.Optional(
+            CONF_ACTION_MODE, default=CONF_ACTION_MODE_SERVICE
+        ): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=CONF_ACTION_MODES,
                 translation_key="action_mode",
@@ -82,6 +92,10 @@ managed_device_schema = vol.Schema(
         ),
         vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
         vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
+        vol.Optional("battery_soc_threshold", default=0): vol.Coerce(float),
+        vol.Optional("max_on_time_per_day_min"): vol.Coerce(int),
+        vol.Optional("min_on_time_per_day_min"): vol.Coerce(int),
+        vol.Optional("offpeak_time"): validate_time_format,
     }
 )
 
@@ -140,5 +154,9 @@ power_managed_device_schema = vol.Schema(
                 min=1.0, max=9999, step=0.1, mode=selector.NumberSelectorMode.BOX
             )
         ),
+        vol.Optional("battery_soc_threshold", default=0): vol.Coerce(float),
+        vol.Optional("max_on_time_per_day_min"): vol.Coerce(int),
+        vol.Optional("min_on_time_per_day_min"): vol.Coerce(int),
+        vol.Optional("offpeak_time"): validate_time_format,
     }
 )

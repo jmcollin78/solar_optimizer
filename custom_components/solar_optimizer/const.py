@@ -2,6 +2,7 @@
 
 from slugify import slugify
 from voluptuous.error import Invalid
+import re
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, HomeAssistantError
