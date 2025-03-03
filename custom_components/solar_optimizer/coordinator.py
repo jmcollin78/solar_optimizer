@@ -46,6 +46,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._sell_tax_percent_entity_id: str = None
         self._smooth_production: bool = True
         self._last_production: float = 0.0
+        self._battery_soc_entity_id: str = None
         self._raz_time: time = None
 
         self._central_config_done = False
@@ -88,7 +89,6 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._smooth_production = config.data.get("smooth_production") is True
         self._last_production = 0.0
 
-        # TODO rigth place ?
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
         ).time()

@@ -8,7 +8,6 @@ from homeassistant.core import callback, HomeAssistant, State, Event
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.components.switch import SwitchEntity, DOMAIN as SWITCH_DOMAIN
 
 from homeassistant.helpers.entity_platform import (
@@ -39,7 +38,7 @@ async def async_setup_entry(
     if entry.data[CONF_DEVICE_TYPE] == CONF_DEVICE_CENTRAL:
         return
 
-    device: ManagedDevice = ManagedDevice(hass, entry.data)
+    device: ManagedDevice = ManagedDevice(hass, entry.data, coordinator)
     entity = ManagedDeviceSwitch(coordinator, hass, device)
     entities.append(entity)
     entity = ManagedDeviceEnable(hass, device)
@@ -279,14 +278,6 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         """Get the extra state attributes for the entity"""
         return self._attr_extra_state_attributes
 
-    @overrides
-    def turn_off(self, **kwargs: Any):
-        """Not used"""
-
-    @overrides
-    def turn_on(self, **kwargs: Any):
-        """Not used"""
-
 
 class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     """The that enables the ManagedDevice optimisation with"""
@@ -309,7 +300,7 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
         return DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self._device.name)},
-            name="name": "Solar Optimizer-" + self._device.name,
+            name="Solar Optimizer-" + self._device.name,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
         )
@@ -335,19 +326,9 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
         self.update_device_enabled()
 
     @callback
-    def turn_on(self, **kwargs: Any) -> None:
-        """Turn the entity on."""
-        self.turn_on()
-
-    @callback
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
         self.turn_on(**kwargs)
-
-    @callback
-    def turn_off(self, **kwargs: Any) -> None:
-        """Turn the entity off."""
-        self.turn_off()
 
     @callback
     async def async_turn_off(  # pylint: disable=useless-parent-delegation

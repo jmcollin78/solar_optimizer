@@ -14,7 +14,12 @@ from homeassistant.helpers.typing import ConfigType
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import selector
 
-# from homeassistant.helpers.entity_component import EntityComponent
+from homeassistant.helpers.service import async_register_admin_service
+from homeassistant.helpers.reload import (
+    async_setup_reload_service,
+    async_reload_integration_platforms,
+    _resetup_platform,
+)
 
 
 from .const import DOMAIN, PLATFORMS, CONFIG_VERSION, CONFIG_MINOR_VERSION, SERVICE_RESET_ON_TIME, validate_time_format
@@ -152,3 +157,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         )
 
     return True
+
+
+async def reload_config(hass):
+    """Handle reload service call."""
+    _LOGGER.info("Service %s.reload called: reloading integration", DOMAIN)
+
+    # await async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
+    # await _resetup_platform(hass, DOMAIN, DOMAIN, None)
+    await async_setup_component(hass, DOMAIN, None)
