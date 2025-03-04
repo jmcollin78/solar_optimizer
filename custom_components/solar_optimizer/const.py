@@ -100,7 +100,7 @@ def seconds_to_hms(seconds):
 
 def validate_time_format(value: str) -> str:
     """check is a string have format "hh:mm" with hh between 00 and 23 and mm between 00 et 59"""
-    if not re.match(TIME_REGEX, value):
+    if value is not None and not re.match(TIME_REGEX, value):
         raise Invalid("The time value should be formatted like 'hh:mm'")
     return value
 
