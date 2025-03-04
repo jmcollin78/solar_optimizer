@@ -48,10 +48,10 @@ central_config_schema = vol.Schema(
             selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
         ),
         vol.Optional(CONF_SMOOTH_PRODUCTION, default=True): cv.boolean,
-        vol.Optional("battery_soc_entity_id"): selector.EntitySelector(
+        vol.Optional(CONF_BATTERY_SOC_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
-        vol.Optional("raz_time", default=DEFAULT_RAZ_TIME): str,
+        vol.Optional(CONF_RAZ_TIME, default=DEFAULT_RAZ_TIME): str,
     }
 )
 
@@ -92,10 +92,10 @@ managed_device_schema = vol.Schema(
         ),
         vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
         vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
-        vol.Optional("battery_soc_threshold", default=0): vol.Coerce(float),
-        vol.Optional("max_on_time_per_day_min"): vol.Coerce(int),
-        vol.Optional("min_on_time_per_day_min"): vol.Coerce(int),
-        vol.Optional("offpeak_time"): validate_time_format,
+        vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): vol.Coerce(float),
+        vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
+        vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
+        vol.Optional(CONF_OFFPEAK_TIME): str,
     }
 )
 
@@ -154,9 +154,9 @@ power_managed_device_schema = vol.Schema(
                 min=1.0, max=9999, step=0.1, mode=selector.NumberSelectorMode.BOX
             )
         ),
-        vol.Optional("battery_soc_threshold", default=0): vol.Coerce(float),
-        vol.Optional("max_on_time_per_day_min"): vol.Coerce(int),
-        vol.Optional("min_on_time_per_day_min"): vol.Coerce(int),
-        vol.Optional("offpeak_time"): validate_time_format,
+        vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): vol.Coerce(float),
+        vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
+        vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
+        vol.Optional(CONF_OFFPEAK_TIME): str,
     }
 )

@@ -68,6 +68,12 @@ CONF_POWER_ENTITY_ID = "power_entity_id"
 CONF_DURATION_POWER_MIN = "duration_power_min"
 CONF_CHANGE_POWER_SERVICE = "change_power_service"
 CONF_CONVERT_POWER_DIVIDE_FACTOR = "convert_power_divide_factor"
+CONF_RAZ_TIME = "raz_time"
+CONF_BATTERY_SOC_ENTITY_ID = "battery_soc_entity_id"
+CONF_BATTERY_SOC_THRESHOLD = "battery_soc_threshold"
+CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
+CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
+CONF_OFFPEAK_TIME = "offpeak_time"
 
 
 def get_tz(hass: HomeAssistant):
@@ -120,3 +126,7 @@ class overrides:  # pylint: disable=invalid-name
 
 class UnknownEntity(HomeAssistantError):
     """Error to indicate there is an unknown entity_id given."""
+
+
+class InvalidTime(HomeAssistantError):
+    """Error to indicate the give time is invalid"""

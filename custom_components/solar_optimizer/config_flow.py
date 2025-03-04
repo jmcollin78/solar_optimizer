@@ -122,11 +122,14 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
                     )
                     raise UnknownEntity(conf)
 
-        try:
-            validate_time_format(data.get("raz_time"))
-        except vol.Invalid as err:
-            errors = {"raz_time": "format_time_invalid"}
-            raise ConfigurationError(errors) from err
+        for conf in [CONF_RAZ_TIME, CONF_OFFPEAK_TIME]:
+            try:
+                d = data.get(conf, None)
+                if d is not None:
+                    validate_time_format(d)
+            except vol.Invalid as err:
+                errors = {conf: "format_time_invalid"}
+                raise InvalidTime(errors)
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps user"""
