@@ -176,10 +176,6 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
         """Handle the flow steps for device"""
         _LOGGER.debug("Into ConfigFlow.async_step_device user_input=%s", user_input)
 
-        if user_input is not None:
-            # Check if the entity_ids are valid
-            await self.validate_input(user_input, "device")
-
         return await self.generic_step(
             "device", managed_device_schema, user_input, self.async_step_finalize
         )

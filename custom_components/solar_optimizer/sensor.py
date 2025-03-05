@@ -63,7 +63,9 @@ async def async_setup_entry(
         return
 
     entities = []
-    device = coordinator.get_device(entry.data[CONF_NAME])
+    device = coordinator.get_device_by_unique_id(
+        name_to_unique_id(entry.data[CONF_NAME])
+    )
     if device is None:
         device = ManagedDevice(hass, entry.data, coordinator)
         coordinator.add_device(device)
@@ -117,7 +119,7 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
         return DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, CONF_DEVICE_CENTRAL)},
-            name=self._attr_name,
+            name="Solar Optimizer",
             manufacturer=DEVICE_MANUFACTURER,
             model=INTEGRATION_MODEL,
         )
@@ -335,12 +337,13 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     @property
     def device_info(self) -> DeviceInfo | None:
         # Retournez des informations sur le périphérique associé à votre entité
-        return {
-            "model": DEVICE_MODEL,
-            "manufacturer": DEVICE_MANUFACTURER,
-            "identifiers": {(DOMAIN, self._device.name)},
-            "name": "Solar Optimizer-" + self._device.name,
-        }
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._device.name)},
+            name="Solar Optimizer-" + self._device.name,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
 
     @property
     def device_class(self) -> SensorDeviceClass | None:

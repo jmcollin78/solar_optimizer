@@ -1,4 +1,5 @@
-""" A bonary sensor entity that holds the state of each managed_device """
+""" A binary sensor entity that holds the state of each managed_device """
+
 import logging
 from datetime import datetime
 from typing import Any
@@ -38,7 +39,9 @@ async def async_setup_entry(
     if entry.data[CONF_DEVICE_TYPE] == CONF_DEVICE_CENTRAL:
         return
 
-    device = coordinator.get_device(entry.data[CONF_NAME])
+    device = coordinator.get_device_by_unique_id(
+        name_to_unique_id(entry.data[CONF_NAME])
+    )
     if device is None:
         device = ManagedDevice(hass, entry.data, coordinator)
         coordinator.add_device(device)
