@@ -131,27 +131,27 @@ input_number:
     mode: slider
     step: 1
 
-template:
-  - trigger:
-      - platform: time_pattern
-        # This will update every night
-        seconds: "/2"
-    sensor:
-      - name: "Next availability Tesla (sec)"
-        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available')) - as_timestamp(now())) | int(0) }}"
-        unit_of_measurement: "s"
-        state_class: measurement
-      - name: "Next availability Tesla Power (sec)"
-        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available_power')) - as_timestamp(now())) | int(0) }}"
-        unit_of_measurement: "s"
-        state_class: measurement
+#template:
+#  - trigger:
+#      - trigger: time_pattern
+#        # This will update every night
+#        seconds: "/2"
+#    sensor:
+#      - name: "Next availability Tesla (sec)"
+#        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available')) - as_timestamp(now())) | int(0) }}"
+#        unit_of_measurement: "s"
+#        state_class: measurement
+#      - name: "Next availability Tesla Power (sec)"
+#        state: "{{ (as_timestamp(state_attr('switch.solar_optimizer_equipement_h', 'next_date_available_power')) - as_timestamp(now())) | int(0) }}"
+#        unit_of_measurement: "s"
+#        state_class: measurement
 
-solar_optimizer:
-  algorithm:
-    initial_temp: 1000
-    min_temp: 0.1
-    cooling_factor: 0.95
-    max_iteration_number: 1000
+#solar_optimizer:
+#  algorithm:
+#    initial_temp: 1000
+#    min_temp: 0.1
+#    cooling_factor: 0.95
+#    max_iteration_number: 1000
 #  devices:
 #    - name: "Equipement A"
 #      entity_id: "input_boolean.fake_device_a"

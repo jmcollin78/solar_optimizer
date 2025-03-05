@@ -53,17 +53,16 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         super().__init__(hass, _LOGGER, name="Solar Optimizer")
 
-        algo_config = config.get("algorithm")
-        if algo_config:
+        init_temp = 1000
+        min_temp = 0.1
+        cooling_factor = 0.95
+        max_iteration_number = 1000
+
+        if config and (algo_config := config.get("algorithm")):
             init_temp = float(algo_config.get("initial_temp", 1000))
             min_temp = float(algo_config.get("min_temp", 0.1))
             cooling_factor = float(algo_config.get("cooling_factor", 0.95))
             max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
-        else:
-            init_temp = 1000
-            min_temp = 0.1
-            cooling_factor = 0.95
-            max_iteration_number = 1000
 
         self._algo = SimulatedAnnealingAlgorithm(
             init_temp, min_temp, cooling_factor, max_iteration_number
@@ -218,6 +217,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     @classmethod
     def get_coordinator(cls) -> Any:
         """Get the coordinator from the hass.data"""
+        if (
+            not hasattr(SolarOptimizerCoordinator, "hass")
+            or SolarOptimizerCoordinator.hass is None
+            or SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN] is None
+        ):
+            return None
+
         return SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN][
             "coordinator"
         ]

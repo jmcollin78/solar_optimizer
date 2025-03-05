@@ -42,7 +42,7 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
         # Coordinator should be initialized
         self._coordinator = SolarOptimizerCoordinator.get_coordinator()
         if not self._coordinator:
-            raise ConfigurationError("Solar Optimizer, coordinator not initialized")
+            _LOGGER.warning("Coordinator is not initialized yet. First run ?")
 
         self._user_inputs: dict = {}
         self._placeholders: dict = {}
@@ -135,7 +135,7 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
         """Handle the flow steps user"""
         _LOGGER.debug("Into ConfigFlow.async_step_user user_input=%s", user_input)
 
-        if not self._coordinator.is_central_config_done:
+        if not self._coordinator or not self._coordinator.is_central_config_done:
             return await self.async_step_device_central(user_input)
 
         schema = types_schema_devices
