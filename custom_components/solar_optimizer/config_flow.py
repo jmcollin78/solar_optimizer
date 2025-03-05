@@ -62,6 +62,8 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
                 await self.validate_input(user_input, step_id)
             except UnknownEntity as err:
                 errors[str(err)] = "unknown_entity"
+            except InvalidTime as err:
+                errors[str(err)] = "format_time_invalid"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -128,8 +130,7 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
                 if d is not None:
                     validate_time_format(d)
             except vol.Invalid as err:
-                errors = {conf: "format_time_invalid"}
-                raise InvalidTime(errors)
+                raise InvalidTime(conf)
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps user"""
@@ -162,7 +163,7 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
             # Check if the entity_ids are valid
             user_input[CONF_NAME] = "Configuration"
             user_input[CONF_DEVICE_TYPE] = CONF_DEVICE_CENTRAL
-            await self.validate_input(user_input, "device_central")
+            # await self.validate_input(user_input, "device_central")
 
         return await self.generic_step(
             "device_central",

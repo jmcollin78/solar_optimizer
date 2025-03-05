@@ -47,7 +47,7 @@ async def async_setup_entry(
     """Setup the entries of type Sensor"""
 
     # Sets the config entries values to SolarOptimizer coordinator
-    coordinator: SolarOptimizerCoordinator = hass.data[DOMAIN]["coordinator"]
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
 
     # inititalize the coordinator if entry if the central config
     if entry.data[CONF_DEVICE_TYPE] == CONF_DEVICE_CENTRAL:
@@ -63,24 +63,18 @@ async def async_setup_entry(
         return
 
     entities = []
-    for _, device in enumerate(coordinator.devices):
-        entity = TodayOnTimeSensor(
-            hass,
-            coordinator,
-            device,
-        )
-        if entity is not None:
-            entities.append(entity)
+    device = coordinator.get_device(entry.data[CONF_NAME])
+    if device is None:
+        device = ManagedDevice(hass, entry.data, coordinator)
+        coordinator.add_device(device)
 
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "best_objective"))
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "total_power"))
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "power_production"))
-    entities.append(
-        SolarOptimizerSensorEntity(coordinator, hass, "power_production_brut")
+    entity1 = TodayOnTimeSensor(
+        hass,
+        coordinator,
+        device,
     )
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "battery_soc"))
 
-    async_add_entities(entities, False)
+    async_add_entities([entotity1], False)
 
     # Add services
     platform = entity_platform.async_get_current_platform()

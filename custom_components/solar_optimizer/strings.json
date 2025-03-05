@@ -251,6 +251,9 @@
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             }
+        },
+        "error": {
+            "format_time_invalid": "Format of time should be HH:MM"
         }
     },
     "selector": {
@@ -266,12 +269,6 @@
                 "service_call": "Action call",
                 "event": "Event"
             }
-        },
-        "error": {
-            "format_time_invalid": "Format of time should be HH:MM"
         }
-    },
-    "error": {
-        "format_time_invalid": "Format of time should be HH:MM"
     }
 }

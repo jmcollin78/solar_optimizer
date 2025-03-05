@@ -38,13 +38,16 @@ async def async_setup_entry(
     if entry.data[CONF_DEVICE_TYPE] == CONF_DEVICE_CENTRAL:
         return
 
-    device: ManagedDevice = ManagedDevice(hass, entry.data, coordinator)
+    device = coordinator.get_device(entry.data[CONF_NAME])
+    if device is None:
+        device = ManagedDevice(hass, entry.data, coordinator)
+        coordinator.add_device(device)
+
     entity = ManagedDeviceSwitch(coordinator, hass, device)
     entities.append(entity)
     entity = ManagedDeviceEnable(hass, device)
     entities.append(entity)
 
-    coordinator.add_device(device)
     async_add_entities(entities)
 
 
