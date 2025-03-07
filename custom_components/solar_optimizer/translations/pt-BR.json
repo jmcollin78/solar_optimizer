@@ -1,0 +1,71 @@
+{
+    "title": "Configuração do Otimizador Solar",
+    "config": {
+        "flow_title": "Configuração do Otimizador Solar",
+        "step": {
+            "user": {
+                "title": "Parâmetros gerais",
+                "description": "Forneça os parâmetros gerais",
+                "data": {
+                    "refresh_period_sec": "Período de atualização",
+                    "power_consumption_entity_id": "Consumo líquido de energia",
+                    "power_production_entity_id": "Produção de energia solar",
+                    "sell_cost_entity_id": "Preço de venda de energia",
+                    "buy_cost_entity_id": "Preço de compra de energia",
+                    "sell_tax_percent_entity_id": "Imposto sobre venda (%)",
+                    "smooth_production": "Suavizar produção solar",
+                    "battery_soc_entity_id": "Estado de carga da bateria",
+                    "raz_time": "Hora de resetar contadores"
+                },
+                "data_description": {
+                    "refresh_period_sec": "Período de atualização em segundos. Aviso: cálculos complexos são realizados a cada período. Evite atualizações muito frequentes",
+                    "power_consumption_entity_id": "Entidade do sensor de consumo líquido. Deve ser negativo quando energia é exportada para a rede",
+                    "power_production_entity_id": "Entidade do sensor de produção solar",
+                    "sell_cost_entity_id": "Entidade com o preço atual de venda de energia",
+                    "buy_cost_entity_id": "Entidade com o preço atual de compra de energia",
+                    "sell_tax_percent_entity_id": "Percentual de imposto sobre a revenda de energia (0 a 100)",
+                    "smooth_production": "Se marcado, suaviza variações bruscas na produção solar",
+                    "battery_soc_entity_id": "Estado de carga da bateria em %. Deixe vazio se não houver bateria",
+                    "raz_time": "Horário para resetar contadores de tempo ativo. Deve ocorrer antes do amanhecer, mas com tempo suficiente para processos noturnos"
+                }
+            }
+        },
+        "error": {
+            "format_time_invalid": "O formato deve ser HH:MM"
+        }
+    },
+    "options": {
+        "flow_title": "Configuração de opções do Otimizador Solar",
+        "step": {
+            "init": {
+                "title": "Parâmetros gerais",
+                "description": "Forneça os parâmetros gerais",
+                "data": {
+                    "refresh_period_sec": "Período de atualização",
+                    "power_consumption_entity_id": "Consumo líquido de energia",
+                    "power_production_entity_id": "Produção de energia solar",
+                    "sell_cost_entity_id": "Preço de venda de energia",
+                    "buy_cost_entity_id": "Preço de compra de energia",
+                    "sell_tax_percent_entity_id": "Imposto sobre venda (%)",
+                    "smooth_production": "Suavizar produção solar",
+                    "battery_soc_entity_id": "Estado de carga da bateria",
+                    "raz_time": "Hora de resetar contadores"
+                },
+                "data_description": {
+                    "refresh_period_sec": "Período de atualização em segundos. Aviso: cálculos complexos são realizados a cada período. Evite atualizações muito frequentes",
+                    "power_consumption_entity_id": "Entidade do sensor de consumo líquido. Deve ser negativo quando energia é exportada para a rede",
+                    "power_production_entity_id": "Entidade do sensor de produção solar",
+                    "sell_cost_entity_id": "Entidade com o preço atual de venda de energia",
+                    "buy_cost_entity_id": "Entidade com o preço atual de compra de energia",
+                    "sell_tax_percent_entity_id": "Percentual de imposto sobre a revenda de energia (0 a 100)",
+                    "smooth_production": "Se marcado, suaviza variações bruscas na produção solar",
+                    "battery_soc_entity_id": "Estado de carga da bateria em %. Deixe vazio se não houver bateria",
+                    "raz_time": "Horário para resetar contadores de tempo ativo. Deve ocorrer antes do amanhecer, mas com tempo suficiente para processos noturnos"
+                }
+            }
+        },
+        "error": {
+            "format_time_invalid": "O formato deve ser HH:MM"
+        }
+    }
+}
