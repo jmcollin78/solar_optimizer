@@ -26,7 +26,7 @@ async def test_normal_start_one_device(hass: HomeAssistant):
                     "check_usable_template": "{{ True }}",
                     "duration_min": 0.3,
                     "duration_stop_min": 0.1,
-                    "action_mode": "service_call",
+                    "action_mode": "action_call",
                     "activation_service": "input_boolean/turn_on",
                     "deactivation_service": "input_boolean/turn_off",
                     "max_on_time_per_day_min": 10,

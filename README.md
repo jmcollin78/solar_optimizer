@@ -122,7 +122,7 @@ devices:
      check_usable_template: "{{ <the template which is True if the equipment is usable> }}"
      duration_min: <the minimum activation duration in minutes>
      duration_stop_min: <minimum stop duration in minutes>
-     action_mode: "service_call"
+     action_mode: "action_call"
      activation_service: "<service name>"
      deactivation_service: "<service name>"
      battery_soc_threshold: <the state of charge minimal to use this device>
@@ -135,31 +135,31 @@ Note: parameters under `algorithm` should not be touched unless you know exactly
 
 Under `devices` you must declare all the equipment that will be controlled by Solar Optimizer as follows:
 
-| attribute | valid for | meaning | example | comment |
-| ----------------------- | ---------------------------------------- | -------------------------------------------- | ------------------------------------------------------- | ------------------------------------ |
-| `name` | all | The name of the equipment | "VMC basement" | - |
-| `entity_id` | all | the entity id of the equipment to order | "switch.vmc_basement" | - |
-| `power_max` | all | the maximum power consumed by the equipment | 250 | - |
-| `check_usable_template` | all | A template that is True if the equipment can be used by Solar Optimizer | "{{ is_state('cover.porte_garage_garage', 'closed') }}" | In the example, Sonar Optimizer will not try to control the "VMC basement" if the garage door is open |
-| `duration_min` | all | The minimum duration in minutes of activation | 60 | The basement VMC will always turn on for at least one hour |
-| `duration_stop_min` | all | The minimum duration in minutes of deactivation. Is `duration_min` if not specified | 15 | The basement VMC will always turn off for at least 15 min |
-| `action_mode` | all | the mode of action for turning the equipment on or off. Can be "service_call" or "event" (*) | "service_call" | "service_call" indicates that the equipment is switched on and off via a service call. See below. "event" indicates that an event is sent when the state should change. See (*) |
-| `activation_service` | only if action_mode="service_call" | the service to be called to activate the equipment in the form "domain/service" | "switch/turn_on" | activation will trigger the "switch/turn_on" service on the entity "entity_id" |
-| `deactivation_service` | only if action_mode="service_call" | the service to call to deactivate the equipment in the form "domain/service" | "switch/turn_off" | deactivation will trigger the "switch/turn_off" service on the entity "entity_id" |
-| `battery_soc_threshold`  | tous | minimal percentage of charge of the solar battery to enable this device            | 30                                       |                                                                                                     |
-| `max_on_time_per_day_min` | all | the maximum number of minutes in the on position for this equipment. Beyond that, the equipment is no longer usable by the algorithm | 10 | The equipment will be on for a maximum of 10 minutes per day |
-| `offpeak_time` | all | The start time of off-peak hours in hh:mm format | "22:00" | The equipment can be switched on at 22:00 if the production of the day has not been sufficient |
-| `min_on_time_per_day_min` | all | the minimum number of minutes in the on position for this equipment. If at the start of off-peak hours, this minimum is not reached then the equipment will be switched on up to the start of the day or the `max_on_time_per_day_min` | 5 | The equipment will be switched on for a minimum of 5 minutes per day |
+| attribute                 | valid for                         | meaning                                                                                                                                                                                                                                | example                                                 | comment                                                                                                                                                                        |
+| ------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`                    | all                               | The name of the equipment                                                                                                                                                                                                              | "VMC basement"                                          | -                                                                                                                                                                              |
+| `entity_id`               | all                               | the entity id of the equipment to order                                                                                                                                                                                                | "switch.vmc_basement"                                   | -                                                                                                                                                                              |
+| `power_max`               | all                               | the maximum power consumed by the equipment                                                                                                                                                                                            | 250                                                     | -                                                                                                                                                                              |
+| `check_usable_template`   | all                               | A template that is True if the equipment can be used by Solar Optimizer                                                                                                                                                                | "{{ is_state('cover.porte_garage_garage', 'closed') }}" | In the example, Sonar Optimizer will not try to control the "VMC basement" if the garage door is open                                                                          |
+| `duration_min`            | all                               | The minimum duration in minutes of activation                                                                                                                                                                                          | 60                                                      | The basement VMC will always turn on for at least one hour                                                                                                                     |
+| `duration_stop_min`       | all                               | The minimum duration in minutes of deactivation. Is `duration_min` if not specified                                                                                                                                                    | 15                                                      | The basement VMC will always turn off for at least 15 min                                                                                                                      |
+| `action_mode`             | all                               | the mode of action for turning the equipment on or off. Can be "action_call" or "event" (*)                                                                                                                                            | "action_call"                                           | "action_call" indicates that the equipment is switched on and off via a service call. See below. "event" indicates that an event is sent when the state should change. See (*) |
+| `activation_service`      | only if action_mode="action_call" | the service to be called to activate the equipment in the form "domain/service"                                                                                                                                                        | "switch/turn_on"                                        | activation will trigger the "switch/turn_on" service on the entity "entity_id"                                                                                                 |
+| `deactivation_service`    | only if action_mode="action_call" | the service to call to deactivate the equipment in the form "domain/service"                                                                                                                                                           | "switch/turn_off"                                       | deactivation will trigger the "switch/turn_off" service on the entity "entity_id"                                                                                              |
+| `battery_soc_threshold`   | tous                              | minimal percentage of charge of the solar battery to enable this device                                                                                                                                                                | 30                                                      |                                                                                                                                                                                |
+| `max_on_time_per_day_min` | all                               | the maximum number of minutes in the on position for this equipment. Beyond that, the equipment is no longer usable by the algorithm                                                                                                   | 10                                                      | The equipment will be on for a maximum of 10 minutes per day                                                                                                                   |
+| `offpeak_time`            | all                               | The start time of off-peak hours in hh:mm format                                                                                                                                                                                       | "22:00"                                                 | The equipment can be switched on at 22:00 if the production of the day has not been sufficient                                                                                 |
+| `min_on_time_per_day_min` | all                               | the minimum number of minutes in the on position for this equipment. If at the start of off-peak hours, this minimum is not reached then the equipment will be switched on up to the start of the day or the `max_on_time_per_day_min` | 5                                                       | The equipment will be switched on for a minimum of 5 minutes per day                                                                                                           |
 
 For variable power equipment, the following attributes must be valued:
 
-| attribute | valid for | meaning | example | comment |
-| ----------------------------- | ------------------------------- | ----------------------------------------------------------- | ---------------------------- | ---------------------------------------------------- |
-| `power_entity_id` | variable power equipment | the entity_id of the entity managing the power | `number.tesla_charging_amps` | The power change will be done by calling the `change_power_service` service on this entity |
-| `power_min` | variable power equipment | The minimum power in watts of the equipment | 100 | When the power setpoint falls below this value, the equipment will be switched off by calling the `deactivation_service` |
-| `power_step` | variable power equipment | The power step | 10 | - |
-| `change_power_service` | variable power equipment | Service called to change power | `"number/set_value"` | - |
-| `convert_power_divide_factor` | variable power equipment | The divisor applied to convert power to value | 50 | In the example, the "number/set_value" service will be called with the `power setpoint / 50` on the entity `entity_id`. For a Tesla on a three-phase electrical installation this parameter should be set to 660 (220 x 3), to convert power to amperes. For mono-phase installation, set it to 220. |
+| attribute                     | valid for                | meaning                                        | example                      | comment                                                                                                                                                                                                                                                                                              |
+| ----------------------------- | ------------------------ | ---------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `power_entity_id`             | variable power equipment | the entity_id of the entity managing the power | `number.tesla_charging_amps` | The power change will be done by calling the `change_power_service` service on this entity                                                                                                                                                                                                           |
+| `power_min`                   | variable power equipment | The minimum power in watts of the equipment    | 100                          | When the power setpoint falls below this value, the equipment will be switched off by calling the `deactivation_service`                                                                                                                                                                             |
+| `power_step`                  | variable power equipment | The power step                                 | 10                           | -                                                                                                                                                                                                                                                                                                    |
+| `change_power_service`        | variable power equipment | Service called to change power                 | `"number/set_value"`         | -                                                                                                                                                                                                                                                                                                    |
+| `convert_power_divide_factor` | variable power equipment | The divisor applied to convert power to value  | 50                           | In the example, the "number/set_value" service will be called with the `power setpoint / 50` on the entity `entity_id`. For a Tesla on a three-phase electrical installation this parameter should be set to 660 (220 x 3), to convert power to amperes. For mono-phase installation, set it to 220. |
 
 Complete and commented example of the device part:
 ```
@@ -176,7 +176,7 @@ devices:
      # 5 min deactivation minimum
      duration_stop_min: 5
      # On enable/disable via a service call
-     action_mode: "service_call"
+     action_mode: "action_call"
      # The service enabling the switch
      activation_service: "switch/turn_on"
      # The service to deactivate the switch
@@ -209,7 +209,7 @@ devices:
      # 5 min minimum between 2 power changes
      duration_power_min: 5
      # activation is done by a service call
-     action_mode: "service_call"
+     action_mode: "action_call"
      activation_service: "switch/turn_on"
      deactivation_service: "switch/turn_off"
      # the power change is done by a service call
@@ -457,20 +457,20 @@ The card allows you to monitor the device’s usage status and interact with it.
 
 ### Icon Color
 
-| Color | Meaning | Example |
-|---------|---------|---------|
-| Gray | Device off | ![use card 2](images/use-card-2.png) |
-| Yellow | Device on | ![use card 3](images/use-card-3.png) |
+| Color  | Meaning    | Example                              |
+| ------ | ---------- | ------------------------------------ |
+| Gray   | Device off | ![use card 2](images/use-card-2.png) |
+| Yellow | Device on  | ![use card 3](images/use-card-3.png) |
 
 ### Badge
 
-| Icon / Color | Meaning | Example |
-|---------|---------|---------|
-| Green check | Device off, waiting for power production | ![use card 4](images/use-card-green-check.png) |
-| Blue check | Device off, unavailable (`check-usable` returns false) | ![use card 4](images/use-card-blue-check.png) |
-| Orange check | Device off, waiting for delay between two activations | ![use card 4](images/use-card-orange-check.png) |
-| Red cancel | Device off, not allowed (`enable` is false) | ![use card 4](images/use-card-red-cancel.png) |
-| Blue moon | Device on during off-peak hours | ![use card 4](images/use-card-blue-moon.png) |
+| Icon / Color | Meaning                                                | Example                                         |
+| ------------ | ------------------------------------------------------ | ----------------------------------------------- |
+| Green check  | Device off, waiting for power production               | ![use card 4](images/use-card-green-check.png)  |
+| Blue check   | Device off, unavailable (`check-usable` returns false) | ![use card 4](images/use-card-blue-check.png)   |
+| Orange check | Device off, waiting for delay between two activations  | ![use card 4](images/use-card-orange-check.png) |
+| Red cancel   | Device off, not allowed (`enable` is false)            | ![use card 4](images/use-card-red-cancel.png)   |
+| Blue moon    | Device on during off-peak hours                        | ![use card 4](images/use-card-blue-moon.png)    |
 
 ### Actions on the Card
 

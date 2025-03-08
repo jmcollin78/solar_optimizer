@@ -158,7 +158,7 @@ input_number:
 #      power_max: 1000
 #      check_usable_template: "{{ True }}"
 #      duration_min: 0.3
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #      max_on_time_per_day_min: 10
@@ -169,7 +169,7 @@ input_number:
 #      power_max: 500
 #      check_usable_template: "{{ True }}"
 #      duration_min: 0.6
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #      min_on_time_per_day_min: 15
@@ -179,7 +179,7 @@ input_number:
 #      power_max: 800
 #      check_usable_template: "{{ True }}"
 #      duration_min: 1
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #    - name: "Equipement D"
@@ -187,7 +187,7 @@ input_number:
 #      power_max: 2100
 #      check_usable_template: "{{ True }}"
 #      duration_min: 0.5
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #    - name: "Equipement E"
@@ -195,7 +195,7 @@ input_number:
 #      power_max: 120
 #      check_usable_template: "{{ True }}"
 #      duration_min: 2
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #    - name: "Equipement F"
@@ -203,7 +203,7 @@ input_number:
 #      power_max: 500
 #      check_usable_template: "{{ True }}"
 #      duration_min: 0.2
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #      battery_soc_threshold: 30
@@ -213,7 +213,7 @@ input_number:
 #      power_max: 1200
 #      check_usable_template: "{{ True }}"
 #      duration_min: 1.5
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #      battery_soc_threshold: 40
@@ -229,7 +229,7 @@ input_number:
 #      duration_min: 1
 #      duration_stop_min: 0.1
 #      duration_power_min: 0.1
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "input_boolean/turn_on"
 #      deactivation_service: "input_boolean/turn_off"
 #      change_power_service: "input_number/set_value"
@@ -241,7 +241,7 @@ input_number:
 #      power_max: 20
 #      check_usable_template: "{{ True }}"
 #      duration_min: 0.1
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "switch/turn_on"
 #      deactivation_service: "switch/turn_off"
 #      battery_soc_threshold: 60
@@ -250,7 +250,7 @@ input_number:
 #      power_max: 20
 #      check_usable_template: "{{ True }}"
 #      duration_min: 0.1
-#      action_mode: "service_call"
+#      action_mode: "action_call"
 #      activation_service: "switch/turn_on"
 #      deactivation_service: "switch/turn_off"
 #      battery_soc_threshold: 60

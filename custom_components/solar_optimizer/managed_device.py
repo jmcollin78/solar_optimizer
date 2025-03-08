@@ -9,7 +9,7 @@ from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from .const import (
     get_tz,
     name_to_unique_id,
-    CONF_ACTION_MODE_SERVICE,
+    CONF_ACTION_MODE_ACTION,
     CONF_ACTION_MODE_EVENT,
     CONF_ACTION_MODES,
     ConfigurationError,
@@ -233,7 +233,7 @@ class ManagedDevice:
         if requested_power is not None:
             self._requested_power = requested_power
 
-        if self._action_mode == CONF_ACTION_MODE_SERVICE:
+        if self._action_mode == CONF_ACTION_MODE_ACTION:
             method = None
             entity_id = self._entity_id
             if action_type == ACTION_ACTIVATE:

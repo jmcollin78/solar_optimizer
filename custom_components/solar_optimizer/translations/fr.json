@@ -1,66 +1,42 @@
 {
-    "title": "Solar Optimizer configuration",
+    "title": "Configuration de Solar Optimizer",
     "config": {
-        "flow_title": "Solar Optimizer configuration",
+        "flow_title": "Configuration de Solar Optimizer",
         "step": {
             "user": {
                 "title": "Type de configuration",
                 "description": "Donnez le type de configuration",
                 "data": {
-                    "refresh_period_sec": "Refresh period",
-                    "power_consumption_entity_id": "Net power consumption",
-                    "power_production_entity_id": "Solar power production",
-                    "sell_cost_entity_id": "Energy sell price",
-                    "buy_cost_entity_id": "Energy buy price",
-                    "sell_tax_percent_entity_id": "Sell taxe percent",
-                    "smooth_production": "Smooth the solar production",
-                    "battery_soc_entity_id": "Battery soc",
-                    "raz_time": "Reset counter time"
+                    "device_type": "Type d'équipement"
                 },
                 "data_description": {
-                    "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
-                    "power_consumption_entity_id": "the entity_id of the net power consumption sensor. Net power should be negative if power is exported to grid.",
-                    "power_production_entity_id": "the entity_id of the solar power production sensor.",
-                    "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
-                    "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
-                    "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
-                    "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
-                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty",
-                    "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation"
+                    "device_type": "Simple équipement de type on/off ou équipement avec gestion de la puissance variable"
                 }
-            }
-        },
-        "error": {
-            "format_time_invalid": "Format of time should be HH:MM"
-        }
-    },
-    "options": {
-        "flow_title": "Solar Optimizer options configuration",
-        "step": {
-            "user": {
-                "title": "Type de configuration",
-                "description": "Donnez le type de configuration",
+            },
+            "device_central": {
+                "title": "Paramètres communs",
+                "description": "Donnez les paramètres communs",
                 "data": {
-                    "refresh_period_sec": "Refresh period",
-                    "power_consumption_entity_id": "Net power consumption",
-                    "power_production_entity_id": "Solar power production",
-                    "sell_cost_entity_id": "Energy sell price",
-                    "buy_cost_entity_id": "Energy buy price",
-                    "sell_tax_percent_entity_id": "Sell taxe percent",
-                    "smooth_production": "Smooth the solar production",
-                    "battery_soc_entity_id": "Battery soc",
+                    "refresh_period_sec": "Période de rafraichissement",
+                    "power_consumption_entity_id": "Consommation nette",
+                    "power_production_entity_id": "Production solaire",
+                    "sell_cost_entity_id": "Prix de vente de l'énergie",
+                    "buy_cost_entity_id": "Prix d'achat de l'énergie",
+                    "sell_tax_percent_entity_id": "Pourcentage de taxe de revente",
+                    "smooth_production": "Lisser la production solaire",
+                    "battery_soc_entity_id": "Etat de charge de la batterie",
                     "raz_time": "Heure de remise à zéro"
                 },
                 "data_description": {
-                    "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
-                    "power_consumption_entity_id": "the entity_id of the net power consumption sensor. Net power should be negative if power is exported to grid.",
-                    "power_production_entity_id": "the entity_id of the solar power production sensor.",
-                    "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
-                    "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
-                    "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
-                    "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
-                    "battery_soc_entity_id": "Battery state of charge in %. If you don't have battery, keep it empty",
-                    "raz_time": "Heure de remise à zéro des compteurs de temps passés actifs. Devrait être avant la première exposition au soleil mais pas trop tôt pour laisser du temps à l'activation de nuit"
+                    "refresh_period_sec": "Période de rafraichissement en secondes. Attention des calculs lourds sont effectués à chaque période. Ne pas rafraichir trop souvent",
+                    "power_consumption_entity_id": "l'entity_id du capteur de consommation nette. La consommation nette doit être négative si l'énergie est exportée vers le réseau.",
+                    "power_production_entity_id": "l'entity_id du capteur de production d'énergie solaire. Doit être positif ou nul",
+                    "sell_cost_entity_id": "L'entity_id qui contient le prix actuel de vente de l'énergie.",
+                    "buy_cost_entity_id": "L'entity_id qui contient le prix actuel d'achat de l'énergie.",
+                    "sell_tax_percent_entity_id": "Le pourcentage de taxe de revente de l'énergie (0 à 100)",
+                    "smooth_production": "Si coché, la production solaire sera lissée pour éviter les variations brutales",
+                    "battery_soc_entity_id": "Etat de charge de la batterie en %. Si vous n'avez pas de batterie, laissez vide",
+                    "raz_time": "Heure de remise à zéro des compteurs de temps passés. Devrait être avant la première exposition au soleil mais pas trop tôt pour laisser du temps à l'activation de nuit"
                 }
             },
             "device": {
@@ -76,21 +52,208 @@
                     "duration_stop_min": "Durée mininale d'extinction",
                     "action_mode": "Mode d'action",
                     "activation_service": "Service d'activation",
-                    "deactivation_service": "Service d'extinction"
+                    "deactivation_service": "Service d'extinction",
+                    "battery_soc_threshold": "Seuil de charge de la batterie",
+                    "max_on_time_per_day_min": "Temps max par jour",
+                    "min_on_time_per_day_min": "Temps min par jour",
+                    "offpeak_time": "Heure creuse"
+                },
+                "data_description": {
+                    "name": "Nom de l'équipement",
+                    "entity_id": "Entity id de l'équipement à piloter",
+                    "power_max": "La puissance maximale de l'équipement lorsqu'il est activé",
+                    "check_usable_template": "Le template pour vérifier si l'équipement est utilisable. Exemple `True ` ou `states('sensor.my_sensor') | float > 10` (n'oubliez pas les doubles accolades)",
+                    "check_active_template": "Le template pour vérifier si un équipement est actif. Laissez le vide pour les simples switch ou apparentés. Exemple `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (avec les doubles accolades)",
+                    "duration_min": "La durée minimale d'allumage de l'équipement en minutes",
+                    "duration_stop_min": "La durée minimale d'extinction de l'équipement en minutes",
+                    "action_mode": "Le mode d'action. `service` pour appeler un service ou `event` pour envoyer un événement afin de l'allumer ou de l'éteindre",
+                    "activation_service": "Le service pour allumer l'équipement. Exemple `switch/turn_on` ou `climate/set_hvac_mode:cool`",
+                    "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode:off`",
+                    "battery_soc_threshold": "Le seuil de charge de la batterie pour activer l'équipement",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
+                }
+            },
+            "powered_device": {
+                "title": "Paramètres de l'équipement avec puissance variable",
+                "description": "Donnez les paramètres de l'équipement avec puissance variable",
+                "data": {
+                    "name": "Nom",
+                    "entity_id": "Entity id",
+                    "power_max": "Puissance maximale",
+                    "power_min": "Puissance minimale",
+                    "power_step": "Pas de puissance",
+                    "check_usable_template": "Template d'utilisabilité",
+                    "check_active_template": "Template d'activation",
+                    "duration_min": "Durée mininale d'allumage",
+                    "duration_stop_min": "Durée mininale d'extinction",
+                    "action_mode": "Mode d'action",
+                    "activation_service": "Service d'activation",
+                    "deactivation_service": "Service d'extinction",
+                    "power_entity_id": "Entity id du capteur de puissance",
+                    "duration_power_min": "Durée de changement de puissance",
+                    "change_power_service": "Service de changement de puissance",
+                    "convert_power_divide_factor": "Facteur de division",
+                    "battery_soc_threshold": "Seuil de charge de la batterie",
+                    "max_on_time_per_day_min": "Temps max par jour",
+                    "min_on_time_per_day_min": "Temps min par jour",
+                    "offpeak_time": "Heure creuse"
                 },
                 "data_description": {
                     "name": "Nom de l'équipement",
                     "entity_id": "Entity id de l'équipement",
                     "power_max": "La puissance maximale de l'équipement lorsqu'il est activé",
+                    "power_min": "La puissance minimale de l'équipement lorsqu'il est activé",
+                    "power_step": "Le pas de puissance pour l'équipement",
                     "check_usable_template": "Le template pour vérifier si l'équipement est utilisable. Exemple `True ` ou `states('sensor.my_sensor') | float > 10` (n'oubliez pas les doubles accolades)",
                     "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
                     "duration_min": "La durée minimale de l'équipement lorsqu'il est allumé en minutes",
                     "duration_stop_min": "La durée minimale de l'équipement lorsqu'il est éteint en minutes",
                     "action_mode": "Le mode d'action. `service` pour appeler un service ou `event` pour envoyer un événement afin de l'allumer ou de l'éteindre",
                     "activation_service": "Le service pour allumer l'équipement. Exemple `switch/turn_on` ou `climate/set_hvac_mode:cool`",
-                    "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode:off`"
+                    "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode:off`",
+                    "power_entity_id": "L'entity id du capteur de puissance",
+                    "duration_power_min": "La durée minimale de chaque changement de puissance en minutes",
+                    "change_power_service": "Le service utilisé pour changer la puissance. Exemple `number/set_value`",
+                    "convert_power_divide_factor": "Le facteur de division pour convertir la puissance en unités de l'équipement. Si la conversion de la puissance en ampère, le diviseur doit être 220",
+                    "battery_soc_threshold": "Le seuil de charge de la batterie pour   activer l'équipement",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             }
+        },
+        "error": {
+            "format_time_invalid": "Le format de l'heure doit être HH:MM"
+        }
+    },
+    "options": {
+        "flow_title": "Reconfiguration de Solar Optimizer",
+        "step": {
+            "user": {
+                "title": "Type de configuration",
+                "description": "Donnez le type de configuration",
+                "data": {
+                    "device_type": "Type d'équipement"
+                },
+                "data_description": {
+                    "device_type": "Simple équipement de type on/off ou équipement avec gestion de la puissance variable"
+                }
+            },
+            "device_central": {
+                "title": "Paramètres communs",
+                "description": "Donnez les paramètres communs",
+                "data": {
+                    "refresh_period_sec": "Période de rafraichissement",
+                    "power_consumption_entity_id": "Consommation nette",
+                    "power_production_entity_id": "Production solaire",
+                    "sell_cost_entity_id": "Prix de vente de l'énergie",
+                    "buy_cost_entity_id": "Prix d'achat de l'énergie",
+                    "sell_tax_percent_entity_id": "Pourcentage de taxe de revente",
+                    "smooth_production": "Lisser la production solaire",
+                    "battery_soc_entity_id": "Etat de charge de la batterie",
+                    "raz_time": "Heure de remise à zéro"
+                },
+                "data_description": {
+                    "refresh_period_sec": "Période de rafraichissement en secondes. Attention des calculs lourds sont effectués à chaque période. Ne pas rafraichir trop souvent",
+                    "power_consumption_entity_id": "l'entity_id du capteur de consommation nette. La consommation nette doit être négative si l'énergie est exportée vers le réseau.",
+                    "power_production_entity_id": "l'entity_id du capteur de production d'énergie solaire. Doit être positif ou nul",
+                    "sell_cost_entity_id": "L'entity_id qui contient le prix actuel de vente de l'énergie.",
+                    "buy_cost_entity_id": "L'entity_id qui contient le prix actuel d'achat de l'énergie.",
+                    "sell_tax_percent_entity_id": "Le pourcentage de taxe de revente de l'énergie (0 à 100)",
+                    "smooth_production": "Si coché, la production solaire sera lissée pour éviter les variations brutales",
+                    "battery_soc_entity_id": "Etat de charge de la batterie en %. Si vous n'avez pas de batterie, laissez vide",
+                    "raz_time": "Heure de remise à zéro des compteurs de temps passés. Devrait être avant la première exposition au soleil mais pas trop tôt pour laisser du temps à l'activation de nuit"
+                }
+            },
+            "device": {
+                "title": "Paramètres de l'équipement",
+                "description": "Donnez les paramètres de l'équipement",
+                "data": {
+                    "name": "Nom",
+                    "entity_id": "Entity id",
+                    "power_max": "Puissance maximale",
+                    "check_usable_template": "Template d'utilisabilité",
+                    "check_active_template": "Template d'activation",
+                    "duration_min": "Durée mininale d'allumage",
+                    "duration_stop_min": "Durée mininale d'extinction",
+                    "action_mode": "Mode d'action",
+                    "activation_service": "Service d'activation",
+                    "deactivation_service": "Service d'extinction",
+                    "battery_soc_threshold": "Seuil de charge de la batterie",
+                    "max_on_time_per_day_min": "Temps max par jour",
+                    "min_on_time_per_day_min": "Temps min par jour",
+                    "offpeak_time": "Heure creuse"
+                },
+                "data_description": {
+                    "name": "Nom de l'équipement",
+                    "entity_id": "Entity id de l'équipement à piloter",
+                    "power_max": "La puissance maximale de l'équipement lorsqu'il est activé",
+                    "check_usable_template": "Le template pour vérifier si l'équipement est utilisable. Exemple `True ` ou `states('sensor.my_sensor') | float > 10` (n'oubliez pas les doubles accolades)",
+                    "check_active_template": "Le template pour vérifier si un équipement est actif. Laissez le vide pour les simples switch ou apparentés. Exemple `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (avec les doubles accolades)",
+                    "duration_min": "La durée minimale d'allumage de l'équipement en minutes",
+                    "duration_stop_min": "La durée minimale d'extinction de l'équipement en minutes",
+                    "action_mode": "Le mode d'action. `service` pour appeler un service ou `event` pour envoyer un événement afin de l'allumer ou de l'éteindre",
+                    "activation_service": "Le service pour allumer l'équipement. Exemple `switch/turn_on` ou `climate/set_hvac_mode:cool`",
+                    "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode:off`",
+                    "battery_soc_threshold": "Le seuil de charge de la batterie pour activer l'équipement",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
+                }
+            },
+            "powered_device": {
+                "title": "Paramètres de l'équipement avec puissance variable",
+                "description": "Donnez les paramètres de l'équipement avec puissance variable",
+                "data": {
+                    "name": "Nom",
+                    "entity_id": "Entity id",
+                    "power_max": "Puissance maximale",
+                    "power_min": "Puissance minimale",
+                    "power_step": "Pas de puissance",
+                    "check_usable_template": "Template d'utilisabilité",
+                    "check_active_template": "Template d'activation",
+                    "duration_min": "Durée mininale d'allumage",
+                    "duration_stop_min": "Durée mininale d'extinction",
+                    "action_mode": "Mode d'action",
+                    "activation_service": "Service d'activation",
+                    "deactivation_service": "Service d'extinction",
+                    "power_entity_id": "Entity id du capteur de puissance",
+                    "duration_power_min": "Durée de changement de puissance",
+                    "change_power_service": "Service de changement de puissance",
+                    "convert_power_divide_factor": "Facteur de division",
+                    "battery_soc_threshold": "Seuil de charge de la batterie",
+                    "max_on_time_per_day_min": "Temps max par jour",
+                    "min_on_time_per_day_min": "Temps min par jour",
+                    "offpeak_time": "Heure creuse"
+                },
+                "data_description": {
+                    "name": "Nom de l'équipement",
+                    "entity_id": "Entity id de l'équipement",
+                    "power_max": "La puissance maximale de l'équipement lorsqu'il est activé",
+                    "power_min": "La puissance minimale de l'équipement lorsqu'il est activé",
+                    "power_step": "Le pas de puissance pour l'équipement",
+                    "check_usable_template": "Le template pour vérifier si l'équipement est utilisable. Exemple `True ` ou `states('sensor.my_sensor') | float > 10` (n'oubliez pas les doubles accolades)",
+                    "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
+                    "duration_min": "La durée minimale de l'équipement lorsqu'il est allumé en minutes",
+                    "duration_stop_min": "La durée minimale de l'équipement lorsqu'il est éteint en minutes",
+                    "action_mode": "Le mode d'action. `service` pour appeler un service ou `event` pour envoyer un événement afin de l'allumer ou de l'éteindre",
+                    "activation_service": "Le service pour allumer l'équipement. Exemple `switch/turn_on` ou `climate/set_hvac_mode:cool`",
+                    "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode:off`",
+                    "power_entity_id": "L'entity id du capteur de puissance",
+                    "duration_power_min": "La durée minimale de chaque changement de puissance en minutes",
+                    "change_power_service": "Le service utilisé pour changer la puissance. Exemple `number/set_value`",
+                    "convert_power_divide_factor": "Le facteur de division pour convertir la puissance en unités de l'équipement. Si la conversion de la puissance en ampère, le diviseur doit être 220",
+                    "battery_soc_threshold": "Le seuil de charge de la batterie pour   activer l'équipement",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
+                }
+            }
+        },
+        "error": {
+            "format_time_invalid": "Le format de l'heure doit être HH:MM"
         }
     },
     "selector": {
@@ -103,12 +266,9 @@
         },
         "action_mode": {
             "options": {
-                "service_call": "Appel d'action",
+                "action_call": "Appel d'action",
                 "event": "Evènement"
             }
-        },
-        "error": {
-            "format_time_invalid": "Format of time should be HH:MM"
         }
     }
 }

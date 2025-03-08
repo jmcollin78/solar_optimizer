@@ -82,7 +82,7 @@ managed_device_schema = vol.Schema(
             )
         ),
         vol.Optional(
-            CONF_ACTION_MODE, default=CONF_ACTION_MODE_SERVICE
+            CONF_ACTION_MODE, default=CONF_ACTION_MODE_ACTION
         ): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=CONF_ACTION_MODES,
@@ -136,7 +136,7 @@ power_managed_device_schema = vol.Schema(
             )
         ),
         vol.Optional(
-            CONF_ACTION_MODE, default=CONF_ACTION_MODE_SERVICE
+            CONF_ACTION_MODE, default=CONF_ACTION_MODE_ACTION
         ): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=CONF_ACTION_MODES,
