@@ -55,11 +55,13 @@ async def test_normal_nominal_start(hass: HomeAssistant):
         },
     )
 
-    device_b = await create_managed_device(
+    device_a = await create_managed_device(
         hass,
         entry_a,
-        "eqtAUniqueId",
+        "equipement_a",
     )
+
+    assert device_a is not None
 
     entry_b = MockConfigEntry(
         domain=DOMAIN,
@@ -92,8 +94,10 @@ async def test_normal_nominal_start(hass: HomeAssistant):
     device_b = await create_managed_device(
         hass,
         entry_b,
-        "eqtBUniqueId",
+        "equipement_b",
     )
+
+    assert device_b is not None
 
     coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
     assert coordinator is not None
@@ -180,7 +184,7 @@ async def test_normal_nominal_start_with_fixture(
     assert len(coordinator.devices) == 0
 
 
-async def test_empty_start(hass: HomeAssistant):
+async def test_empty_start(hass: HomeAssistant, reset_coordinator):
     """A test with no central config"""
 
     coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()

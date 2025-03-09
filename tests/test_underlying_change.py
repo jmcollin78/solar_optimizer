@@ -9,22 +9,41 @@ from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-impor
 
 
 async def test_underlying_state_change(
-    hass: HomeAssistant,
-    init_solar_optimizer_with_2_devices_power_not_power,
-    init_solar_optimizer_entry,  # pylint: disable=unused-argument
+    hass: HomeAssistant, init_solar_optimizer_central_config
 ):
     """Testing underlying state change"""
 
-    coordinator: SolarOptimizerCoordinator = (
-        init_solar_optimizer_with_2_devices_power_not_power
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtAUniqueId",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 2,
+            CONF_DURATION_STOP_MIN: 1,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_BATTERY_SOC_THRESHOLD: 30,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+            CONF_OFFPEAK_TIME: "23:00",
+        },
     )
 
-    assert coordinator is not None
-    assert coordinator.devices is not None
-    assert len(coordinator.devices) == 2
+    device = await create_managed_device(
+        hass,
+        entry_a,
+        "equipement_a",
+    )
+    assert device is not None
 
-    device: ManagedDevice = coordinator.devices[0]
     assert device.name == "Equipement A"
+    assert device.is_enabled is True
     assert device.is_enabled is True
 
     # Creates the fake input_boolean
@@ -71,7 +90,8 @@ async def test_underlying_state_change(
     assert device.is_active is False
     assert device_switch.get_attr_extra_state_attributes.get("is_active") is False
 
-async def test_underlying_state_initialize(hass, init_solar_optimizer_with_2_devices_power_not_power):
+
+async def test_underlying_state_initialize(hass, init_solar_optimizer_central_config):
     """ Test the initialization of underlying device """
 
     # Creates the fake input_boolean
@@ -84,16 +104,37 @@ async def test_underlying_state_initialize(hass, init_solar_optimizer_with_2_dev
     await fake_input_bool.async_turn_on()
     await hass.async_block_till_done()
 
-    coordinator: SolarOptimizerCoordinator = (
-        init_solar_optimizer_with_2_devices_power_not_power
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtAUniqueId",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 2,
+            CONF_DURATION_STOP_MIN: 1,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_BATTERY_SOC_THRESHOLD: 30,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+            CONF_OFFPEAK_TIME: "23:00",
+        },
     )
 
-    assert coordinator is not None
-    assert coordinator.devices is not None
-    assert len(coordinator.devices) == 2
+    device = await create_managed_device(
+        hass,
+        entry_a,
+        "equipement_a",
+    )
+    assert device is not None
 
-    device: ManagedDevice = coordinator.devices[0]
     assert device.name == "Equipement A"
+    assert device.is_enabled is True
     assert device.is_active is True
 
     #

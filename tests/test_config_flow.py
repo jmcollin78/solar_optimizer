@@ -15,7 +15,7 @@ from custom_components.solar_optimizer.const import *
 from custom_components.solar_optimizer.coordinator import SolarOptimizerCoordinator
 
 
-async def test_empty_config(hass: HomeAssistant):
+async def test_empty_config(hass: HomeAssistant, reset_coordinator):
     """Test an empty config. This should not work"""
     _result = await hass.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": "user"}

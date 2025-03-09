@@ -121,6 +121,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             )
         )
 
+        self.update_custom_attributes(self._device)
+
     @callback
     async def _on_enable_state_change(self, event: Event) -> None:
         """Triggered when the ManagedDevice enable state have change"""
