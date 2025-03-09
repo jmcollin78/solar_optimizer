@@ -7,7 +7,7 @@ from homeassistant.setup import async_setup_component
 from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
-async def test_normal_start_one_device(hass: HomeAssistant):
+async def test_normal_nominal_start(hass: HomeAssistant):
     """A full nominal start of Solar Optimizer"""
 
     entry_central = MockConfigEntry(
@@ -97,6 +97,7 @@ async def test_normal_start_one_device(hass: HomeAssistant):
 
     coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
     assert coordinator is not None
+    assert coordinator.is_central_config_done is True
 
     assert coordinator.devices is not None
     assert len(coordinator.devices) == 2
@@ -164,3 +165,23 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert (device.next_date_available_power.astimezone(tz) - now).total_seconds() < 1
 
     assert device.convert_power_divide_factor == 6
+
+
+async def test_normal_nominal_start_with_fixture(
+    hass: HomeAssistant, init_solar_optimizer_central_config
+):
+    """A test with the init of the central config in fixture"""
+
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
+    assert coordinator is not None
+    assert coordinator.is_central_config_done is True
+
+    assert coordinator.devices is not None
+    assert len(coordinator.devices) == 0
+
+
+async def test_empty_start(hass: HomeAssistant):
+    """A test with no central config"""
+
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
+    assert coordinator is None

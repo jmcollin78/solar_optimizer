@@ -20,11 +20,13 @@ import pytest
 
 from homeassistant.setup import async_setup_component
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import StateMachine
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.solar_optimizer.const import DOMAIN
+from custom_components.solar_optimizer.const import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from custom_components.solar_optimizer.coordinator import SolarOptimizerCoordinator
+from .commons import create_managed_device
 
 # from homeassistant.core import StateMachine
 
@@ -49,6 +51,21 @@ def skip_notifications_fixture():
         "homeassistant.components.persistent_notification.async_dismiss"
     ):
         yield
+
+
+@pytest.fixture(name="skip_hass_states_get")
+def skip_hass_states_get_fixture():
+    """Skip the get state in HomeAssistant"""
+    with patch.object(StateMachine, "get"):
+        yield
+
+
+@pytest.fixture(name="reset_coordinator")
+def reset_coordinator_fixture():
+    """Reset the coordinator"""
+    SolarOptimizerCoordinator.reset()
+    yield
+
 
 @pytest.fixture(name="config_2_devices_power_not_power")
 def define_config_2_devices():
@@ -282,3 +299,30 @@ async def init_solar_optimizer_with_devices_offpeak_morning(
     """Initialization of Solar Optimizer with 2 managed device"""
     await async_setup_component(hass, "solar_optimizer", config_devices_offpeak_morning)
     return hass.data[DOMAIN]["coordinator"]
+
+
+@pytest.fixture(name="init_solar_optimizer_central_config")
+async def init_solar_optimizer_central_config(hass):
+    """Initialization of the integration from an Entry"""
+    entry_central = MockConfigEntry(
+        domain=DOMAIN,
+        title="Central",
+        unique_id="centralUniqueId",
+        data={
+            CONF_REFRESH_PERIOD_SEC: 60,
+            CONF_DEVICE_TYPE: CONF_DEVICE_CENTRAL,
+            CONF_POWER_CONSUMPTION_ENTITY_ID: "sensor.fake_power_consumption",
+            CONF_POWER_PRODUCTION_ENTITY_ID: "sensor.fake_power_production",
+            CONF_SELL_COST_ENTITY_ID: "input_number.fake_sell_cost",
+            CONF_BUY_COST_ENTITY_ID: "input_number.fake_buy_cost",
+            CONF_SELL_TAX_PERCENT_ENTITY_ID: "input_number.fake_sell_tax_percent",
+            CONF_SMOOTH_PRODUCTION: True,
+            CONF_BATTERY_SOC_ENTITY_ID: "sensor.fake_battery_soc",
+            CONF_RAZ_TIME: "05:00",
+        },
+    )
+    device_central = await create_managed_device(
+        hass,
+        entry_central,
+        "centralUniqueId",
+    )

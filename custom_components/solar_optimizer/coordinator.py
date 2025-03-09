@@ -228,6 +228,20 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             "coordinator"
         ]
 
+    @classmethod
+    def reset(cls) -> Any:
+        """Reset the coordinator from the hass.data"""
+        if (
+            not hasattr(SolarOptimizerCoordinator, "hass")
+            or SolarOptimizerCoordinator.hass is None
+            or SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN] is None
+        ):
+            return
+
+        SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN][
+            "coordinator"
+        ] = None
+
     @property
     def is_central_config_done(self) -> bool:
         """Return True if the central config is done"""
