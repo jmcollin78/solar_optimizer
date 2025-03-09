@@ -22,6 +22,23 @@ from custom_components.solar_optimizer.managed_device import ManagedDevice
 
 _LOGGER = logging.getLogger(__name__)
 
+
+async def create_managed_device(
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    entity_id: str,
+) -> ManagedDevice:
+    """Creates and return a ManagedDevice"""
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    assert entry.state is ConfigEntryState.LOADED
+
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
+    assert coordinator is not None
+
+    return coordinator.get_device_by_unique_id(entity_id)
+
+
 def search_entity(hass: HomeAssistant, entity_id, domain) -> Entity:
     """Search and return the entity in the domain"""
     # component = hass.data["components"].domain #hass.data[domain]

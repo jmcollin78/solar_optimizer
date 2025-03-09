@@ -76,7 +76,7 @@ async def async_setup_entry(
         device,
     )
 
-    async_add_entities([entotity1], False)
+    async_add_entities([entity1], False)
 
     # Add services
     platform = entity_platform.async_get_current_platform()
