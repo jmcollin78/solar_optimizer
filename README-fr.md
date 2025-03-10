@@ -10,6 +10,7 @@
 
 - [Qu'est-ce que Solar Optimizer ?](#quest-ce-que-solar-optimizer-)
 - [Comment fonctionne-t-elle ?](#comment-fonctionne-t-elle-)
+  - [Procédure de migration d'une version 2.x vers la 3.x](#procédure-de-migration-dune-version-2x-vers-la-3x)
   - [Anti-bagot](#anti-bagot)
   - [Utilisabilité](#utilisabilité)
 - [Comment on l'installe ?](#comment-on-linstalle-)
@@ -35,6 +36,8 @@ Migration
 - Redémarrez
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.0.0** :
+>    - ajout d'une IHM de configuration des équipmements. Attention : l'installation de la release 3.0.0 nécessite une procédure particulière. Voir la procédure ci-dessous.
 > * **release 2.1.0** :
 >    - ajout d'une durée minimale d'allumage en heure creuses. Permet de gérer les équipements qui doivent avoir un minimum d'allumage par jour comme les chauffes-eau ou les chargeurs (voitures, batteries, ……). Si l'ensoleillement n'a pas durée d'atteindre la durée requise, alors l'équipement s'allumera pendant les heures creuses. Vous pouvez en plus définir à quelle heure les compteurs d'allumage sont remis à zéro ce qui permet de profiter des toutes les heures creuses
 > * **release 2.0.0** :
@@ -69,6 +72,19 @@ Le fonctionnement est le suivant :
 3. la meilleure configuration est alors appliquée.
 
 L'algorithme utilisé est un algorithme de type recuit simulé dont vous trouverez une description ici : https://fr.wikipedia.org/wiki/Recuit_simul%C3%A9
+
+## Procédure de migration d'une version 2.x vers la 3.x
+La version 3.0.0 amène une IHM de configuration qui permet d'ajouter facilement des nouveaux équipements à contrôler et de changer facilement leur configuration.
+
+Cette procédure, ne doit être déroulée que si vous avez déjà installée et configurée une version 2.x.
+
+L'installation de la v 3.0.0 impose de recréer tous les équipements via l'IHM et de supprimer la configuration du fichier `configuration.yaml`. La procédure à suivre est la suivante, elle doit être suivie scrupuleusement :
+1. allez dans Paramètres / Intégration, sélectionnez "Solar Optimizer" et supprimez l'appareil "Solar Optimizer". L'intégration "Solar Optimizer" ne doit plus être visible,
+2. supprimez la configuration qui est dans votre fichier `configuration.yaml`,
+3. lancez HACS, recherchez "Solar Optimizer" et faite l'installation de la version 3.0.0,
+4. Allez dans Paramètres / Intégration et cliquez sur "Ajouter une intégration" et sélectionnez "Solar optimizer",
+5. Vous arrivez sur la page de configuration.
+6. TODO
 
 ## Anti-bagot
 Pour éviter les effets de bagottements d'un cycle à l'autre, un délai minimal d'activation est paramétrable par équipements : `duration_min`. Par exemple : un chauffe-eau doit être activé au moins une heure pour que l'allumage soit utile, la charge d'une voiture électrique doit durer au moins deux heures, ...
