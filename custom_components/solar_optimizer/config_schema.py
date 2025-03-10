@@ -146,7 +146,7 @@ power_managed_device_schema = vol.Schema(
         ),
         vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
         vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
-        vol.Optional(CONF_CHANGE_POWER_SERVICE): str,
+        vol.Optional(CONF_CHANGE_POWER_SERVICE, default="number/set_value"): str,
         vol.Optional(
             CONF_CONVERT_POWER_DIVIDE_FACTOR, default=220
         ): selector.NumberSelector(

@@ -19,9 +19,20 @@
   - [Configurer l'intégration](#configurer-lintégration)
   - [Configurer les équipements](#configurer-les-équipements)
 - [Entités disponibles](#entités-disponibles)
-- [En complément](#en-complément)
+- [Une carte pour vos dashboard en complément](#une-carte-pour-vos-dashboard-en-complément)
+  - [Installez les plugins](#installez-les-plugins)
+  - [Installez les templates](#installez-les-templates)
+  - [Ajoutez une carte par équipements](#ajoutez-une-carte-par-équipements)
+  - [Utilisation de la carte](#utilisation-de-la-carte)
+    - [Couleur de l'icône](#couleur-de-licône)
+    - [Badge](#badge)
+    - [Action sur la carte](#action-sur-la-carte)
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
+Migration
+- Supprimez l'équipement SO
+- Supprimez la conf manuelle dans condiguration.yaml
+- Redémarrez
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
 > * **release 2.1.0** :

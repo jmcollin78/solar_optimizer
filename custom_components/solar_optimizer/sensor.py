@@ -46,11 +46,15 @@ async def async_setup_entry(
 ) -> None:
     """Setup the entries of type Sensor"""
 
+    # check that there is some data to configure
+    if device_type := entry.data.get(CONF_DEVICE_TYPE, None) is None:
+        return
+
     # Sets the config entries values to SolarOptimizer coordinator
     coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
 
     # inititalize the coordinator if entry if the central config
-    if entry.data[CONF_DEVICE_TYPE] == CONF_DEVICE_CENTRAL:
+    if device_type == CONF_DEVICE_CENTRAL:
         # This is device entry
         entity1 = SolarOptimizerSensorEntity(coordinator, hass, "best_objective")
         entity2 = SolarOptimizerSensorEntity(coordinator, hass, "total_power")

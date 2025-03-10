@@ -242,7 +242,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        await self.turn_on(**kwargs)
+        self.turn_on(**kwargs)
 
     def turn_off(  # pylint: disable=useless-parent-delegation
         self, **kwargs: Any
