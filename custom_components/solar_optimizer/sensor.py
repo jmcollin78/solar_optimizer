@@ -47,7 +47,7 @@ async def async_setup_entry(
     """Setup the entries of type Sensor"""
 
     # check that there is some data to configure
-    if device_type := entry.data.get(CONF_DEVICE_TYPE, None) is None:
+    if (device_type := entry.data.get(CONF_DEVICE_TYPE, None)) is None:
         return
 
     # Sets the config entries values to SolarOptimizer coordinator
