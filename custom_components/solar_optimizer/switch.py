@@ -1,13 +1,14 @@
-""" A bonary sensor entity that holds the state of each managed_device """
+""" A binary sensor entity that holds the state of each managed_device """
+
 import logging
 from datetime import datetime
 from typing import Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_ON
 from homeassistant.core import callback, HomeAssistant, State, Event
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.components.switch import SwitchEntity, DOMAIN as SWITCH_DOMAIN
 
 from homeassistant.helpers.entity_platform import (
@@ -17,16 +18,9 @@ from homeassistant.helpers.entity_platform import (
 from homeassistant.helpers.event import (
     async_track_state_change_event,
 )
+from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
 
-from .const import (
-    DOMAIN,
-    name_to_unique_id,
-    get_tz,
-    EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
-    DEVICE_MANUFACTURER,
-    DEVICE_MODEL,
-    overrides,
-)
+from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from .coordinator import SolarOptimizerCoordinator
 from .managed_device import ManagedDevice
 
@@ -34,26 +28,28 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, _, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Setup the entries of type Binary sensor, one for each ManagedDevice"""
     _LOGGER.debug("Calling switch.async_setup_entry")
 
-    coordinator: SolarOptimizerCoordinator = hass.data[DOMAIN]["coordinator"]
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
 
     entities = []
-    for _, device in enumerate(coordinator.devices):
-        entity = ManagedDeviceSwitch(
-            coordinator,
-            hass,
-            device,
-        )
-        if entity is not None:
-            entities.append(entity)
+    if entry.data[CONF_DEVICE_TYPE] == CONF_DEVICE_CENTRAL:
+        return
 
-        entity = ManagedDeviceEnable(hass, device)
-        if entity is not None:
-            entities.append(entity)
+    device = coordinator.get_device_by_unique_id(
+        name_to_unique_id(entry.data[CONF_NAME])
+    )
+    if device is None:
+        device = ManagedDevice(hass, entry.data, coordinator)
+        coordinator.add_device(device)
+
+    entity = ManagedDeviceSwitch(coordinator, hass, device)
+    entities.append(entity)
+    entity = ManagedDeviceEnable(hass, device)
+    entities.append(entity)
 
     async_add_entities(entities)
 
@@ -83,7 +79,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         )
     )
 
-    def __init__(self, coordinator, hass, device):
+    def __init__(self, coordinator, hass, device: ManagedDevice):
         _LOGGER.debug("Adding ManagedDeviceSwitch for %s", device.name)
         idx = name_to_unique_id(device.name)
         super().__init__(coordinator, context=idx)
@@ -124,6 +120,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
                 listener=self._on_enable_state_change,
             )
         )
+
+        self.update_custom_attributes(self._device)
 
     @callback
     async def _on_enable_state_change(self, event: Event) -> None:
@@ -227,11 +225,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         self.update_custom_attributes(device)
         self.async_write_ha_state()
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        if not self.coordinator or not self.coordinator.data:
-            return
-
         _LOGGER.info("Turn_on Solar Optimizer switch %s", self._attr_name)
         # search for coordinator and device
         if not self.coordinator or not (
@@ -240,13 +235,25 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         if not self._attr_is_on:
-            await device.activate()
+            device.activate()
             self._attr_is_on = True
             self.update_custom_attributes(device)
             self.async_write_ha_state()
 
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the entity on."""
+        self.turn_on(**kwargs)
+
+    def turn_off(  # pylint: disable=useless-parent-delegation
+        self, **kwargs: Any
+    ) -> None:
+        """Turn the entity off."""
+        # We cannot call async_turn_off from a sync context so we call the async_turn_off in a task
+        self.hass.async_create_task(self.async_turn_off(**kwargs))
+
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity on."""
+        _LOGGER.info("Turn_off Solar Optimizer switch %s", self._attr_name)
         if not self.coordinator or not self.coordinator.data:
             return
 
@@ -266,25 +273,18 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def device_info(self) -> DeviceInfo | None:
         # Retournez des informations sur le périphérique associé à votre entité
-        return {
-            "model": DEVICE_MODEL,
-            "manufacturer": DEVICE_MANUFACTURER,
-            "identifiers": {(DOMAIN, self._device.name)},
-            "name": "Solar Optimizer-" + self._device.name,
-        }
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._device.name)},
+            name="Solar Optimizer-" + self._device.name,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
 
     @property
     def get_attr_extra_state_attributes(self):
         """Get the extra state attributes for the entity"""
         return self._attr_extra_state_attributes
-
-    @overrides
-    def turn_off(self, **kwargs: Any):
-        """Not used"""
-
-    @overrides
-    def turn_on(self, **kwargs: Any):
-        """Not used"""
 
 
 class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
@@ -305,12 +305,13 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     @property
     def device_info(self) -> DeviceInfo | None:
         # Retournez des informations sur le périphérique associé à votre entité
-        return {
-            "model": DEVICE_MODEL,
-            "manufacturer": DEVICE_MANUFACTURER,
-            "identifiers": {(DOMAIN, self._device.name)},
-            "name": "Solar Optimizer-" + self._device.name,
-        }
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._device.name)},
+            name="Solar Optimizer-" + self._device.name,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
 
     @property
     def icon(self) -> str | None:
@@ -324,7 +325,7 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
 
         # Si l'état précédent existe, vous pouvez l'utiliser
         if last_state is not None:
-            self._attr_is_on = last_state.state == "on"
+            self._attr_is_on = last_state.state == STATE_ON
         else:
             # Si l'état précédent n'existe pas, initialisez l'état comme vous le souhaitez
             self._attr_is_on = True
@@ -335,12 +336,15 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     @callback
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        self.turn_on()
+        self.turn_on(**kwargs)
 
     @callback
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(  # pylint: disable=useless-parent-delegation
+        self, **kwargs: Any
+    ) -> None:
         """Turn the entity off."""
-        self.turn_off()
+        # We cannot call async_turn_off from a sync context so we call the async_turn_off in a task
+        self.turn_off(**kwargs)
 
     def update_device_enabled(self) -> None:
         """Update the device is enabled flag"""

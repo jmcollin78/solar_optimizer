@@ -10,24 +10,42 @@ from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-impor
 
 async def test_is_usable(
     hass: HomeAssistant,
-    init_solar_optimizer_with_2_devices_power_not_power_battery,
-    init_solar_optimizer_entry,  # pylint: disable=unused-argument
+    init_solar_optimizer_central_config,
 ):
     """Testing is_usable feature"""
-
-    coordinator: SolarOptimizerCoordinator = (
-        init_solar_optimizer_with_2_devices_power_not_power_battery
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtAUniqueId",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0.3,
+            CONF_DURATION_STOP_MIN: 0.1,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_BATTERY_SOC_THRESHOLD: 30,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+        },
     )
 
-    assert coordinator is not None
-    assert coordinator.devices is not None
-    assert len(coordinator.devices) == 2
+    device = await create_managed_device(
+        hass,
+        entry_a,
+        "equipement_a",
+    )
 
-    device: ManagedDevice = coordinator.devices[0]
+    assert device is not None
     assert device.name == "Equipement A"
     device_switch = search_entity(
         hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN
     )
+
+    assert device_switch is not None
 
     assert (
         device_switch.get_attr_extra_state_attributes.get("battery_soc_threshold") == 30

@@ -1,75 +1,107 @@
 """ Nominal Unit test module"""
 # from unittest.mock import patch
-from datetime import datetime
+from datetime import datetime, time
 
 from homeassistant.setup import async_setup_component
 
 from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
-async def test_normal_start_one_device(hass: HomeAssistant):
+async def test_normal_nominal_start(hass: HomeAssistant):
     """A full nominal start of Solar Optimizer"""
 
-    config = {
-        "solar_optimizer": {
-            "algorithm": {
-                "initial_temp": 1000,
-                "min_temp": 0.1,
-                "cooling_factor": 0.95,
-                "max_iteration_number": 1000,
-            },
-            "devices": [
-                {
-                    "name": "Equipement A",
-                    "entity_id": "input_boolean.fake_device_a",
-                    "power_max": 1000,
-                    "check_usable_template": "{{ True }}",
-                    "duration_min": 0.3,
-                    "duration_stop_min": 0.1,
-                    "action_mode": "service_call",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                    "max_on_time_per_day_min": 10,
-                },
-                {
-                    "name": "Equipement B",
-                    "entity_id": "input_boolean.fake_device_b",
-                    "power_max": 2000,
-                    "power_min": 100,
-                    "power_step": 150,
-                    "check_usable_template": "{{ False }}",
-                    "duration_min": 1,
-                    "duration_stop_min": 2,
-                    "duration_power_min": 3,
-                    "action_mode": "event",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                    "convert_power_divide_factor": 6,
-                    "change_power_service": "input_number/set_value",
-                    "power_entity_id": "input_number.tesla_amps",
-                },
-            ],
-        }
-    }
-
-    # Initialiser le composant avec la configuration de test
-    assert await async_setup_component(hass, "solar_optimizer", config)
-
-    entry = MockConfigEntry(
+    entry_central = MockConfigEntry(
         domain=DOMAIN,
-        title="TheSolarOptimizer",
-        unique_id="uniqueId",
-        data={},
+        title="Central",
+        unique_id="centralUniqueId",
+        data={
+            CONF_REFRESH_PERIOD_SEC: 60,
+            CONF_DEVICE_TYPE: CONF_DEVICE_CENTRAL,
+            CONF_POWER_CONSUMPTION_ENTITY_ID: "sensor.fake_power_consumption",
+            CONF_POWER_PRODUCTION_ENTITY_ID: "sensor.fake_power_production",
+            CONF_SELL_COST_ENTITY_ID: "input_number.fake_sell_cost",
+            CONF_BUY_COST_ENTITY_ID: "input_number.fake_buy_cost",
+            CONF_SELL_TAX_PERCENT_ENTITY_ID: "input_number.fake_sell_tax_percent",
+            CONF_SMOOTH_PRODUCTION: True,
+            CONF_BATTERY_SOC_ENTITY_ID: "sensor.fake_battery_soc",
+            CONF_RAZ_TIME: "05:00",
+        },
+    )
+    device_central = await create_managed_device(
+        hass,
+        entry_central,
+        "centralUniqueId",
     )
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtAUniqueId",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0.3,
+            CONF_DURATION_STOP_MIN: 0.1,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_BATTERY_SOC_THRESHOLD: 50,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 1,
+            CONF_OFFPEAK_TIME: "22:00",
+        },
+    )
 
-    assert entry.state is ConfigEntryState.LOADED
+    device_a = await create_managed_device(
+        hass,
+        entry_a,
+        "equipement_a",
+    )
 
-    coordinator: SolarOptimizerCoordinator = hass.data[DOMAIN]["coordinator"]
+    assert device_a is not None
+
+    entry_b = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement B",
+        unique_id="eqtBUniqueId",
+        data={
+            CONF_NAME: "Equipement B",
+            CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_b",
+            CONF_POWER_MAX: 2000,
+            CONF_POWER_MIN: 100,
+            CONF_POWER_STEP: 150,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ False }}",
+            CONF_DURATION_MIN: 1,
+            CONF_DURATION_STOP_MIN: 2,
+            CONF_DURATION_POWER_MIN: 3,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_EVENT,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_CONVERT_POWER_DIVIDE_FACTOR: 6,
+            CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+            CONF_POWER_ENTITY_ID: "input_number.tesla_amps",
+            CONF_BATTERY_SOC_THRESHOLD: 0,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 0,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 0,
+            CONF_OFFPEAK_TIME: "00:00",
+        },
+    )
+
+    device_b = await create_managed_device(
+        hass,
+        entry_b,
+        "equipement_b",
+    )
+
+    assert device_b is not None
+
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
     assert coordinator is not None
+    assert coordinator.is_central_config_done is True
 
     assert coordinator.devices is not None
     assert len(coordinator.devices) == 2
@@ -95,6 +127,9 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert device.requested_power == 0
     assert device.can_change_power is False
     assert device.max_on_time_per_day_sec == 10 * 60
+    assert device.min_on_time_per_day_sec == 1 * 60
+    assert device.battery_soc_threshold == 50
+    assert device.offpeak_time == time(22, 0)
 
     tz = get_tz(hass) # pylint: disable=invalid-name
     now: datetime = datetime.now(tz=tz)
@@ -117,7 +152,6 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert device.power_step == 150
     assert device.duration_sec == 60
     assert device.duration_stop_sec == 120
-    # duration_power is set to duration_sec in not power mode
     assert device.duration_power_sec == 180
     assert device.entity_id == "input_boolean.fake_device_b"
     assert device.power_entity_id == "input_number.tesla_amps"
@@ -125,6 +159,9 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert device.requested_power == 0
     assert device.can_change_power is True
     assert device.max_on_time_per_day_sec == 24 * 60 * 60
+    assert device.min_on_time_per_day_sec == 0
+    assert device.battery_soc_threshold == 0
+    assert device.offpeak_time == time(0, 0)
 
     tz = get_tz(hass) # pylint: disable=invalid-name
     now: datetime = datetime.now(tz=tz)
@@ -132,3 +169,23 @@ async def test_normal_start_one_device(hass: HomeAssistant):
     assert (device.next_date_available_power.astimezone(tz) - now).total_seconds() < 1
 
     assert device.convert_power_divide_factor == 6
+
+
+async def test_normal_nominal_start_with_fixture(
+    hass: HomeAssistant, init_solar_optimizer_central_config
+):
+    """A test with the init of the central config in fixture"""
+
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
+    assert coordinator is not None
+    assert coordinator.is_central_config_done is True
+
+    assert coordinator.devices is not None
+    assert len(coordinator.devices) == 0
+
+
+async def test_empty_start(hass: HomeAssistant, reset_coordinator):
+    """A test with no central config"""
+
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
+    assert coordinator is None

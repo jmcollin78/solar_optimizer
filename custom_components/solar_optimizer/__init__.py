@@ -1,4 +1,5 @@
 """Initialisation du package de l'intégration HACS Tuto"""
+
 import logging
 import asyncio
 import voluptuous as vol
@@ -12,14 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import selector
-from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
-from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.humidifier import DOMAIN as HUMIDIFIER_DOMAIN
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
+
 from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.reload import (
     async_setup_reload_service,
@@ -27,10 +21,8 @@ from homeassistant.helpers.reload import (
     _resetup_platform,
 )
 
-# from homeassistant.helpers.entity_component import EntityComponent
 
-
-from .const import DOMAIN, PLATFORMS, SERVICE_RESET_ON_TIME, validate_time_format
+from .const import DOMAIN, PLATFORMS, CONFIG_VERSION, CONFIG_MINOR_VERSION, SERVICE_RESET_ON_TIME, validate_time_format
 from .coordinator import SolarOptimizerCoordinator
 
 # from .input_boolean import async_setup_entry as async_setup_entry_input_boolean
@@ -50,51 +42,6 @@ CONFIG_SCHEMA = vol.Schema(
                             "max_iteration_number", default=1000
                         ): cv.positive_int,
                     }
-                ),
-                "devices": vol.All(
-                    [
-                        {
-                            vol.Required("name"): str,
-                            vol.Required("entity_id"): selector.EntitySelector(
-                                selector.EntitySelectorConfig(
-                                    domain=[
-                                        INPUT_BOOLEAN_DOMAIN,
-                                        SWITCH_DOMAIN,
-                                        HUMIDIFIER_DOMAIN,
-                                        CLIMATE_DOMAIN,
-                                        BUTTON_DOMAIN,
-                                        LIGHT_DOMAIN,
-                                    ]
-                                )
-                            ),
-                            vol.Optional("power_entity_id"): selector.EntitySelector(
-                                selector.EntitySelectorConfig(
-                                    domain=[INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN]
-                                )
-                            ),
-                            vol.Required("power_max"): vol.Coerce(float),
-                            vol.Optional("power_min"): vol.Coerce(float),
-                            vol.Optional("power_step"): vol.Coerce(float),
-                            vol.Optional("check_usable_template"): str,
-                            vol.Optional("check_active_template"): str,
-                            vol.Optional("duration_min"): vol.Coerce(float),
-                            vol.Optional("duration_stop_min"): vol.Coerce(float),
-                            vol.Optional("duration_power_min"): vol.Coerce(float),
-                            vol.Optional("action_mode"): str,
-                            vol.Required("activation_service"): str,
-                            vol.Required("deactivation_service"): str,
-                            vol.Optional("change_power_service"): str,
-                            vol.Optional("convert_power_divide_factor"): vol.Coerce(
-                                float
-                            ),
-                            vol.Optional(
-                                "battery_soc_threshold", default=0
-                            ): vol.Coerce(float),
-                            vol.Optional("max_on_time_per_day_min"): vol.Coerce(int),
-                            vol.Optional("min_on_time_per_day_min"): vol.Coerce(int),
-                            vol.Optional("offpeak_time"): validate_time_format,
-                        }
-                    ]
                 ),
             }
         ),
@@ -175,7 +122,41 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
-    # await async_setup_entry(hass, entry)
+    await async_setup_entry(hass, entry)
+
+
+# Migration function (not used yet)
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry):
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Migrating from version %s/%s", config_entry.version, config_entry.minor_version
+    )
+
+    if (
+        config_entry.version != CONFIG_VERSION
+        or config_entry.minor_version != CONFIG_MINOR_VERSION
+    ):
+        _LOGGER.debug(
+            "Migration to %s/%s is needed", CONFIG_VERSION, CONFIG_MINOR_VERSION
+        )
+        new = {**config_entry.data}
+
+        # Put migration code here
+
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=new,
+            version=CONFIG_VERSION,
+            minor_version=CONFIG_MINOR_VERSION,
+        )
+
+        _LOGGER.info(
+            "Migration to version %s (%s) successful",
+            config_entry.version,
+            config_entry.minor_version,
+        )
+
+    return True
 
 
 async def reload_config(hass):
@@ -185,5 +166,3 @@ async def reload_config(hass):
     # await async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
     # await _resetup_platform(hass, DOMAIN, DOMAIN, None)
     await async_setup_component(hass, DOMAIN, None)
-
-    # current_entries = hass.config_entries.async_entries(DOMAIN)

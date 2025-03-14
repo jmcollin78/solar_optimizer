@@ -1,4 +1,5 @@
 """ A sensor entity that holds the result of the recuit simule algorithm """
+
 import logging
 from datetime import datetime, timedelta, time
 from homeassistant.const import (
@@ -19,6 +20,8 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 
+from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+
 from homeassistant.helpers.entity_platform import (
     AddEntitiesCallback,
 )
@@ -30,15 +33,8 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from .const import (
-    DOMAIN,
-    DEVICE_MANUFACTURER,
-    INTEGRATION_MODEL,
-    name_to_unique_id,
-    DEVICE_MODEL,
-    seconds_to_hms,
-    SERVICE_RESET_ON_TIME,
-)
+
+from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from .coordinator import SolarOptimizerCoordinator
 from .managed_device import ManagedDevice
 
@@ -50,30 +46,41 @@ async def async_setup_entry(
 ) -> None:
     """Setup the entries of type Sensor"""
 
-    # Sets the config entries values to SolarOptimizer coordinator
-    coordinator: SolarOptimizerCoordinator = hass.data[DOMAIN]["coordinator"]
+    # check that there is some data to configure
+    if (device_type := entry.data.get(CONF_DEVICE_TYPE, None)) is None:
+        return
 
-    await coordinator.configure(entry)
+    # Sets the config entries values to SolarOptimizer coordinator
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
+
+    # inititalize the coordinator if entry if the central config
+    if device_type == CONF_DEVICE_CENTRAL:
+        # This is device entry
+        entity1 = SolarOptimizerSensorEntity(coordinator, hass, "best_objective")
+        entity2 = SolarOptimizerSensorEntity(coordinator, hass, "total_power")
+        entity3 = SolarOptimizerSensorEntity(coordinator, hass, "power_production")
+        entity4 = SolarOptimizerSensorEntity(coordinator, hass, "power_production_brut")
+
+        async_add_entities([entity1, entity2, entity3, entity4], False)
+
+        await coordinator.configure(entry)
+        return
 
     entities = []
-    for _, device in enumerate(coordinator.devices):
-        entity = TodayOnTimeSensor(
-            hass,
-            coordinator,
-            device,
-        )
-        if entity is not None:
-            entities.append(entity)
-
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "best_objective"))
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "total_power"))
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "power_production"))
-    entities.append(
-        SolarOptimizerSensorEntity(coordinator, hass, "power_production_brut")
+    device = coordinator.get_device_by_unique_id(
+        name_to_unique_id(entry.data[CONF_NAME])
     )
-    entities.append(SolarOptimizerSensorEntity(coordinator, hass, "battery_soc"))
+    if device is None:
+        device = ManagedDevice(hass, entry.data, coordinator)
+        coordinator.add_device(device)
 
-    async_add_entities(entities, False)
+    entity1 = TodayOnTimeSensor(
+        hass,
+        coordinator,
+        device,
+    )
+
+    async_add_entities([entity1], False)
 
     # Add services
     platform = entity_platform.async_get_current_platform()
@@ -113,13 +120,13 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self):
         # Retournez des informations sur le périphérique associé à votre entité
-        return {
-            "model": INTEGRATION_MODEL,
-            "manufacturer": DEVICE_MANUFACTURER,
-            "identifiers": {(DOMAIN, "solar_optimizer_device")},
-            "name": "Solar Optimizer",
-            # Autres attributs du périphérique ici
-        }
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, CONF_DEVICE_CENTRAL)},
+            name="Solar Optimizer",
+            manufacturer=DEVICE_MANUFACTURER,
+            model=INTEGRATION_MODEL,
+        )
 
     @property
     def icon(self) -> str | None:
@@ -143,10 +150,10 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
 
     @property
     def state_class(self) -> SensorStateClass | None:
-        if self.idx == "best_objective":
-            return SensorStateClass.TOTAL
-        else:
+        if self.device_class == SensorDeviceClass.POWER:
             return SensorStateClass.MEASUREMENT
+        else:
+            return SensorStateClass.TOTAL
 
     @property
     def native_unit_of_measurement(self) -> str | None:
@@ -334,12 +341,13 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     @property
     def device_info(self) -> DeviceInfo | None:
         # Retournez des informations sur le périphérique associé à votre entité
-        return {
-            "model": DEVICE_MODEL,
-            "manufacturer": DEVICE_MANUFACTURER,
-            "identifiers": {(DOMAIN, self._device.name)},
-            "name": "Solar Optimizer-" + self._device.name,
-        }
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._device.name)},
+            name="Solar Optimizer-" + self._device.name,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
 
     @property
     def device_class(self) -> SensorDeviceClass | None:
