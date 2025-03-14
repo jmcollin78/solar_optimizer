@@ -12,32 +12,44 @@
 - [How does it work?](#how-does-it-work)
   - [Anti-flickering](#anti-flickering)
   - [Usability](#usability)
-- [How do we install it?](#how-do-we-install-it)
+- [Installation](#installation)
+  - [Migration Procedure from Version 2.x to 3.x](#migration-procedure-from-version-2x-to-3x)
   - [HACS installation (recommended)](#hacs-installation-recommended)
   - [Manual Install](#manual-install)
 - [The configuration](#the-configuration)
-  - [Configure integration](#configure-integration)
-  - [Configure equipment](#configure-equipment)
-- [Available entities](#available-entities)
-- [In addition](#in-addition)
+  - [Configure the Integration for the First Time](#configure-the-integration-for-the-first-time)
+  - [Configure the Devices](#configure-the-devices)
+    - [Configuring a Simple Device (On/Off)](#configuring-a-simple-device-onoff)
+  - [Configuring a Device with Variable Power](#configuring-a-device-with-variable-power)
+  - [Configuring the Algorithm in Advanced Mode](#configuring-the-algorithm-in-advanced-mode)
+    - [Enabling Advanced Configuration](#enabling-advanced-configuration)
+- [Available Entities](#available-entities)
+  - [The "configuration" Device](#the-configuration-device)
+  - [Devices and Their Entities](#devices-and-their-entities)
+    - [Switch Attributes](#switch-attributes)
+- [A Card for Your Dashboards as a complement](#a-card-for-your-dashboards-as-a-complement)
+  - [Install the Plugins](#install-the-plugins)
+  - [Install the Templates](#install-the-templates)
+  - [Add a Card for Each Device](#add-a-card-for-each-device)
+  - [Using the Card](#using-the-card)
+    - [Icon Color](#icon-color)
+    - [Badge](#badge)
+    - [Actions on the Card](#actions-on-the-card)
 - [Contributions are welcome!](#contributions-are-welcome)
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.0.0** :
+>    - Added a configuration UI for devices.
+>    - ⚠️ Installing release 3.0.0 requires a specific procedure. See the migration procedure below [here](#migration-procedure-from-version-2x-to-3x).
 > * **release 2.1.0** :
-> - added a minimum duration of ignition during off-peak hours. Allows you to manage equipment that must have a minimum of ignition per day such as water heaters or chargers (cars, battery, ...). If the sunshine has not reached the required duration, then the equipment will turn on during off-peak hours. You can also define at what time the ignition counters are reset to zero, which allows you to take advantage of all off-peak hours> * **release 2.0.0** :
+> - added a minimum duration of ignition during off-peak hours. Allows you to manage equipment that must have a minimum of ignition per day such as water heaters or chargers (cars, battery, ...). If the sunshine has not reached the required duration, then the equipment will turn on during off-peak hours. You can also define at what time the ignition counters are reset to zero, which allows you to take advantage of all off-peak hours
+> * **release 2.0.0** :
 > - added a device per controlled equipment to group the entities,
 > - added an ignition time counter for each device. When the controlled switch goes to 'Off', the time counter is incremented by the time spent 'On', in seconds. This counter is reset to zero every day at midnight.
 > - added a maximum time to 'On' in the configuration (in minutes). When this duration is exceeded, the equipment is no longer usable by the algorithm (is_usable = off) until the next reset. This offers the possibility of not exceeding a maximum ignition time per day, even when solar power is available.
 > - to take advantage of this new information, don't forget to update the decluterring template (at the end of this file)
 > - this release opens the door to more significant developments based on the ignition time (having a daily minimum for example) and prepares the ground for the arrival of the configuration via the graphical interface.
-* **release 1.7.0**:
-- added battery management. You can specify a percentage type entity that gives the state of charge of the battery (soc). On each device you can specify a `battery_soc_threshold` parameter: the battery threshold below which the device will not be usable.
-* **release 1.3.0**:
-  - added the parameter `duration_stop_min` which allows to specify a minimal duration of deactivation to distinguish it from the minimal delay of activation `duration_min`. If not specified, this parameter takes the value of `duration_min`.
-  - restores the state of the `enable` switches when the integration starts.
-  - starts a calculation immediately after starting Home Assistant
-* **release 1.0**: first operational version. Control of equipment based on switches, power control (Tesla) and configuration via configuration.yaml.
 
 # What is Solar Optimizer?
 This integration will allow you to maximize the use of your solar production. You delegate to it the control of your equipment whose activation can be deferred over time (water heater, swimming pool pump, electric vehicle charge, dishwasher, washing machine, etc.) and it takes care of launching them when the power produced is sufficient.
@@ -63,7 +75,7 @@ To avoid the effects of flickering from one cycle to another, a minimum activati
 Similarly, a minimum stop duration can be specified in the `duration_stop_min` parameter.
 
 ## Usability
-Each configured device is associated with a switch-type entity that authorizes the algorithm to use the device. If I want to force the heating of the hot water tank, I put its switch to off. The algorithm will therefore not look at it, the water heater switches back to manual, not managed by Solar Optimizer.
+Each configured device is associated with a switch-type entity named `enable` that authorizes the algorithm to use the device. If I want to force the heating of the hot water tank, I put its switch to off. The algorithm will therefore not look at it, the water heater switches back to manual, not managed by Solar Optimizer.
 
 In addition, it is possible to define a usability rule for equipment. For example, if the car is charged at more than 90%, the algorithm considers that the equipment which controls the charging of the car must be switched off. This rule is defined in the form of a configurable template which is True if the equipment is usable.
 
@@ -75,7 +87,22 @@ A minimum daily usage time is also optionally configurable. This parameter ensur
 
 These 5 rules allow the algorithm to only order what is really useful at a time t. These rules are re-evaluated at each cycle.
 
-# How do we install it?
+# Installation
+
+## Migration Procedure from Version 2.x to 3.x
+
+Version 3.0.0 introduces a configuration UI that allows for easy addition and modification of controlled devices.
+
+This procedure should only be followed if you have already installed and configured a 2.x version.
+
+Installing v3.0.0 requires recreating all devices through the UI and removing the configuration from the `configuration.yaml` file. Follow these steps carefully:
+
+1. Go to *Settings / Integration*, select "Solar Optimizer," and remove the "Solar Optimizer" device. The "Solar Optimizer" integration should no longer be visible.
+2. Remove the configuration from your `configuration.yaml` file.
+3. Open HACS, search for "Solar Optimizer," and install version 3.0.0.
+4. Go to *Settings / Integration*, click on "Add Integration," and select "Solar Optimizer."
+5. You will arrive at the common parameter configuration page, described [here](#configure-the-integration-for-the-first-time).
+
 ## HACS installation (recommended)
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jmcollin78&repository=solar_optimizer&category=integration)
@@ -90,147 +117,159 @@ These 5 rules allow the algorithm to only order what is really useful at a time 
 Manual installation is possible. It is not recommended and therefore it will not be described here.
 
 # The configuration
-## Configure integration
-When adding the Solar Optimizer integration, the following settings page opens:
 
-You must specify:
-1. the sensor which gives the instantaneous net consumption of the dwelling (it must be negative if production exceeds consumption). This figure is indicated in Watt,
-2. the sensor which gives the instantaneous photovoltaic production in Watt too,
-3. a sensor or input_number which gives the cost of the imported kwh (require: positive number, not zero),
-4. a sensor or input_number which gives the price of the exported kwh (require: positive number, not zero)(depends on your contract), can re-use same sensor/input_number as imported kwh if no have a resale contract.
-5. a sensor or input_number which gives the applicable tax on the exported kwh (require: postive number or zero)(depends on your contract)
-6. the start time of the day. At this time the equipment usage counters are reset to zero. The default value is 05:00. It must be before the first production and as late as possible for activations during off-peak hours. See above.
+## Configure the Integration for the First Time
 
-These 5 pieces of information are necessary for the algorithm to work, so they are all mandatory. The fact that they are sensors or input_number allows to have values that are re-evaluated at each cycle. Consequently, switching to off-peak hours can modify the calculation and therefore the states of the equipment since the import becomes less expensive. So everything is dynamic and recalculated at each cycle.
+When adding the Solar Optimizer integration, the common parameters configuration page opens:
 
-## Configure equipment
-Controllable devices are defined in the configuration.yaml file as follows:
-- add the following line in your configuration.yaml:
+![common configuration page](images/config-common-parameters.png)
 
-   ```solar_optimizer: !include solar_optimizer.yaml```
-- and create a file at the same level as the configuration.yaml with the following information:
-```
-algorithm:
-   initial_temp: 1000
-   min_temp: 0.1
-   cooling_factor: 0.95
-   max_iteration_number: 1000
-devices:
-   - name: "<equipment name>"
-     entity_id: "switch.xxxxx"
-     power_max: <max power consumed>
-     check_usable_template: "{{ <the template which is True if the equipment is usable> }}"
-     duration_min: <the minimum activation duration in minutes>
-     duration_stop_min: <minimum stop duration in minutes>
-     action_mode: "action_call"
-     activation_service: "<service name>"
-     deactivation_service: "<service name>"
-     battery_soc_threshold: <the state of charge minimal to use this device>
-     max_on_time_per_day_min: <the maximum time on 'on' per day in minutes>
-     offpeak_time: <start time of off-peak hours>
-     min_on_time_per_day_min: <the minimal time on 'on' per day in minutes>
-```
+You need to specify:
+1. **A refresh period** in seconds. The shorter the period, the more precise the tracking, but the higher the load on your server, as the calculations are CPU-intensive. A good average value is 5 minutes (i.e., 300 seconds).
+2. The sensor that provides **the net instantaneous consumption** of the home (it should be negative if production exceeds consumption). This value is given in Watts.
+3. The sensor that provides **the instantaneous photovoltaic production**, also in Watts (it is always positive or zero).
+4. A sensor or `input_number` that provides **the cost of imported kWh** (required: strictly positive number).
+5. A sensor or `input_number` that provides **the price of exported kWh** (required: strictly positive number). If there is no resale contract, the same value/sensor as the imported cost can be used. Do not set it to 0, as it would distort the algorithm.
+6. A sensor or `input_number` that provides **the applicable tax rate on exported kWh** as a percentage (positive number or 0 if you do not resell or do not know this value). This value depends on your contract. It is not critical to the algorithm, so a value of 0 is perfectly fine.
+7. An optional sensor that provides **the charge level of a possible solar battery** in percentage. If your solar installation does not include a battery, leave this field empty.
+8. **The start time of the day**. At this time, the usage counters of the equipment are reset to zero. The default value is 05:00. Ideally, this should be set before the first production of the day and as late as possible for off-peak activations.
 
-Note: parameters under `algorithm` should not be touched unless you know exactly what you are doing.
+Except for the solar battery charge level, these parameters are essential for the algorithm to function, so they are all mandatory. Using sensors or `input_number` allows values to be updated in real-time at each cycle. Consequently, when off-peak hours begin, the calculation may change, impacting the state of the equipment as importing energy becomes cheaper. Everything is dynamic and recalculated in each cycle.
 
-Under `devices` you must declare all the equipment that will be controlled by Solar Optimizer as follows:
+## Configure the Devices
+Each controllable device must be configured by adding a new integration via the "Add a device" button available on the integration page:
 
-| attribute                 | valid for                         | meaning                                                                                                                                                                                                                                | example                                                 | comment                                                                                                                                                                        |
-| ------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `name`                    | all                               | The name of the equipment                                                                                                                                                                                                              | "VMC basement"                                          | -                                                                                                                                                                              |
-| `entity_id`               | all                               | the entity id of the equipment to order                                                                                                                                                                                                | "switch.vmc_basement"                                   | -                                                                                                                                                                              |
-| `power_max`               | all                               | the maximum power consumed by the equipment                                                                                                                                                                                            | 250                                                     | -                                                                                                                                                                              |
-| `check_usable_template`   | all                               | A template that is True if the equipment can be used by Solar Optimizer                                                                                                                                                                | "{{ is_state('cover.porte_garage_garage', 'closed') }}" | In the example, Sonar Optimizer will not try to control the "VMC basement" if the garage door is open                                                                          |
-| `duration_min`            | all                               | The minimum duration in minutes of activation                                                                                                                                                                                          | 60                                                      | The basement VMC will always turn on for at least one hour                                                                                                                     |
-| `duration_stop_min`       | all                               | The minimum duration in minutes of deactivation. Is `duration_min` if not specified                                                                                                                                                    | 15                                                      | The basement VMC will always turn off for at least 15 min                                                                                                                      |
-| `action_mode`             | all                               | the mode of action for turning the equipment on or off. Can be "action_call" or "event" (*)                                                                                                                                            | "action_call"                                           | "action_call" indicates that the equipment is switched on and off via a service call. See below. "event" indicates that an event is sent when the state should change. See (*) |
-| `activation_service`      | only if action_mode="action_call" | the service to be called to activate the equipment in the form "domain/service"                                                                                                                                                        | "switch/turn_on"                                        | activation will trigger the "switch/turn_on" service on the entity "entity_id"                                                                                                 |
-| `deactivation_service`    | only if action_mode="action_call" | the service to call to deactivate the equipment in the form "domain/service"                                                                                                                                                           | "switch/turn_off"                                       | deactivation will trigger the "switch/turn_off" service on the entity "entity_id"                                                                                              |
-| `battery_soc_threshold`   | tous                              | minimal percentage of charge of the solar battery to enable this device                                                                                                                                                                | 30                                                      |                                                                                                                                                                                |
-| `max_on_time_per_day_min` | all                               | the maximum number of minutes in the on position for this equipment. Beyond that, the equipment is no longer usable by the algorithm                                                                                                   | 10                                                      | The equipment will be on for a maximum of 10 minutes per day                                                                                                                   |
-| `offpeak_time`            | all                               | The start time of off-peak hours in hh:mm format                                                                                                                                                                                       | "22:00"                                                 | The equipment can be switched on at 22:00 if the production of the day has not been sufficient                                                                                 |
-| `min_on_time_per_day_min` | all                               | the minimum number of minutes in the on position for this equipment. If at the start of off-peak hours, this minimum is not reached then the equipment will be switched on up to the start of the day or the `max_on_time_per_day_min` | 5                                                       | The equipment will be switched on for a minimum of 5 minutes per day                                                                                                           |
+![common configuration page](images/config-add-device.png)
 
-For variable power equipment, the following attributes must be valued:
+The following menu will appear, allowing you to choose between a simple on/off device or a device with variable power (to match the available power):
 
-| attribute                     | valid for                | meaning                                        | example                      | comment                                                                                                                                                                                                                                                                                              |
-| ----------------------------- | ------------------------ | ---------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `power_entity_id`             | variable power equipment | the entity_id of the entity managing the power | `number.tesla_charging_amps` | The power change will be done by calling the `change_power_service` service on this entity                                                                                                                                                                                                           |
-| `power_min`                   | variable power equipment | The minimum power in watts of the equipment    | 100                          | When the power setpoint falls below this value, the equipment will be switched off by calling the `deactivation_service`                                                                                                                                                                             |
-| `power_step`                  | variable power equipment | The power step                                 | 10                           | -                                                                                                                                                                                                                                                                                                    |
-| `change_power_service`        | variable power equipment | Service called to change power                 | `"number/set_value"`         | -                                                                                                                                                                                                                                                                                                    |
-| `convert_power_divide_factor` | variable power equipment | The divisor applied to convert power to value  | 50                           | In the example, the "number/set_value" service will be called with the `power setpoint / 50` on the entity `entity_id`. For a Tesla on a three-phase electrical installation this parameter should be set to 660 (220 x 3), to convert power to amperes. For mono-phase installation, set it to 220. |
+![device type](images/config-device-type.png)
 
-Complete and commented example of the device part:
-```
-devices:
-   - name: "Reservoir pump"
-     # The switch that controls the tank pump
-     entity_id: "switch.tank_pump_socket"
-     # the power of this pump
-     power_max: 170
-     # Always usable
-     # check_usable_template: "{{ True }}"
-     # 15 min minimum activation
-     duration_min: 15
-     # 5 min deactivation minimum
-     duration_stop_min: 5
-     # On enable/disable via a service call
-     action_mode: "action_call"
-     # The service enabling the switch
-     activation_service: "switch/turn_on"
-     # The service to deactivate the switch
-     deactivation_service: "switch/turn_off"
-     # We authorize the pump to start if there is 10% battery in the solar installation
-     battery_soc_threshold: 10
-     # One hour per day maximum
-     max_on_time_per_day_min: 60
-     # 1/2h per day minimum ...
-     min_on_time_per_day_min: 30
-     # ... starting at 22:30
-     offpeak_time: "22:30"
+### Configuring a Simple Device (On/Off)
+A simple device is controlled solely by turning it on or off (a switch). If the algorithm decides to turn it on, the device is switched on; otherwise, it is switched off. It is configured as follows:
 
-   - name: "Tesla Recharge"
-     entity_id: "switch.cloucloute_charger"
-     # The minimum load power is 660 W (i.e. 1 Amp because convert_power_divide_factor=660 too)
-     power_min: 660
-     # The minimum load power is 3960 W (i.e. 5 Amp (= 3960/600) )
-     power_max: 3960
-     # the step of 660 or 1 Amp after division by convert_power_divide_factor
-     power_step: 660
-     # Usable if the charging mode is "Solar" and the car is plugged into the charger and it is charged at less than 90% (so it stops by itself at 90%)
-     check_usable_template: "{{ is_state('input_select.charge_mode', 'Solar') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery ') | float(100) < states('number.cloucloute_charge_limit') | float(90) }}"
-     # 1 hour minimum charge
-     duration_min: 60
-     # 15 min minimum stop charge
-     duration_stop_min: 15
-     # The entity that drives the load amperage
-     power_entity_id: "number.tesla_charging_amps"
-     # 5 min minimum between 2 power changes
-     duration_power_min: 5
-     # activation is done by a service call
-     action_mode: "action_call"
-     activation_service: "switch/turn_on"
-     deactivation_service: "switch/turn_off"
-     # the power change is done by a service call
-     change_power_service: "number/set_value"
-     # the factor used to convert the set power into Amps (number.tesla_charging_amps takes Amps)
-     convert_power_divide_factor: 660
-     # We do not start a charge if the battery of the solar installation is not at least 50% charged
-     battery_soc_threshold: 50
-     # 4h par day minimum ...
-     min_on_time_per_day_min: 240
-     # ... starting at 23:00
-     offpeak_time: "22:00"
-...
-```
-Any change in the configuration requires a stop / restart of the integration (or of Home Assistant) to be taken into account.
+![simple device configuration](images/config-simple-device.png)
 
-# Available entities
-The integration, once properly configured, creates a device that contains several entities:
-1. a sensor named "total_power" which is the total of all the powers of the equipment controlled by Solar Optimizer,
-2. a sensor named "best_objective" which is the value of the cost function (see how the algorithm works),
-3. a switch per equipment named `switch.enable_solar_optimizer_<name>` declared in the configuration.yaml. If the switch is "Off", the algorithm will not consider this equipment for the calculation. This allows you to manually remove equipment from the list without having to modify the list. This switch contains additional attributes which make it possible to follow the internal state of the equipment seen by the algorithm.
+You need to specify the following attributes:
+
+| Attribute                 | Applicable to                       | Meaning                                                                                                                                                                                                                                | Example                                          | Comment                                                                                                                                                                                                           |
+| ------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                    | All                                 | The name of the device.                                                                                                                                                                                                                | Basement Ventilation                             | The name is used to identify the entities of this device.                                                                                                                                                         |
+| `entity_id`               | All                                 | The entity ID of the device to be controlled.                                                                                                                                                                                          | switch.basement_ventilation                      | Can be a `switch`, `input_boolean`, `humidifier`, or `climate`. If it is not a `switch`, the `activation_service` and `deactivation_service` fields must be adjusted.                                             |
+| `power_max`               | All                                 | The maximum power consumption of the device when turned on, in watts.                                                                                                                                                                  | 250                                              | -                                                                                                                                                                                                                 |
+| `check_usable_template`   | All                                 | A template that evaluates to `True` if the device can be used by Solar Optimizer. A template must start with `{{` and end with `}}`.                                                                                                   | {{ is_state('cover.garage_door', 'closed') }}    | In this example, Solar Optimizer will not attempt to control the "Basement Ventilation" if the garage door is open. Use `{{ True }}` if you do not need this condition.                                           |
+| `active_template`         | All                                 | A template that evaluates to `True` if the device is currently active. A template must start with `{{` and end with `}}`.                                                                                                              | {{ is_state('climate.living_room_ac', 'cool') }} | In this example, a `climate` device will be considered active by Solar Optimizer if its state is `cool`. Leave it blank for devices where the default 'on'/'off' state applies (switches and input_booleans).     |
+| `duration_min`            | All                                 | The minimum activation duration in minutes.                                                                                                                                                                                            | 60                                               | The basement ventilation will always run for at least one hour when turned on.                                                                                                                                    |
+| `duration_stop_min`       | All                                 | The minimum deactivation duration in minutes. Defaults to `duration_min` if not specified.                                                                                                                                             | 15                                               | The basement ventilation will always remain off for at least 15 minutes before restarting.                                                                                                                        |
+| `action_mode`             | All                                 | The action mode used to turn the device on or off. Can be either `"action_call"` or `"event"` (*).                                                                                                                                     | action_call                                      | `"action_call"` indicates that the device is controlled via an action call. See below. `"event"` means an event is triggered when the state should change. See (*) for more details.                              |
+| `activation_service`      | Only if `action_mode="action_call"` | The service to call for activating the device, in the format `"domain/service"`.                                                                                                                                                       | switch/turn_on                                   | Activating the device will trigger the `"switch/turn_on"` service on the `entity_id` specified.                                                                                                                   |
+| `deactivation_service`    | Only if `action_mode="action_call"` | The service to call for deactivating the device, in the format `"domain/service"`.                                                                                                                                                     | switch/turn_off                                  | Deactivating the device will trigger the `"switch/turn_off"` service on the `entity_id` specified.                                                                                                                |
+| `battery_soc_threshold`   | All                                 | The minimum battery charge percentage required for the device to be usable.                                                                                                                                                            | 30                                               | In this example, the device will not be used by the algorithm if the solar battery is not charged to at least 30%. Requires the battery charge state entity to be configured in the common parameters. See above. |
+| `max_on_time_per_day_min` | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
+| `min_on_time_per_day_min` | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
+| `offpeak_time`            | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
+
+## Configuring a Device with Variable Power
+This type of device allows for adjusting the power consumption based on solar production and the algorithm's decisions. Essentially, it acts as a software-based solar router, enabling, for example, an electric vehicle to charge using only surplus solar energy.
+
+All the parameters described [here](#configuring-a-simple-device-onoff) apply and must be supplemented with the following:
+
+| Attribute                     | Applicable to         | Meaning                                                      | Example                      | Comment                                                                                                                                                                                                                                                    |
+| ----------------------------- | --------------------- | ------------------------------------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `power_entity_id`             | Variable power device | The `entity_id` of the entity managing power levels          | `number.tesla_charging_amps` | The power adjustment is done by calling the `change_power_service` on this entity. It can be either a `number` or an `input_number`.                                                                                                                       |
+| `power_min`                   | Variable power device | The minimum power in watts for the device                    | 100                          | If the power setting drops below this value, the device will be turned off via the `deactivation_service`. This parameter works with `power_max` to define the range of power adjustment.                                                                  |
+| `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                           | For an electric vehicle, set this to 220 (200V x 1A).                                                                                                                                                                                                      |
+| `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `"number/set_value"`         | -                                                                                                                                                                                                                                                          |
+| `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                           | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220. |
+
+## Configuring the Algorithm in Advanced Mode
+Advanced configuration allows modifying the algorithm's settings. It is not recommended to change these settings unless you have specific needs. The algorithm uses a **simulated annealing** approach to search for optimal configurations (combinations of on/off states) and evaluates a cost function at each iteration.
+
+During each iteration, the algorithm randomly changes the state of some devices and evaluates the cost function. If the new evaluation is better than the previous one, it is kept. If it is worse, it may still be kept based on a "temperature" parameter. This temperature gradually decreases over iterations, allowing the algorithm to converge toward an optimal solution.
+
+### Enabling Advanced Configuration
+To use the advanced configuration, follow these steps:
+
+1. Add the following line to your `configuration.yaml` file:
+
+   ```yaml
+   solar_optimizer: !include solar_optimizer.yaml
+   ```
+2.	Create a file named solar_optimizer.yaml at the same level as configuration.yaml and include the following settings:
+
+  ``` yaml
+  algorithm:
+    initial_temp: 1000
+    min_temp: 0.1
+    cooling_factor: 0.95
+    max_iteration_number: 1000
+  ```
+
+Explanation of Parameters
+	•	`initial_temp`: The initial temperature. Cost function variations up to 1000 are accepted in the first iterations. If you have high-power devices, you may increase this value. For lower-power devices, it can be reduced.
+	•	`min_temp`: The minimum temperature. At the final stage of the optimization, only variations of 0.1 will be accepted. This parameter should not be modified.
+	•	`cooling_factor`: The temperature is multiplied by 0.95 at each iteration, ensuring a slow and progressive decrease. A lower value makes the algorithm converge faster but may reduce solution quality.	A higher value (strictly less than 1) increases computation time but improves the solution quality.
+	•	`max_iteration_number`: The maximum number of iterations. Reducing this number can shorten computation time but may degrade solution quality if no stable solution is found.
+
+The default values are suited for setups with around 20 devices (which results in many possible configurations). If you have fewer than 5 devices and no variable power devices, you can try these alternative parameters (not tested):
+
+  ```yaml
+  algorithm:
+    initial_temp: 1000
+    min_temp: 0.1
+    cooling_factor: 0.90
+    max_iteration_number: 300
+  ```
+
+# Available Entities
+## The "configuration" Device
+Once the integration is properly configured, a **device** named `'configuration'` is created, containing several entities:
+
+1. A sensor named `total_power`: the total power of all devices controlled by Solar Optimizer.
+2. A sensor named `best_objective`: the cost function value (see algorithm operation). The **lower** the value, the **better** the solution.
+3. A sensor named `power_production`: the last **smoothed** solar production value considered (if the option is enabled).
+4. A sensor named `power_production_brut`: the last **raw** solar production value considered.
+
+![Configuration Entities](images/entities-configuration.png)
+
+Reconfiguring this device allows modifying the **Solar Optimizer** settings.
+
+## Devices and Their Entities
+Each controlled device has the following entities:
+
+1. A **switch** named `switch.enable_solar_optimizer_<name>`:
+   - If **"Off"**, the device is ignored by the algorithm.
+   - This allows manually **excluding** a device **without modifying** the configuration.
+   - This switch contains **additional attributes** to monitor the device's internal state as seen by the algorithm.
+
+2. A **sensor** named `sensor.on_time_today_solar_optimizer_<name>`:
+   - Indicates the **activation duration** since the last reset (**see `raz_time`**).
+
+3. A **switch** named `switch.solar_optimizer_<name>`:
+   - Reflects the **activation state** requested by **Solar Optimizer**.
+
+![Simple Device Entities](images/entities-simple-device.png)
+
+### Switch Attributes
+The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Developer Tools → States**:
+
+![Configuration Entities](images/entities-attributes.png)
+
+| Attribute Name              | Description                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| `is_enabled`                | `true` if the device is enabled by the user for optimization.                               |
+| `is_active`                 | `true` if the device is currently **on**.                                                   |
+| `is_usable`                 | `true` if the algorithm **can** use the device.                                             |
+| `can_change_power`          | `true` if the device's power **can** be adjusted.                                           |
+| `current_power`             | The **current power consumption** of the device.                                            |
+| `requested_power`           | The power level requested by **Solar Optimizer**.                                           |
+| `duration_sec`              | The total **activation duration** in seconds.                                               |
+| `duration_power_sec`        | The duration of the **last power change** in seconds.                                       |
+| `next_date_available`       | The **next available time** for the device to be used by the algorithm.                     |
+| `next_date_available_power` | The **next available time** for a power adjustment.                                         |
+| `battery_soc_threshold`     | The **minimum** battery **state of charge (SOC)** required for the device to be considered. |
+| `battery_soc`               | The **current** battery **state of charge (SOC)**.                                          |
+
 
 # A Card for Your Dashboards as a complement
 As a complement, the following Lovelace code allows you to control each declared device.
