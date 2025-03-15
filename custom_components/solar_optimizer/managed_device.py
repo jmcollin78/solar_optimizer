@@ -38,23 +38,31 @@ async def do_service_action(
     _LOGGER.info("Calling service %s for entity %s", service_name, entity_id)
 
     parties = service_name.split("/")
-    if len(parties) != 2:
+    if len(parties) < 2:
         raise ConfigurationError(
-            f"Incorrect service declaration for entity {entity_id}. Service {service_name} should be formatted with: 'domain/service'"
+            f"Incorrect service declaration for entity {entity_id}. Service {service_name} should be formatted with: 'domain/action[/option:value]'"
         )
+
+    service_data = {}
+    domain = parties[0]
+    action = parties[1]
+    parameter = parties[2] if len(parties) == 3 else None
 
     if action_type == ACTION_CHANGE_POWER:
         value = round(requested_power / convert_power_divide_factor)
         service_data = {"value": value}
     else:
-        service_data = {}
+        if parameter:
+            args = parameter.split(":")
+            if len(args) >= 2:
+                service_data = {args[0]: args[1]}
 
     target = {
         "entity_id": entity_id,
     }
 
     await hass.services.async_call(
-        parties[0], parties[1], service_data=service_data, target=target
+        domain, action, service_data=service_data, target=target
     )
 
     # Also send an event to inform
