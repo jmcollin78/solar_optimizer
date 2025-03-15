@@ -21,6 +21,10 @@
   - [Configurer les équipements](#configurer-les-équipements)
     - [Configurer un équipement simple (on/off)](#configurer-un-équipement-simple-onoff)
   - [Configurer un équipement avec une puissance variable](#configurer-un-équipement-avec-une-puissance-variable)
+  - [Exemples de configurations](#exemples-de-configurations)
+    - [Commande d'une recharge de Tesla](#commande-dune-recharge-de-tesla)
+    - [Commande d'une climatisation](#commande-dune-climatisation)
+    - [Commande d'un deshumidificateur](#commande-dun-deshumidificateur)
   - [Configurer l'algorithme en mode avancé](#configurer-lalgorithme-en-mode-avancé)
 - [Entités disponibles](#entités-disponibles)
   - [L'appareil "configuration"](#lappareil-configuration)
@@ -175,6 +179,74 @@ Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'a
 | `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `"number/set_value"`         | -                                                                                                                                                                                                                                                                                                        |
 | `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (220 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 220. |
 
+## Exemples de configurations
+Les exemples ci-dessus sont à adapter à votre cas.
+
+### Commande d'une recharge de Tesla
+Pour commander la recharge d'une voiture de type Tesla avec modulation de l'intensité de charge, si la batterie solaire est chargée à 50%, en tri-phasé avec recharge en heures creuses à partir de 23h00, voici les paramètres :
+
+```yaml
+  name: "Recharge Tesla"
+  entity_id: "switch.tesla_charger"
+  power_min: 660
+  power_max: 3960
+  power_step: 660
+  check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.tesla_charge_limit') | float(90) }}"
+  # 2 heures
+  duration_min: 120
+  # 15 min stop
+  duration_stop_min: 15
+  # Power management
+  power_entity_id: "number.tesla_charging_amps"
+  # 5 min
+  duration_power_min: 5
+  action_mode: "service_call"
+  activation_service: "switch/turn_on"
+  deactivation_service: "switch/turn_off"
+  change_power_service: "number/set_value"
+  convert_power_divide_factor: 660
+  battery_soc_threshold: 50
+  min_on_time_per_day_min: 300
+  offpeak_time: "23:00"
+```
+
+En monophasé, remplacez les 660 par des 220. Vous devez adapter, la puissance maximale et le `check_usable_template` au minimum.
+
+### Commande d'une climatisation
+Attention, cette configuration n'a pas été testée sur un cas réel.
+
+Pour allumer une climatisation si la température est supérieure à 27° :
+```yaml
+    name: "Climatisation salon"
+    entity_id: "climate.clim_salon"
+    power_max: 1500
+    check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    # 1 h minimum
+    duration_min: 60
+    action_mode: "service_call"
+    activation_service: "climate/set_hvac_mode:hvac_mode=cool"
+    deactivation_service: "climate/set_hvac_mode:hvac_mode=off"
+    battery_soc_threshold: 80
+```
+
+### Commande d'un deshumidificateur
+Pour allumer un déhumidificateur si l'humidité dépasse un seuil pour au moins une heure par jour avec possibilité d'allumage en heures creuses :
+
+```yaml
+  name: "Dehumidification musique"
+  entity_id: "humidifier.humidifier_musique"
+  power_max: 250
+  # 1 h
+  duration_min: 60
+  duration_stop_min: 30
+  check_usable_template: "{{ states('sensor.humidite_musique') | float(50) > 55 }}"
+  action_mode: "service_call"
+  activation_service: "humidifier/turn_on"
+  deactivation_service: "humidifier/turn_off"
+  max_on_time_per_day_min: 180
+  min_on_time_per_day_min: 60
+  offpeak_time: "02:00"
+```
 
 ## Configurer l'algorithme en mode avancé
 La configuration avancée permet de modifier la configuration de l'algorithme. Il n'est pas conseillé d'y toucher mais cette fonction reste disponible pour des besoins spécifiques. L'algorithme est un algorithme de type recuit simulé qui cherche des configurations (combinaisons de on/off) et procède à une évaluation d'une fonction de coût à chaque itération.

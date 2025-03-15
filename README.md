@@ -21,6 +21,10 @@
   - [Configure the Devices](#configure-the-devices)
     - [Configuring a Simple Device (On/Off)](#configuring-a-simple-device-onoff)
   - [Configuring a Device with Variable Power](#configuring-a-device-with-variable-power)
+  - [Configuration Examples](#configuration-examples)
+    - [Controlling Tesla Charging](#controlling-tesla-charging)
+    - [Controlling an Air Conditioner](#controlling-an-air-conditioner)
+    - [Controlling a Dehumidifier](#controlling-a-dehumidifier)
   - [Configuring the Algorithm in Advanced Mode](#configuring-the-algorithm-in-advanced-mode)
     - [Enabling Advanced Configuration](#enabling-advanced-configuration)
 - [Available Entities](#available-entities)
@@ -181,6 +185,76 @@ All the parameters described [here](#configuring-a-simple-device-onoff) apply an
 | `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                           | For an electric vehicle, set this to 220 (200V x 1A).                                                                                                                                                                                                      |
 | `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `"number/set_value"`         | -                                                                                                                                                                                                                                                          |
 | `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                           | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220. |
+
+## Configuration Examples
+The examples below should be adapted to your specific case.
+
+### Controlling Tesla Charging
+To control the charging of a Tesla vehicle with adjustable charging intensity, if the solar battery is charged to 50%, in three-phase mode with off-peak charging starting at 11:00 PM, here are the parameters:
+
+```yaml
+  name: "Recharge Tesla"
+  entity_id: "switch.tesla_charger"
+  power_min: 660
+  power_max: 3960
+  power_step: 660
+  check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.tesla_charge_limit') | float(90) }}"
+  # 2 heures
+  duration_min: 120
+  # 15 min stop
+  duration_stop_min: 15
+  # Power management
+  power_entity_id: "number.tesla_charging_amps"
+  # 5 min
+  duration_power_min: 5
+  action_mode: "service_call"
+  activation_service: "switch/turn_on"
+  deactivation_service: "switch/turn_off"
+  change_power_service: "number/set_value"
+  convert_power_divide_factor: 660
+  battery_soc_threshold: 50
+  min_on_time_per_day_min: 300
+  offpeak_time: "23:00"
+```
+
+In single-phase mode, replace 660 with 220. You should at least adjust the maximum power and the `check_usable_template`.
+
+### Controlling an Air Conditioner
+Caution: This configuration has not been tested in a real scenario.
+
+To turn on an air conditioner if the temperature is above 27°C:
+
+```yaml
+    name: "Climatisation salon"
+    entity_id: "climate.clim_salon"
+    power_max: 1500
+    check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    # 1 h minimum
+    duration_min: 60
+    action_mode: "service_call"
+    activation_service: "climate/set_hvac_mode:hvac_mode=cool"
+    deactivation_service: "climate/set_hvac_mode:hvac_mode=off"
+    battery_soc_threshold: 80
+```
+
+### Controlling a Dehumidifier
+To turn on a dehumidifier if the humidity exceeds a threshold for at least one hour per day, with the possibility of activation during off-peak hours:
+
+```yaml
+  name: "Dehumidification musique"
+  entity_id: "humidifier.humidifier_musique"
+  power_max: 250
+  # 1 h
+  duration_min: 60
+  duration_stop_min: 30
+  check_usable_template: "{{ states('sensor.humidite_musique') | float(50) > 55 }}"
+  action_mode: "service_call"
+  activation_service: "humidifier/turn_on"
+  deactivation_service: "humidifier/turn_off"
+  max_on_time_per_day_min: 180
+  min_on_time_per_day_min: 60
+  offpeak_time: "02:00"
+```
 
 ## Configuring the Algorithm in Advanced Mode
 Advanced configuration allows modifying the algorithm's settings. It is not recommended to change these settings unless you have specific needs. The algorithm uses a **simulated annealing** approach to search for optimal configurations (combinations of on/off states) and evaluates a cost function at each iteration.
