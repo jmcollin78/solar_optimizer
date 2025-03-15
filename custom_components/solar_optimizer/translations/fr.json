@@ -70,8 +70,8 @@
                     "activation_service": "Le service pour allumer l'équipement. Exemple `switch/turn_on` ou `climate/set_hvac_mode/hvac_mode:cool`",
                     "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode/hvac_mode:off`",
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour activer l'équipement",
-                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
-                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             },
@@ -118,8 +118,8 @@
                     "change_power_service": "Le service utilisé pour changer la puissance. Exemple `number/set_value`",
                     "convert_power_divide_factor": "Le facteur de division pour convertir la puissance en unités de l'équipement. Si la conversion de la puissance en ampère, le diviseur doit être 220",
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour   activer l'équipement",
-                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
-                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             }
@@ -198,8 +198,8 @@
                     "activation_service": "Le service pour allumer l'équipement. Exemple `switch/turn_on` ou `climate/set_hvac_mode/hvac_mode:cool`",
                     "deactivation_service": "Le service pour éteindre l'équipement. Exemple `switch/turn_off` ou `climate/set_hvac_mode/hvac_mode:off`",
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour activer l'équipement",
-                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
-                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             },
@@ -246,8 +246,8 @@
                     "change_power_service": "Le service utilisé pour changer la puissance. Exemple `number/set_value`",
                     "convert_power_divide_factor": "Le facteur de division pour convertir la puissance en unités de l'équipement. Si la conversion de la puissance en ampère, le diviseur doit être 220",
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour   activer l'équipement",
-                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
-                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
+                    "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             }
