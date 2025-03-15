@@ -227,6 +227,10 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
+        self.hass.async_create_task(self.async_turn_on(**kwargs))
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the entity on."""
         _LOGGER.info("Turn_on Solar Optimizer switch %s", self._attr_name)
         # search for coordinator and device
         if not self.coordinator or not (
@@ -235,14 +239,10 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         if not self._attr_is_on:
-            device.activate()
+            await device.activate()
             self._attr_is_on = True
             self.update_custom_attributes(device)
             self.async_write_ha_state()
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the entity on."""
-        self.turn_on(**kwargs)
 
     def turn_off(  # pylint: disable=useless-parent-delegation
         self, **kwargs: Any
