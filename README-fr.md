@@ -29,6 +29,7 @@
 - [Entités disponibles](#entités-disponibles)
   - [L'appareil "configuration"](#lappareil-configuration)
   - [Les appareils](#les-appareils)
+- [Les évènements](#les-évènements)
 - [Une carte pour vos dashboards en complément](#une-carte-pour-vos-dashboards-en-complément)
   - [Installez les plugins](#installez-les-plugins)
   - [Installez les templates](#installez-les-templates)
@@ -323,6 +324,106 @@ Ce dernier switch possède des attributs consultables via Outils de developpemen
 10. `next_date_available_power` : à quelle date et heure le changement de puissance de l'équipement sera de nouveau disponible pour un changement,
 11. `battery_soc_threshold` : l'état de charge minimal de la batterie solaire pour que l'équipement soit utilisable par l'algorithme,
 12. `battery_soc` : l'état de charge courant de la batterie solaire.
+
+# Les évènements
+Solar Optimizer produit des évènements à chaque allumage ou extinction d'un appareil. Cela vous permet de capter ces évènements dans une automatisation par exemple.
+
+`solar_optimizer_state_change_event` : lorsqu'un équipement change d'état. Le contenu du message est alors le suivant :
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [Activate | Deactivate],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+`solar_optimizer_change_power_event` : lorsqu'un équipement change de puissance. Le contenu du message est alors le suivant :
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [ChangePower],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+`solar_optimizer_enable_state_change_event` : lorsque le switch `enable` d'un équipement change d'état. Le contenu du message est alors le suivant :
+```
+event_type: solar_optimizer_enable_state_change_event
+data:
+  device_unique_id: prise_vmc_garage
+  is_enabled: false
+  is_active: true
+  is_usable: false
+  is_waiting: true
+```
+
+Vous pouvez contrôler la réception et le contenu des évènements dans Outils de développement / Evènements. Donnez le nom de l'évènement à écouter :
+
+![écoute d'évènements](images/event-listening.png)
+
+Un exemple d'automatisation qui écoute les évènements :
+
+```yaml
+alias: Gestion des events de Solar Optimizer
+description: Notifie les modifiations de status de Solar Optimizer
+mode: parallel
+max: 50
+triggers:
+  - event_type: solar_optimizer_change_power_event
+    id: power_event
+    trigger: event
+  - event_type: solar_optimizer_state_change_event
+    id: state_change
+    trigger: event
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: power_event
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: ChangePower Event de Solar Optimizer
+            enabled: false
+            action: persistent_notification.create
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ trigger.event.data.entity_id == switch.cloucloute_charger
+                  }}
+            then:
+              - data:
+                  message: On demande a changer la puissance de Cloucloute
+                  title: Changement de puissance
+                  notification_id: cloucloute-power-change
+                action: persistent_notification.create
+              - data:
+                  value: >-
+                    {{ (trigger.event.data.requested_power | float(0) / 660) |
+                    round(0) }}
+                target:
+                  entity_id: number.cloucloute_charging_amps
+                action: number.set_value
+      - conditions:
+          - condition: trigger
+            id: state_change
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: StateChange Event de Solar Optimizer
+            action: persistent_notification.create
+```
 
 
 # Une carte pour vos dashboards en complément

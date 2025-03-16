@@ -31,6 +31,7 @@
   - [The "configuration" Device](#the-configuration-device)
   - [Devices and Their Entities](#devices-and-their-entities)
     - [Switch Attributes](#switch-attributes)
+- [Events](#events)
 - [A Card for Your Dashboards as a complement](#a-card-for-your-dashboards-as-a-complement)
   - [Install the Plugins](#install-the-plugins)
   - [Install the Templates](#install-the-templates)
@@ -343,6 +344,96 @@ The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Dev
 | `next_date_available_power` | The **next available time** for a power adjustment.                                         |
 | `battery_soc_threshold`     | The **minimum** battery **state of charge (SOC)** required for the device to be considered. |
 | `battery_soc`               | The **current** battery **state of charge (SOC)**.                                          |
+
+# Events
+
+Solar Optimizer generates events each time a device is turned on or off. This allows you to capture these events in an automation, for example.
+
+`solar_optimizer_state_change_event`: Triggered when a device changes state. The event message contains the following data:
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [Activate | Deactivate],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+`solar_optimizer_change_power_event`: Triggered when a device changes power. The event message contains the following data:
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [ChangePower],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+You can monitor the reception and content of events in Developer Tools / Events. Enter the name of the event to listen for:
+
+![Event Listening](images/event-listening.png)
+
+An example of an automation that listens for events:
+
+```yaml
+alias: Gestion des events de Solar Optimizer
+description: Notifie les modifiations de status de Solar Optimizer
+mode: parallel
+max: 50
+triggers:
+  - event_type: solar_optimizer_change_power_event
+    id: power_event
+    trigger: event
+  - event_type: solar_optimizer_state_change_event
+    id: state_change
+    trigger: event
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: power_event
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: ChangePower Event de Solar Optimizer
+            enabled: false
+            action: persistent_notification.create
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ trigger.event.data.entity_id == switch.cloucloute_charger
+                  }}
+            then:
+              - data:
+                  message: On demande a changer la puissance de Cloucloute
+                  title: Changement de puissance
+                  notification_id: cloucloute-power-change
+                action: persistent_notification.create
+              - data:
+                  value: >-
+                    {{ (trigger.event.data.requested_power | float(0) / 660) |
+                    round(0) }}
+                target:
+                  entity_id: number.cloucloute_charging_amps
+                action: number.set_value
+      - conditions:
+          - condition: trigger
+            id: state_change
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: StateChange Event de Solar Optimizer
+            action: persistent_notification.create
+```
 
 # A Card for Your Dashboards as a complement
 As a complement, the following Lovelace code allows you to control each declared device.
