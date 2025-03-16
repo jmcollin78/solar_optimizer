@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 set -e
 set -x
@@ -11,11 +11,12 @@ if [[ ! -d "${PWD}/config" ]]; then
     mkdir -p "${PWD}/config"
     # Add defaults configuration
     hass --config "${PWD}/config" --script ensure_config
-    # Overwrite configuration.yaml if provided
-    if [ -f ${PWD}/.devcontainer/configuration.yaml ]; then
-        rm -f ${PWD}/config/configuration.yaml
-        ln -s ${PWD}/.devcontainer/configuration.yaml ${PWD}/config/configuration.yaml
-    fi
+fi
+
+# Overwrite configuration.yaml if provided
+if [ -f ${PWD}/.devcontainer/configuration.yaml ]; then
+    rm -f ${PWD}/config/configuration.yaml
+    ln -s ${PWD}/.devcontainer/configuration.yaml ${PWD}/config/configuration.yaml
 fi
 
 # Set the path to custom_components
@@ -23,6 +24,10 @@ fi
 ## while at the same time have Home Assistant configuration inside <root>/config
 ## without resulting to symlinks.
 export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
+
+## Link custom_components into config
+# rm -f ${PWD}/config/custom_components
+# ln -s ${PWD}/custom_components ${PWD}/config/
 
 # Start Home Assistant
 hass --config "${PWD}/config" --debug

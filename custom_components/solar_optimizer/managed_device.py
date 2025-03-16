@@ -61,9 +61,12 @@ async def do_service_action(
         "entity_id": entity_id,
     }
 
-    await hass.services.async_call(
-        domain, action, service_data=service_data, target=target
-    )
+    try:
+        await hass.services.async_call(
+            domain, action, service_data=service_data, target=target
+        )
+    except Exception as err:  # pylint: disable=broad-except
+        _LOGGER.exception(err)
 
     # Also send an event to inform
     do_event_action(

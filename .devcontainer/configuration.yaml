@@ -18,6 +18,11 @@ logger:
   logs:
     custom_components.solar_optimizer: debug
 
+debugpy:
+  start: true
+  wait: false
+  port: 5678
+
 input_boolean:
   fake_device_a:
     name: "Equipement A (1000 W)"
@@ -130,7 +135,6 @@ input_number:
     unit_of_measurement: "%"
     mode: slider
     step: 1
-
 #template:
 #  - trigger:
 #      - trigger: time_pattern
@@ -255,9 +259,3 @@ input_number:
 #      deactivation_service: "switch/turn_off"
 #      battery_soc_threshold: 60
 #
-
-# If you need to debug uncommment the line below (doc: https://www.home-assistant.io/integrations/debugpy/)
-debugpy:
-  start: true
-  wait: false
-  port: 5678
