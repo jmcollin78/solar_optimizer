@@ -93,15 +93,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         ).time()
         self._central_config_done = True
 
-        # Do not calculate immediatly because switch state are not restored yet. Wait for homeassistant_started event
-        # which is captured in onHAStarted method
-        # await self.async_config_entry_first_refresh()
-
     async def on_ha_started(self, _) -> None:
         """Listen the homeassistant_started event to initialize the first calculation"""
         _LOGGER.info("First initialization of Solar Optimizer")
-        # This throws an error. Let's see how it works without it
-        # TODO await self.async_config_entry_first_refresh()
 
     async def _async_update_data(self):
         _LOGGER.info("Refreshing Solar Optimizer calculation")
