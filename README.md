@@ -344,7 +344,6 @@ The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Dev
 | `battery_soc_threshold`     | The **minimum** battery **state of charge (SOC)** required for the device to be considered. |
 | `battery_soc`               | The **current** battery **state of charge (SOC)**.                                          |
 
-
 # A Card for Your Dashboards as a complement
 As a complement, the following Lovelace code allows you to control each declared device.
 The steps to follow are:

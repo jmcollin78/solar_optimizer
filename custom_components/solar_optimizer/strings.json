@@ -70,8 +70,8 @@
                     "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode/hvac_mode:cool`",
                     "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode/hvac_mode:off`",
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device",
-                    "max_on_time_per_day_min": "The maximum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
-                    "min_on_time_per_day_min": "The minimum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_per_day_min": "The maximum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
+                    "min_on_time_per_day_min": "The minimum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             },
@@ -111,15 +111,15 @@
                     "duration_min": "The minimum duration of the device when turned on in minutes",
                     "duration_stop_min": "The minimum duration of the device when turned off in minutes",
                     "action_mode": "The action mode of the device. `service` to service call a service to turn on or off or `event` to send an event to turn on or off",
-                    "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode:cool`",
-                    "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode:off`",
+                    "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode/hvac_mode:cool`",
+                    "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode/hvac_mode:off`",
                     "power_entity_id": "The entity id of the power sensor",
                     "duration_power_min": "The minimal duration of each power change in minutes",
                     "change_power_service": "The service used to change the power. Example `number/set_value`",
                     "convert_power_divide_factor": "The divide factor to convert power into units of the power device. If conversion from power to ampere, the divisor should be 220",
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device",
-                    "max_on_time_per_day_min": "The maximum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
-                    "min_on_time_per_day_min": "The minimum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_per_day_min": "The maximum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
+                    "min_on_time_per_day_min": "The minimum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             }
@@ -198,8 +198,8 @@
                     "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode/hvac_mode:cool`",
                     "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode/hvac_mode:off`",
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device",
-                    "max_on_time_per_day_min": "The maximum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
-                    "min_on_time_per_day_min": "The minimum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_per_day_min": "The maximum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
+                    "min_on_time_per_day_min": "The minimum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             },
@@ -239,15 +239,15 @@
                     "duration_min": "The minimum duration of the device when turned on in minutes",
                     "duration_stop_min": "The minimum duration of the device when turned off in minutes",
                     "action_mode": "The action mode of the device. `service` to service call a service to turn on or off or `event` to send an event to turn on or off",
-                    "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode:cool`",
-                    "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode:off`",
+                    "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode/hvac_mode:cool`",
+                    "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode/hvac_mode:off`",
                     "power_entity_id": "The entity id of the power sensor",
                     "duration_power_min": "The minimal duration of each power change in minutes",
                     "change_power_service": "The service used to change the power. Example `number/set_value`",
                     "convert_power_divide_factor": "The divide factor to convert power into units of the power device. If conversion from power to ampere, the divisor should be 220",
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device",
-                    "max_on_time_per_day_min": "The maximum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
-                    "min_on_time_per_day_min": "The minimum time per day in state on. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_per_day_min": "The maximum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
+                    "min_on_time_per_day_min": "The minimum time per day in state on in minutes. If minium time is not reached during daylight, it will be activated during offpeak time",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             }
