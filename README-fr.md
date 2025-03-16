@@ -21,10 +21,15 @@
   - [Configurer les équipements](#configurer-les-équipements)
     - [Configurer un équipement simple (on/off)](#configurer-un-équipement-simple-onoff)
   - [Configurer un équipement avec une puissance variable](#configurer-un-équipement-avec-une-puissance-variable)
+  - [Exemples de configurations](#exemples-de-configurations)
+    - [Commande d'une recharge de Tesla](#commande-dune-recharge-de-tesla)
+    - [Commande d'une climatisation](#commande-dune-climatisation)
+    - [Commande d'un deshumidificateur](#commande-dun-deshumidificateur)
   - [Configurer l'algorithme en mode avancé](#configurer-lalgorithme-en-mode-avancé)
 - [Entités disponibles](#entités-disponibles)
   - [L'appareil "configuration"](#lappareil-configuration)
   - [Les appareils](#les-appareils)
+- [Les évènements](#les-évènements)
 - [Une carte pour vos dashboards en complément](#une-carte-pour-vos-dashboards-en-complément)
   - [Installez les plugins](#installez-les-plugins)
   - [Installez les templates](#installez-les-templates)
@@ -155,12 +160,12 @@ Vous devez spécifier les attributs suivant :
 | `duration_min`            | tous                                    | La durée en minute minimale d'activation                                                                                                                                                                                                     | 60                                                    | La VMC sous-sol s'allumera toujours pour une heure au minimum                                                                                                                                                                                  |
 | `duration_stop_min`       | tous                                    | La durée en minute minimale de desactivation. Vaut `duration_min` si elle n'est pas précisée                                                                                                                                                 | 15                                                    | La VMC sous-sol s'éteindra toujours pour 15 min au minimum                                                                                                                                                                                     |
 | `action_mode`             | tous                                    | le mode d'action pour allumer ou éteindre l'équipement. Peut être "action_call" ou "event" (*)                                                                                                                                               | action_call                                           | "action_call" indique que l'équipement s'allume et s'éteint via une action. Cf. ci-dessous. "event" indique qu'un évènement est envoyé lorsque l'état doit changer. Cf. (*)                                                                    |
-| `activation_service`      | uniquement si action_mode="action_call" | le service a appeler pour activer l'équipement sous la forme "domain/service"                                                                                                                                                                | switch/turn_on                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id"                                                                                                                                                                  |
-| `deactivation_service`    | uniquement si action_mode="action_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service"                                                                                                                                                             | switch/turn_off                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id"                                                                                                                                                             |
+| `activation_service`      | uniquement si action_mode="action_call" | le service a appeler pour activer l'équipement sous la forme "domain/service[/parameter:value]"                                                                                                                                              | switch/turn_on                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id". La syntaxe acceptée est la suivante : domain/action[/parameter:value]                                                                                           |
+| `deactivation_service`    | uniquement si action_mode="action_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service[/parameter:value]"                                                                                                                                           | switch/turn_off                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id". La syntaxe acceptée est la suivante : domain/action[/parameter:value]                                                                                      |
 | `battery_soc_threshold`   | tous                                    | le pourcentage minimal de charge de la batterie pour que l'équipement soit utilisable                                                                                                                                                        | 30                                                    | Dans cet exemple, l'équipement ne sera utilisable par l'algorithme si la batterie solaire n'est pas chargée à au moins 30%. Nécessite le renseignement de l'entité d'état de charge de la batterie dans les paramètres communs. Cf. ci-dessus. |
 | `max_on_time_per_day_min` | tous                                    | le nombre de minutes maximal en position allumé pour cet équipement. Au delà, l'équipement n'est plus utilisable par l'algorithme                                                                                                            | 10                                                    | L'équipement sera allumé au maximum 10 minutes par jour                                                                                                                                                                                        |
 | `min_on_time_per_day_min` | tous                                    | le nombre de minutes minimale en position allumé pour cet équipement. Si lors du démarrage des heures creuses, ce minimum n'est pas atteint alors l'équipement sera allumé à concurrence du début de journée ou du `max_on_time_per_day_min` | 5                                                     | L'équipement est sera allumé au minimum 5 minutes par jour ; soit pendant la production solaire, soit pendant les heures creuses                                                                                                               |
-| `offpeak_time`            | tous                                    | L'heure de début des heures creuses au format hh:mm                                                                                                                                                                                          | 22:00                                                 | L'équipement pourra être allumé à 22h00 si la production de la journeé n'a pas été suffisante                                                                                                                                                  |
+| `offpeak_time`            | tous                                    | L'heure de début des heures creuses au format hh:mm                                                                                                                                                                                          | 22:00                                                 | L'équipement pourra être allumé à 22h00 si la production de la journée n'a pas été suffisante                                                                                                                                                  |
 
 ## Configurer un équipement avec une puissance variable
 Ce type d'équipement permet moduler la puissance consommée par l'équipement en fonction de la production solaire et de ce que décide l'algorithme. Vous avez ainsi une sorte de routeur solaire logiciel qui permet, par exemple, de moduler la charge d'une voiture électrique avec uniquement le surplus de production.
@@ -175,6 +180,74 @@ Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'a
 | `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `"number/set_value"`         | -                                                                                                                                                                                                                                                                                                        |
 | `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (220 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 220. |
 
+## Exemples de configurations
+Les exemples ci-dessus sont à adapter à votre cas.
+
+### Commande d'une recharge de Tesla
+Pour commander la recharge d'une voiture de type Tesla avec modulation de l'intensité de charge, si la batterie solaire est chargée à 50%, en tri-phasé avec recharge en heures creuses à partir de 23h00, voici les paramètres :
+
+```yaml
+  name: "Recharge Tesla"
+  entity_id: "switch.tesla_charger"
+  power_min: 660
+  power_max: 3960
+  power_step: 660
+  check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.tesla_charge_limit') | float(90) }}"
+  # 2 heures
+  duration_min: 120
+  # 15 min stop
+  duration_stop_min: 15
+  # Power management
+  power_entity_id: "number.tesla_charging_amps"
+  # 5 min
+  duration_power_min: 5
+  action_mode: "service_call"
+  activation_service: "switch/turn_on"
+  deactivation_service: "switch/turn_off"
+  change_power_service: "number/set_value"
+  convert_power_divide_factor: 660
+  battery_soc_threshold: 50
+  min_on_time_per_day_min: 300
+  offpeak_time: "23:00"
+```
+
+En monophasé, remplacez les 660 par des 220. Vous devez adapter, la puissance maximale et le `check_usable_template` au minimum.
+
+### Commande d'une climatisation
+Attention, cette configuration n'a pas été testée sur un cas réel.
+
+Pour allumer une climatisation si la température est supérieure à 27° :
+```yaml
+    name: "Climatisation salon"
+    entity_id: "climate.clim_salon"
+    power_max: 1500
+    check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    # 1 h minimum
+    duration_min: 60
+    action_mode: "service_call"
+    activation_service: "climate/set_hvac_mode/hvac_mode:cool"
+    deactivation_service: "climate/set_hvac_mode/hvac_mode:off"
+    battery_soc_threshold: 80
+```
+
+### Commande d'un deshumidificateur
+Pour allumer un déhumidificateur si l'humidité dépasse un seuil pour au moins une heure par jour avec possibilité d'allumage en heures creuses :
+
+```yaml
+  name: "Dehumidification musique"
+  entity_id: "humidifier.humidifier_musique"
+  power_max: 250
+  # 1 h
+  duration_min: 60
+  duration_stop_min: 30
+  check_usable_template: "{{ states('sensor.humidite_musique') | float(50) > 55 }}"
+  action_mode: "service_call"
+  activation_service: "humidifier/turn_on"
+  deactivation_service: "humidifier/turn_off"
+  max_on_time_per_day_min: 180
+  min_on_time_per_day_min: 60
+  offpeak_time: "02:00"
+```
 
 ## Configurer l'algorithme en mode avancé
 La configuration avancée permet de modifier la configuration de l'algorithme. Il n'est pas conseillé d'y toucher mais cette fonction reste disponible pour des besoins spécifiques. L'algorithme est un algorithme de type recuit simulé qui cherche des configurations (combinaisons de on/off) et procède à une évaluation d'une fonction de coût à chaque itération.
@@ -251,6 +324,106 @@ Ce dernier switch possède des attributs consultables via Outils de developpemen
 10. `next_date_available_power` : à quelle date et heure le changement de puissance de l'équipement sera de nouveau disponible pour un changement,
 11. `battery_soc_threshold` : l'état de charge minimal de la batterie solaire pour que l'équipement soit utilisable par l'algorithme,
 12. `battery_soc` : l'état de charge courant de la batterie solaire.
+
+# Les évènements
+Solar Optimizer produit des évènements à chaque allumage ou extinction d'un appareil. Cela vous permet de capter ces évènements dans une automatisation par exemple.
+
+`solar_optimizer_state_change_event` : lorsqu'un équipement change d'état. Le contenu du message est alors le suivant :
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [Activate | Deactivate],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+`solar_optimizer_change_power_event` : lorsqu'un équipement change de puissance. Le contenu du message est alors le suivant :
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [ChangePower],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+`solar_optimizer_enable_state_change_event` : lorsque le switch `enable` d'un équipement change d'état. Le contenu du message est alors le suivant :
+```
+event_type: solar_optimizer_enable_state_change_event
+data:
+  device_unique_id: prise_vmc_garage
+  is_enabled: false
+  is_active: true
+  is_usable: false
+  is_waiting: true
+```
+
+Vous pouvez contrôler la réception et le contenu des évènements dans Outils de développement / Evènements. Donnez le nom de l'évènement à écouter :
+
+![écoute d'évènements](images/event-listening.png)
+
+Un exemple d'automatisation qui écoute les évènements :
+
+```yaml
+alias: Gestion des events de Solar Optimizer
+description: Notifie les modifiations de status de Solar Optimizer
+mode: parallel
+max: 50
+triggers:
+  - event_type: solar_optimizer_change_power_event
+    id: power_event
+    trigger: event
+  - event_type: solar_optimizer_state_change_event
+    id: state_change
+    trigger: event
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: power_event
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: ChangePower Event de Solar Optimizer
+            enabled: false
+            action: persistent_notification.create
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ trigger.event.data.entity_id == switch.cloucloute_charger
+                  }}
+            then:
+              - data:
+                  message: On demande a changer la puissance de Cloucloute
+                  title: Changement de puissance
+                  notification_id: cloucloute-power-change
+                action: persistent_notification.create
+              - data:
+                  value: >-
+                    {{ (trigger.event.data.requested_power | float(0) / 660) |
+                    round(0) }}
+                target:
+                  entity_id: number.cloucloute_charging_amps
+                action: number.set_value
+      - conditions:
+          - condition: trigger
+            id: state_change
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: StateChange Event de Solar Optimizer
+            action: persistent_notification.create
+```
 
 
 # Une carte pour vos dashboards en complément

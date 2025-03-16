@@ -1,16 +1,1 @@
-# Strictly for tests
--r requirements.txt
-pytest-homeassistant-custom-component
-coverage
-pytest
-pytest-asyncio
-pytest-cov
-pytest-aiohttp
-pytest-freezer
-pytest-socket
-pytest-test-groups
-pytest-sugar
-pytest-timeout
-pytest-unordered
-pytest-picked
-pytest-xdist
+homeassistant==2025.2.5

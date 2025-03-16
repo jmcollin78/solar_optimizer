@@ -8,7 +8,7 @@
 	"appPort": [
 		"9123:8123"
 	],
-	"postCreateCommand": "pip install -r requirements.txt ; pip install -r requirements_dev.txt",
+	"postCreateCommand": "pip install --upgrade pip ; pip install -r requirements_test.txt",
 
 	"mounts": [
 		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
@@ -36,7 +36,9 @@
                 "huizhou.githd",
                 "github.copilot",
                 "github.copilot-chat",
-                "ms-azuretools.vscode-docker"
+                "ms-azuretools.vscode-docker",
+                "openai.chatgpt"
+
 			],
 
 			"settings": {

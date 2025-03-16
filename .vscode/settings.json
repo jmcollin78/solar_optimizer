@@ -12,6 +12,6 @@
     "python.testing.pytestEnabled": true,
     "python.analysis.extraPaths": [
         "/workspaces/solar_optimizer/custom_components/solar_optimizer",
-        "/home/vscode/.local/lib/python3.12/site-packages/homeassistant"
+        "/home/vscode/.local/lib/python3.13/site-packages/homeassistant"
     ]
 }

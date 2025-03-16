@@ -243,6 +243,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             self._attr_is_on = True
             self.update_custom_attributes(device)
             self.async_write_ha_state()
+            _LOGGER.debug("Turn_on Solar Optimizer switch %s ok", self._attr_name)
 
     def turn_off(  # pylint: disable=useless-parent-delegation
         self, **kwargs: Any
@@ -254,10 +255,6 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity on."""
         _LOGGER.info("Turn_off Solar Optimizer switch %s", self._attr_name)
-        if not self.coordinator or not self.coordinator.data:
-            return
-
-        _LOGGER.info("Turn_on Solar Optimizer switch %s", self._attr_name)
         # search for coordinator and device
         if not self.coordinator or not (
             device := self.coordinator.get_device_by_unique_id(self.idx)
@@ -265,10 +262,14 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         if self._attr_is_on:
+            _LOGGER.debug("Will deactivate %s", self._attr_name)
             await device.deactivate()
             self._attr_is_on = False
             self.update_custom_attributes(device)
             self.async_write_ha_state()
+            _LOGGER.debug("Turn_ff Solar Optimizer switch %s ok", self._attr_name)
+        else:
+            _LOGGER.debug("Not active %s", self._attr_name)
 
     @property
     def device_info(self) -> DeviceInfo | None:

@@ -21,12 +21,17 @@
   - [Configure the Devices](#configure-the-devices)
     - [Configuring a Simple Device (On/Off)](#configuring-a-simple-device-onoff)
   - [Configuring a Device with Variable Power](#configuring-a-device-with-variable-power)
+  - [Configuration Examples](#configuration-examples)
+    - [Controlling Tesla Charging](#controlling-tesla-charging)
+    - [Controlling an Air Conditioner](#controlling-an-air-conditioner)
+    - [Controlling a Dehumidifier](#controlling-a-dehumidifier)
   - [Configuring the Algorithm in Advanced Mode](#configuring-the-algorithm-in-advanced-mode)
     - [Enabling Advanced Configuration](#enabling-advanced-configuration)
 - [Available Entities](#available-entities)
   - [The "configuration" Device](#the-configuration-device)
   - [Devices and Their Entities](#devices-and-their-entities)
     - [Switch Attributes](#switch-attributes)
+- [Events](#events)
 - [A Card for Your Dashboards as a complement](#a-card-for-your-dashboards-as-a-complement)
   - [Install the Plugins](#install-the-plugins)
   - [Install the Templates](#install-the-templates)
@@ -162,8 +167,8 @@ You need to specify the following attributes:
 | `duration_min`            | All                                 | The minimum activation duration in minutes.                                                                                                                                                                                            | 60                                               | The basement ventilation will always run for at least one hour when turned on.                                                                                                                                    |
 | `duration_stop_min`       | All                                 | The minimum deactivation duration in minutes. Defaults to `duration_min` if not specified.                                                                                                                                             | 15                                               | The basement ventilation will always remain off for at least 15 minutes before restarting.                                                                                                                        |
 | `action_mode`             | All                                 | The action mode used to turn the device on or off. Can be either `"action_call"` or `"event"` (*).                                                                                                                                     | action_call                                      | `"action_call"` indicates that the device is controlled via an action call. See below. `"event"` means an event is triggered when the state should change. See (*) for more details.                              |
-| `activation_service`      | Only if `action_mode="action_call"` | The service to call for activating the device, in the format `"domain/service"`.                                                                                                                                                       | switch/turn_on                                   | Activating the device will trigger the `"switch/turn_on"` service on the `entity_id` specified.                                                                                                                   |
-| `deactivation_service`    | Only if `action_mode="action_call"` | The service to call for deactivating the device, in the format `"domain/service"`.                                                                                                                                                     | switch/turn_off                                  | Deactivating the device will trigger the `"switch/turn_off"` service on the `entity_id` specified.                                                                                                                |
+| `activation_service`      | Only if `action_mode="action_call"` | The service to call for activating the device, in the format `"domain/service[/parameter:value]"`.                                                                                                                                     | switch/turn_on                                   | Activating the device will trigger the `"switch/turn_on"` service on the `entity_id` specified.                                                                                                                   |
+| `deactivation_service`    | Only if `action_mode="action_call"` | The service to call for deactivating the device, in the format `"domain/service[/parameter:value]"`.                                                                                                                                   | switch/turn_off                                  | Deactivating the device will trigger the `"switch/turn_off"` service on the `entity_id` specified.                                                                                                                |
 | `battery_soc_threshold`   | All                                 | The minimum battery charge percentage required for the device to be usable.                                                                                                                                                            | 30                                               | In this example, the device will not be used by the algorithm if the solar battery is not charged to at least 30%. Requires the battery charge state entity to be configured in the common parameters. See above. |
 | `max_on_time_per_day_min` | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
 | `min_on_time_per_day_min` | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
@@ -181,6 +186,76 @@ All the parameters described [here](#configuring-a-simple-device-onoff) apply an
 | `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                           | For an electric vehicle, set this to 220 (200V x 1A).                                                                                                                                                                                                      |
 | `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `"number/set_value"`         | -                                                                                                                                                                                                                                                          |
 | `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                           | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220. |
+
+## Configuration Examples
+The examples below should be adapted to your specific case.
+
+### Controlling Tesla Charging
+To control the charging of a Tesla vehicle with adjustable charging intensity, if the solar battery is charged to 50%, in three-phase mode with off-peak charging starting at 11:00 PM, here are the parameters:
+
+```yaml
+  name: "Recharge Tesla"
+  entity_id: "switch.tesla_charger"
+  power_min: 660
+  power_max: 3960
+  power_step: 660
+  check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.tesla_charge_limit') | float(90) }}"
+  # 2 heures
+  duration_min: 120
+  # 15 min stop
+  duration_stop_min: 15
+  # Power management
+  power_entity_id: "number.tesla_charging_amps"
+  # 5 min
+  duration_power_min: 5
+  action_mode: "service_call"
+  activation_service: "switch/turn_on"
+  deactivation_service: "switch/turn_off"
+  change_power_service: "number/set_value"
+  convert_power_divide_factor: 660
+  battery_soc_threshold: 50
+  min_on_time_per_day_min: 300
+  offpeak_time: "23:00"
+```
+
+In single-phase mode, replace 660 with 220. You should at least adjust the maximum power and the `check_usable_template`.
+
+### Controlling an Air Conditioner
+Caution: This configuration has not been tested in a real scenario.
+
+To turn on an air conditioner if the temperature is above 27°C:
+
+```yaml
+    name: "Climatisation salon"
+    entity_id: "climate.clim_salon"
+    power_max: 1500
+    check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    # 1 h minimum
+    duration_min: 60
+    action_mode: "service_call"
+    activation_service: "climate/set_hvac_mode:hvac_mode=cool"
+    deactivation_service: "climate/set_hvac_mode:hvac_mode=off"
+    battery_soc_threshold: 80
+```
+
+### Controlling a Dehumidifier
+To turn on a dehumidifier if the humidity exceeds a threshold for at least one hour per day, with the possibility of activation during off-peak hours:
+
+```yaml
+  name: "Dehumidification musique"
+  entity_id: "humidifier.humidifier_musique"
+  power_max: 250
+  # 1 h
+  duration_min: 60
+  duration_stop_min: 30
+  check_usable_template: "{{ states('sensor.humidite_musique') | float(50) > 55 }}"
+  action_mode: "service_call"
+  activation_service: "humidifier/turn_on"
+  deactivation_service: "humidifier/turn_off"
+  max_on_time_per_day_min: 180
+  min_on_time_per_day_min: 60
+  offpeak_time: "02:00"
+```
 
 ## Configuring the Algorithm in Advanced Mode
 Advanced configuration allows modifying the algorithm's settings. It is not recommended to change these settings unless you have specific needs. The algorithm uses a **simulated annealing** approach to search for optimal configurations (combinations of on/off states) and evaluates a cost function at each iteration.
@@ -270,6 +345,95 @@ The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Dev
 | `battery_soc_threshold`     | The **minimum** battery **state of charge (SOC)** required for the device to be considered. |
 | `battery_soc`               | The **current** battery **state of charge (SOC)**.                                          |
 
+# Events
+
+Solar Optimizer generates events each time a device is turned on or off. This allows you to capture these events in an automation, for example.
+
+`solar_optimizer_state_change_event`: Triggered when a device changes state. The event message contains the following data:
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [Activate | Deactivate],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+`solar_optimizer_change_power_event`: Triggered when a device changes power. The event message contains the following data:
+```
+event_type: solar_optimizer_state_change_event
+data:
+  action_type: [ChangePower],
+  requested_power: <la nouvelle puissance demandée si disponible>,
+  current_power: <la puissance demandée si disponible>,
+  entity_id: <l'entity_id de l'appareil commandé>,
+```
+
+You can monitor the reception and content of events in Developer Tools / Events. Enter the name of the event to listen for:
+
+![Event Listening](images/event-listening.png)
+
+An example of an automation that listens for events:
+
+```yaml
+alias: Gestion des events de Solar Optimizer
+description: Notifie les modifiations de status de Solar Optimizer
+mode: parallel
+max: 50
+triggers:
+  - event_type: solar_optimizer_change_power_event
+    id: power_event
+    trigger: event
+  - event_type: solar_optimizer_state_change_event
+    id: state_change
+    trigger: event
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: power_event
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: ChangePower Event de Solar Optimizer
+            enabled: false
+            action: persistent_notification.create
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ trigger.event.data.entity_id == switch.cloucloute_charger
+                  }}
+            then:
+              - data:
+                  message: On demande a changer la puissance de Cloucloute
+                  title: Changement de puissance
+                  notification_id: cloucloute-power-change
+                action: persistent_notification.create
+              - data:
+                  value: >-
+                    {{ (trigger.event.data.requested_power | float(0) / 660) |
+                    round(0) }}
+                target:
+                  entity_id: number.cloucloute_charging_amps
+                action: number.set_value
+      - conditions:
+          - condition: trigger
+            id: state_change
+        sequence:
+          - data:
+              message: >-
+                {{ trigger.event.data.action_type }} pour entité {{
+                trigger.event.data.entity_id}}     avec requested_power {{
+                trigger.event.data.requested_power }}. (current_power is {{
+                trigger.event.data.current_power }})
+              title: StateChange Event de Solar Optimizer
+            action: persistent_notification.create
+```
 
 # A Card for Your Dashboards as a complement
 As a complement, the following Lovelace code allows you to control each declared device.
