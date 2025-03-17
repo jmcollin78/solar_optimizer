@@ -176,9 +176,9 @@ Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'a
 | ----------------------------- | ------------------------------- | ------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `power_entity_id`             | équipement à puissance variable | l'entity_id de l'entité gérant la puissance                   | `number.tesla_charging_amps` | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité. Elle peut être un `number` ou un `input_number`                                                                                                                                                      |
 | `power_min`                   | équipement a puissance variable | La puissance minimale en watt de l'équipement                 | 100                          | Lorsque la consigne de puissance passe en dessous de cette valeur, l'équipement sera éteint par l'appel du `deactivation_service`. Ce paramètre fonctionne avec `power_max` pour définir l'interval possible de variation de la puissance                                                                |
-| `power_step`                  | équipement a puissance variable | Le pas de puissance en watt                                   | 10                           | Pour une voiture mettre 220 (200 v x 1 A)                                                                                                                                                                                                                                                                |
+| `power_step`                  | équipement a puissance variable | Le pas de puissance en watt                                   | 10                           | Pour une voiture mettre 230 (230 v x 1 A)                                                                                                                                                                                                                                                                |
 | `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `"number/set_value"`         | -                                                                                                                                                                                                                                                                                                        |
-| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (220 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 220. |
+| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (230 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 230. |
 
 ## Exemples de configurations
 Les exemples ci-dessus sont à adapter à votre cas.
@@ -189,9 +189,11 @@ Pour commander la recharge d'une voiture de type Tesla avec modulation de l'inte
 ```yaml
   name: "Recharge Tesla"
   entity_id: "switch.tesla_charger"
-  power_min: 660
-  power_max: 3960
-  power_step: 660
+  # 3 x 230 v
+  power_min: 690
+  # 18 x 230 v
+  power_max: 4140
+  power_step: 690
   check_usable_template: "{{ is_state('input_select.charge_mode', 'Solaire') and is_state('binary_sensor.tesla_wall_connector_vehicle_connected', 'on') and is_state('binary_sensor.tesla_charger', 'on') and states('sensor.tesla_battery') | float(100) < states('number.tesla_charge_limit') | float(90) }}"
   # 2 heures
   duration_min: 120
@@ -205,13 +207,13 @@ Pour commander la recharge d'une voiture de type Tesla avec modulation de l'inte
   activation_service: "switch/turn_on"
   deactivation_service: "switch/turn_off"
   change_power_service: "number/set_value"
-  convert_power_divide_factor: 660
+  convert_power_divide_factor: 690
   battery_soc_threshold: 50
   min_on_time_per_day_min: 300
   offpeak_time: "23:00"
 ```
 
-En monophasé, remplacez les 660 par des 220. Vous devez adapter, la puissance maximale et le `check_usable_template` au minimum.
+En monophasé, remplacez les 690 par des 230. Vous devez adapter, la puissance maximale et le `check_usable_template` au minimum.
 
 ### Commande d'une climatisation
 Attention, cette configuration n'a pas été testée sur un cas réel.
