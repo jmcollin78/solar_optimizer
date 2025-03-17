@@ -39,13 +39,13 @@ central_config_schema = vol.Schema(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
         vol.Required(CONF_SELL_COST_ENTITY_ID): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
         vol.Required(CONF_BUY_COST_ENTITY_ID): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
         vol.Required(CONF_SELL_TAX_PERCENT_ENTITY_ID): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN])
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
         vol.Optional(CONF_SMOOTH_PRODUCTION, default=True): cv.boolean,
         vol.Optional(CONF_BATTERY_SOC_ENTITY_ID): selector.EntitySelector(
