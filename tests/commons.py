@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+from typing import Any, Dict, Callable
 from unittest.mock import patch, MagicMock
 import pytest  # pylint: disable=unused-import
 
@@ -94,3 +95,31 @@ async def create_test_input_boolean(hass, entity_id, name):
         }
     }
     await async_setup_component(hass, INPUT_BOOLEAN_DOMAIN, config)
+
+
+#
+# Side effects management
+#
+SideEffectDict = Dict[str, Any]
+
+
+class SideEffects:
+    """A class to manage sideEffects for mock"""
+
+    def __init__(self, side_effects: SideEffectDict, default_side_effect: Any):
+        """Initialise the side effects"""
+        self._current_side_effects: SideEffectDict = side_effects
+        self._default_side_effect: Any = default_side_effect
+
+    def get_side_effects(self) -> Callable[[str], Any]:
+        """returns the method which apply the side effects"""
+
+        def side_effect_method(arg) -> Any:
+            """Search a side effect definition and return it"""
+            return self._current_side_effects.get(arg, self._default_side_effect)
+
+        return side_effect_method
+
+    def add_or_update_side_effect(self, key: str, new_value: Any):
+        """Update the value of a side effect"""
+        self._current_side_effects[key] = new_value
