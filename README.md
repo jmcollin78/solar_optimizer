@@ -44,9 +44,11 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.2.0** :
+> - Added an optional sensor for the net instantaneous power charged or discharged in the battery. This value is added to the net consumed power. Since the battery charging power affects the power available for the devices, it is taken into account. The sensor must report a value in watts, positive when the battery is discharging and negative when the battery is charging.
 > * **release 3.0.0** :
->    - Added a configuration UI for devices.
->    - ⚠️ Installing release 3.0.0 requires a specific procedure. See the migration procedure below [here](#migration-procedure-from-version-2x-to-3x).
+> - Added a configuration UI for devices.
+> - ⚠️ Installing release 3.0.0 requires a specific procedure. See the migration procedure below [here](#migration-procedure-from-version-2x-to-3x).
 > * **release 2.1.0** :
 > - added a minimum duration of ignition during off-peak hours. Allows you to manage equipment that must have a minimum of ignition per day such as water heaters or chargers (cars, battery, ...). If the sunshine has not reached the required duration, then the equipment will turn on during off-peak hours. You can also define at what time the ignition counters are reset to zero, which allows you to take advantage of all off-peak hours
 > * **release 2.0.0** :
@@ -137,7 +139,8 @@ You need to specify:
 5. A sensor or `input_number` that provides **the price of exported kWh** (required: strictly positive number). If there is no resale contract, the same value/sensor as the imported cost can be used. Do not set it to 0, as it would distort the algorithm.
 6. A sensor or `input_number` that provides **the applicable tax rate on exported kWh** as a percentage (positive number or 0 if you do not resell or do not know this value). This value depends on your contract. It is not critical to the algorithm, so a value of 0 is perfectly fine.
 7. An optional sensor that provides **the charge level of a possible solar battery** in percentage. If your solar installation does not include a battery, leave this field empty.
-8. **The start time of the day**. At this time, the usage counters of the equipment are reset to zero. The default value is 05:00. Ideally, this should be set before the first production of the day and as late as possible for off-peak activations.
+8. A sensor that provides **the net instantaneous charging power of the battery**. It must be expressed in watt and should be negative when the battery is charging and positive when the battery is discharging. This value will be added to the net consumed power. If the net consumed power is -1000 W (selling 1000 W) but the battery is charging at -500 W, it means that the surplus available for the algorithm is 1500 W.
+9. **The start time of the day**. At this time, the usage counters of the equipment are reset to zero. The default value is 05:00. Ideally, this should be set before the first production of the day and as late as possible for off-peak activations.
 
 Except for the solar battery charge level, these parameters are essential for the algorithm to function, so they are all mandatory. Using sensors or `input_number` allows values to be updated in real-time at each cycle. Consequently, when off-peak hours begin, the calculation may change, impacting the state of the equipment as importing energy becomes cheaper. Everything is dynamic and recalculated in each cycle.
 

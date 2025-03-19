@@ -25,6 +25,7 @@
                     "sell_tax_percent_entity_id": "Sell taxe percent",
                     "smooth_production": "Smooth the solar production",
                     "battery_soc_entity_id": "Battery state of charge",
+                    "battery_charge_power_entity_id": "Battery charging power",
                     "raz_time": "Reset counter time"
                 },
                 "data_description": {
@@ -36,6 +37,7 @@
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
                     "battery_soc_entity_id": "The entity id of the battery state of charge in %. If you don't have battery, keep it empty",
+                    "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
                     "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation"
                 }
             },
@@ -153,6 +155,7 @@
                     "sell_tax_percent_entity_id": "Sell taxe percent",
                     "smooth_production": "Smooth the solar production",
                     "battery_soc_entity_id": "Battery state of charge",
+                    "battery_charge_power_entity_id": "Battery charging power",
                     "raz_time": "Reset counter time"
                 },
                 "data_description": {
@@ -164,6 +167,7 @@
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
                     "battery_soc_entity_id": "The entity id of the battery state of charge in %. If you don't have battery, keep it empty",
+                    "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
                     "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation"
                 }
             },
