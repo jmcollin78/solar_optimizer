@@ -11,6 +11,9 @@ from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.humidifier import DOMAIN as HUMIDIFIER_DOMAIN
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
+from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
+from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 
 
 from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -65,6 +68,9 @@ managed_device_schema = vol.Schema(
                     SWITCH_DOMAIN,
                     HUMIDIFIER_DOMAIN,
                     CLIMATE_DOMAIN,
+                    FAN_DOMAIN,
+                    LIGHT_DOMAIN,
+                    SELECT_DOMAIN,
                 ]
             )
         ),
