@@ -23,7 +23,8 @@
   - [Configuring a Device with Variable Power](#configuring-a-device-with-variable-power)
   - [Configuration Examples](#configuration-examples)
     - [Controlling Tesla Charging](#controlling-tesla-charging)
-    - [Controlling an Air Conditioner](#controlling-an-air-conditioner)
+    - [Controlling an Air Conditioner hvac mode](#controlling-an-air-conditioner-hvac-mode)
+    - [Controlling an Air Conditioner preset](#controlling-an-air-conditioner-preset)
     - [Controlling a Dehumidifier](#controlling-a-dehumidifier)
   - [Configuring the Algorithm in Advanced Mode](#configuring-the-algorithm-in-advanced-mode)
     - [Enabling Advanced Configuration](#enabling-advanced-configuration)
@@ -220,9 +221,7 @@ To control the charging of a Tesla vehicle with adjustable charging intensity, i
 
 In single-phase mode, replace 660 with 220. You should at least adjust the maximum power and the `check_usable_template`.
 
-### Controlling an Air Conditioner
-Caution: This configuration has not been tested in a real scenario.
-
+### Controlling an Air Conditioner hvac mode
 To turn on an air conditioner if the temperature is above 27°C:
 
 ```yaml
@@ -230,11 +229,29 @@ To turn on an air conditioner if the temperature is above 27°C:
     entity_id: "climate.clim_salon"
     power_max: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    active_template: "{{ states('climate.vtherm', 'cool') }}"
     # 1 h minimum
     duration_min: 60
     action_mode: "service_call"
-    activation_service: "climate/set_hvac_mode:hvac_mode=cool"
-    deactivation_service: "climate/set_hvac_mode:hvac_mode=off"
+    activation_service: "climate/set_hvac_mode/hvac_mode:cool"
+    deactivation_service: "climate/set_hvac_mode/hvac_mode:off"
+    battery_soc_threshold: 80
+```
+
+### Controlling an Air Conditioner preset
+To change the preset of an air conditioner if the temperature is above 27°C:
+
+```yaml
+    name: "Climatisation salon"
+    entity_id: "climate.clim_salon"
+    power_max: 1500
+    check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    active_template: "{{ is_state_attr('climate.clim_salon', 'preset_mode', 'boost') }}"
+    # 1 h minimum
+    duration_min: 60
+    action_mode: "service_call"
+    activation_service: "climate/set_preset_mode/preset_mode:boost"
+    deactivation_service: "climate/set_preset_mode/preset_mode:eco"
     battery_soc_threshold: 80
 ```
 

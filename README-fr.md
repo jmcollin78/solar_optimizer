@@ -24,6 +24,7 @@
   - [Exemples de configurations](#exemples-de-configurations)
     - [Commande d'une recharge de Tesla](#commande-dune-recharge-de-tesla)
     - [Commande d'une climatisation](#commande-dune-climatisation)
+    - [Commande du preset d'une climatisation](#commande-du-preset-dune-climatisation)
     - [Commande d'un deshumidificateur](#commande-dun-deshumidificateur)
   - [Configurer l'algorithme en mode avancé](#configurer-lalgorithme-en-mode-avancé)
 - [Entités disponibles](#entités-disponibles)
@@ -216,20 +217,34 @@ Pour commander la recharge d'une voiture de type Tesla avec modulation de l'inte
 En monophasé, remplacez les 690 par des 230. Vous devez adapter, la puissance maximale et le `check_usable_template` au minimum.
 
 ### Commande d'une climatisation
-Attention, cette configuration n'a pas été testée sur un cas réel.
-
 Pour allumer une climatisation si la température est supérieure à 27° :
 ```yaml
     name: "Climatisation salon"
     entity_id: "climate.clim_salon"
     power_max: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    active_template: "{{ states('climate.vtherm', 'cool') }}"
     # 1 h minimum
     duration_min: 60
     action_mode: "service_call"
     activation_service: "climate/set_hvac_mode/hvac_mode:cool"
     deactivation_service: "climate/set_hvac_mode/hvac_mode:off"
-    battery_soc_threshold: 80
+```
+
+### Commande du preset d'une climatisation
+Pour changer le preset d'une climatisation si la température est supérieure à 27° :
+
+```yaml
+    name: "Climatisation salon"
+    entity_id: "climate.clim_salon"
+    power_max: 1500
+    check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
+    active_template: "{{ is_state_attr('climate.clim_salon', 'preset_mode', 'boost') }}"
+    # 1 h minimum
+    duration_min: 60
+    action_mode: "service_call"
+    activation_service: "climate/set_preset_mode/preset_mode:boost"
+    deactivation_service: "climate/set_preset_mode/preset_mode:eco"
 ```
 
 ### Commande d'un deshumidificateur
