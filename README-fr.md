@@ -42,6 +42,8 @@
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.2.0** :
+>   - ajout d'un capteur optionnelle de la puissance nette instantanée chargée ou déchargée dans la batterie. Elle vient s'ajouter à la puissance nette consommée. En effet si la puissance de charge de la batterie est de la puissance disponible pour les équipements. Le capteur doit remonter une valeur en watt, positive si la batterie se décharge et négative si la batterie charge.
 > * **release 3.0.0** :
 >   - ajout d'une IHM de configuration des équipmements.
 >   - ⚠️ l'installation de la release 3.0.0 nécessite une procédure particulière. Voir la procédure ci-dessous [ici](#procédure-de-migration-dune-version-2x-vers-la-3x).
@@ -130,7 +132,8 @@ Vous devez spécifier :
 5. un sensor ou input_number qui donne **le prix du kwh exporté** (requis: nombre strictement positif). On peut utiliser la même valeur/sensor que l'importée si pas de contrat de revente. Ne pas mettre 0 sinon ça fausse trop l'algorithme,
 6. un sensor ou input_number qui donne **la valeur de la taxe applicable sur les kwh exportée** en pourcentage (chiffre positif ou 0 si vous ne revendez pas ou ne connaissez pas cette valeur). Cette valeur dépend de votre contrat. Elle n'est pas déterminante dans l'algorithme donc une valeur de 0 est tout à fait adaptée,
 7. un sensor facultatif qui donne **l'état de charge d'une éventuelle batterie solaire** en pourcentage. Si vous n'avez pas de batterie dans votre installation solaire, laissez ce champ vide,
-8. **l'heure de début de journée**. A cette heure les compteurs d'uitlisation des équipements sont remis à zéro. La valeur par défaut est 05:00. Pour bien faire, elle doit être avant la première production et le plus tard possible pour les activations en heures creuses.
+8. un sensor qui donne la **puissance nette instantanée de charge de la batterie**. Elle doit être exprimée en watt et doit être négative si la batterie charge et positive si la batterie se décharge. Cette valeur sera ajoutée à la puissance net consommée. Si la puissance consommée nette est de -1000 w (vente de 1000 w) mais que la batterie charge de -500 w, cela veut dire que le surplus utilisable par l'algorithme est de 1500 w.
+9. **l'heure de début de journée**. A cette heure les compteurs d'uitlisation des équipements sont remis à zéro. La valeur par défaut est 05:00. Pour bien faire, elle doit être avant la première production et le plus tard possible pour les activations en heures creuses.
 
 
 A part l'état de charge de la batterie solaire, ces informations sont nécessaires à l'algorithme pour fonctionner, elles sont donc toutes obligatoires. Le fait que ce soit des sensor ou input_number permet d'avoir des valeurs qui sont réévaluées à chaque cycle. En conséquence le passage en heure creuse peut modifier le calcul et donc les états des équipements puisque l'import devient moins cher. Donc tout est dynamique et recalculé à chaque cycle.

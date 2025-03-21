@@ -25,6 +25,7 @@
                     "sell_tax_percent_entity_id": "Pourcentage de taxe de revente",
                     "smooth_production": "Lisser la production solaire",
                     "battery_soc_entity_id": "Etat de charge de la batterie",
+                    "battery_charge_power_entity_id": "Puissance de charge nette de la batterie",
                     "raz_time": "Heure de remise à zéro"
                 },
                 "data_description": {
@@ -36,6 +37,7 @@
                     "sell_tax_percent_entity_id": "Le pourcentage de taxe de revente de l'énergie (0 à 100)",
                     "smooth_production": "Si coché, la production solaire sera lissée pour éviter les variations brutales",
                     "battery_soc_entity_id": "Etat de charge de la batterie en %. Si vous n'avez pas de batterie, laissez vide",
+                    "battery_charge_power_entity_id": "L'entity_id qui mesure la charger nette de la batterie instantanée. Doit-être exprimé en watts, être positif si la batterie se décharge et négatif si la batterie charge. Laissez vide si vous n'avez pas de batterie solaire.",
                     "raz_time": "Heure de remise à zéro des compteurs de temps passés. Devrait être avant la première exposition au soleil mais pas trop tôt pour laisser du temps à l'activation de nuit"
                 }
             },
@@ -153,6 +155,7 @@
                     "sell_tax_percent_entity_id": "Pourcentage de taxe de revente",
                     "smooth_production": "Lisser la production solaire",
                     "battery_soc_entity_id": "Etat de charge de la batterie",
+                    "battery_charge_power_entity_id": "Puissance de charge nette de la batterie",
                     "raz_time": "Heure de remise à zéro"
                 },
                 "data_description": {
@@ -164,6 +167,7 @@
                     "sell_tax_percent_entity_id": "Le pourcentage de taxe de revente de l'énergie (0 à 100)",
                     "smooth_production": "Si coché, la production solaire sera lissée pour éviter les variations brutales",
                     "battery_soc_entity_id": "Etat de charge de la batterie en %. Si vous n'avez pas de batterie, laissez vide",
+                    "battery_charge_power_entity_id": "L'entity_id qui mesure la charger nette de la batterie instantanée. Doit-être exprimé en watts, être positif si la batterie se décharge et négatif si la batterie charge. Laissez vide si vous n'avez pas de batterie solaire.",
                     "raz_time": "Heure de remise à zéro des compteurs de temps passés. Devrait être avant la première exposition au soleil mais pas trop tôt pour laisser du temps à l'activation de nuit"
                 }
             },
