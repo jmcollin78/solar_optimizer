@@ -25,7 +25,10 @@ from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
 from homeassistant.helpers.entity_platform import (
     AddEntitiesCallback,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.restore_state import (
+    RestoreEntity,
+    async_get as restore_async_get,
+)
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
@@ -70,9 +73,8 @@ async def async_setup_entry(
     device = coordinator.get_device_by_unique_id(
         name_to_unique_id(entry.data[CONF_NAME])
     )
-    if device is None:
-        device = ManagedDevice(hass, entry.data, coordinator)
-        coordinator.add_device(device)
+    device = ManagedDevice(hass, entry.data, coordinator)
+    coordinator.add_device(device)
 
     entity1 = TodayOnTimeSensor(
         hass,
@@ -242,6 +244,11 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         if old_state is not None:
             if old_state.state is not None and old_state.state != "unknown":
                 self._attr_native_value = round(float(old_state.state))
+                _LOGGER.info(
+                    "%s - read on_time from storage is %s",
+                    self,
+                    self._attr_native_value,
+                )
 
             old_value = old_state.attributes.get("last_datetime_on")
             if old_value is not None:
@@ -249,6 +256,16 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
 
         self.update_custom_attributes()
         self.async_write_ha_state()
+
+    async def async_will_remove_from_hass(self):
+        """Try to force backup of entity"""
+        _LOGGER.info(
+            "%s - force write before remove. on_time is %s",
+            self,
+            self._attr_native_value,
+        )
+        # Force dump in background
+        await restore_async_get(self.hass).async_dump_states()
 
     @callback
     async def _on_state_change(self, event: Event) -> None:
