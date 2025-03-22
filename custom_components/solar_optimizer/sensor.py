@@ -73,8 +73,9 @@ async def async_setup_entry(
     device = coordinator.get_device_by_unique_id(
         name_to_unique_id(entry.data[CONF_NAME])
     )
-    device = ManagedDevice(hass, entry.data, coordinator)
-    coordinator.add_device(device)
+    if device is None:
+        device = ManagedDevice(hass, entry.data, coordinator)
+        coordinator.add_device(device)
 
     entity1 = TodayOnTimeSensor(
         hass,

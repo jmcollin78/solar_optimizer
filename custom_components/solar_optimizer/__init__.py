@@ -22,7 +22,15 @@ from homeassistant.helpers.reload import (
 )
 
 
-from .const import DOMAIN, PLATFORMS, CONFIG_VERSION, CONFIG_MINOR_VERSION, SERVICE_RESET_ON_TIME, validate_time_format
+from .const import (
+    DOMAIN,
+    PLATFORMS,
+    CONFIG_VERSION,
+    CONFIG_MINOR_VERSION,
+    SERVICE_RESET_ON_TIME,
+    validate_time_format,
+    name_to_unique_id,
+)
 from .coordinator import SolarOptimizerCoordinator
 
 # from .input_boolean import async_setup_entry as async_setup_entry_input_boolean
@@ -114,7 +122,8 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        pass
+        if coordinator := SolarOptimizerCoordinator.get_coordinator() is not None:
+            await coordinator.remove_device(name_to_unique_id(entry.data[CONF_NAME]))
         # hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded
 

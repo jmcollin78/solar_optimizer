@@ -283,3 +283,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 self._devices[i] = device
                 return
         self._devices.append(device)
+
+    def remove_device(self, unique_id: str):
+        """Remove a device from the list of managed device"""
+        for i, dev in enumerate(self._devices):
+            if dev.unique_id == unique_id:
+                self._devices.pop(i)
+                return
