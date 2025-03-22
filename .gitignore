@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 
 config/**
+custom_components/versatile_thermostat
+custom_components/hacs

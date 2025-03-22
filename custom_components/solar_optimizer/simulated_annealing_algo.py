@@ -8,7 +8,7 @@ from .managed_device import ManagedDevice
 
 _LOGGER = logging.getLogger(__name__)
 
-DEBUG = False
+DEBUG = True
 
 
 class SimulatedAnnealingAlgorithm:
@@ -23,7 +23,7 @@ class SimulatedAnnealingAlgorithm:
     _puissance_totale_eqt_initiale: float
     _cout_achat: float = 15  # centimes
     _cout_revente: float = 10  # centimes
-    _taxe_revente: float = 0.13  # pourcentage
+    _taxe_revente: float = 10  # pourcentage
     _consommation_net: float
     _production_solaire: float
 
@@ -60,7 +60,7 @@ class SimulatedAnnealingAlgorithm:
         """The entrypoint of the algorithm:
         You should give:
          - devices: a list of ManagedDevices. devices that are is_usable false are not taken into account
-         - power_consumption: the current power consumption. Can be negeative if power is given back to grid
+         - power_consumption: the current power consumption. Can be negeative if power is given back to grid. If a solar battery is used, this value should include the net battery power consumption
          - solar_power_production: the solar production power
          - sell_cost: the sell cost of energy
          - buy_cost: the buy cost of energy
@@ -243,7 +243,8 @@ class SimulatedAnnealingAlgorithm:
     ):
         """Calcul une nouvelle puissance"""
         choices = []
-        if current_power > power_min or can_switch_off:
+        power_min_to_use = power_min if can_switch_off else power_min + power_step
+        if current_power > power_min_to_use:
             choices.append(-1)
         if current_power < power_max:
             choices.append(1)
@@ -318,7 +319,7 @@ class SimulatedAnnealingAlgorithm:
         if state and can_change_power and is_waiting:
             # calculated a new power but do not switch off (because waiting)
             requested_power = self.calculer_new_power(
-                current_power, power_step, power_min, power_max, False
+                current_power, power_step, power_min, power_max, can_switch_off=False
             )
             assert (
                 requested_power > 0
@@ -327,7 +328,7 @@ class SimulatedAnnealingAlgorithm:
         elif state and can_change_power and not is_waiting:
             # change power and accept switching off
             requested_power = self.calculer_new_power(
-                current_power, power_step, power_min, power_max, True
+                current_power, power_step, power_min, power_max, can_switch_off=True
             )
             if requested_power < power_min:
                 # deactivate the equipment
@@ -349,30 +350,6 @@ class SimulatedAnnealingAlgorithm:
             assert False, "Requested power n'a pas été calculé. Ce n'est pas normal"
 
         eqt["requested_power"] = requested_power
-
-        # old code that was working
-        # if not state or not can_change_power:
-        #    eqt["state"] = not state
-        #    # We always start at the min power
-        #    eqt["requested_power"] = power_min
-        # else:
-        #    _LOGGER.debug("Managing a can_change_power eqt which is already Activated")
-        #    # Deactivate eqt or change power
-        #    power_add = random.choice([-1, 1]) * power_step
-        #    _LOGGER.debug(
-        #        "Adding %d power to current_power (%d)", power_add, current_power
-        #    )
-        #    requested_power = current_power + power_add
-        #    if requested_power < power_min:
-        #        # deactivate the equipment
-        #        eqt["state"] = False
-        #        requested_power = 0
-        #    elif requested_power > power_max:
-        #        # Do nothing
-        #        requested_power = current_power
-        #    _LOGGER.debug("New requested_power is %s for eqt %s", requested_power, name)
-        #    # Update the solution with current_power and
-        #    eqt["requested_power"] = requested_power
 
         if DEBUG:
             _LOGGER.debug(

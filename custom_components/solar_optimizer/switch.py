@@ -171,7 +171,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         # On recherche la date de l'event pour la stocker dans notre état
-        new_state = new_state.state == STATE_ON
+        new_state = self._device.is_active  # new_state.state == STATE_ON
         if new_state == self._attr_is_on:
             return
 

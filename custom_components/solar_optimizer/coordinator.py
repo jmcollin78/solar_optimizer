@@ -174,10 +174,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         # Uses the result to turn on or off or change power
         should_log = False
         for _, equipement in enumerate(best_solution):
-            _LOGGER.debug("Dealing with best_solution for %s", equipement)
             name = equipement["name"]
             requested_power = equipement.get("requested_power")
             state = equipement["state"]
+            _LOGGER.debug("Dealing with best_solution for %s - %s", name, equipement)
             device = self.get_device_by_name(name)
             if not device:
                 continue
