@@ -267,4 +267,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
     def add_device(self, device: ManagedDevice):
         """Add a new device to the list of managed device"""
+        # Append or replace the device
+        for i, dev in enumerate(self._devices):
+            if dev.unique_id == device.unique_id:
+                self._devices[i] = device
+                return
         self._devices.append(device)
