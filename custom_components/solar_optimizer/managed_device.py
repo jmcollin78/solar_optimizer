@@ -152,8 +152,16 @@ class ManagedDevice:
         self._entity_id = device_config.get("entity_id")
         self._power_entity_id = device_config.get("power_entity_id")
         self._power_max = int(device_config.get("power_max"))
-        self._power_min = int(device_config.get("power_min") or -1)
-        self._power_step = int(device_config.get("power_step") or 0)
+        self._power_min = (
+            int(device_config.get("power_min"))
+            if device_config.get("power_min") is not None
+            else -1
+        )
+        self._power_step = (
+            int(device_config.get("power_step"))
+            if device_config.get("power_step") is not None
+            else 0
+        )
         self._can_change_power = self._power_min >= 0
         self._convert_power_divide_factor = int(
             device_config.get("convert_power_divide_factor") or 1

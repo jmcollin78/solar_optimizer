@@ -73,8 +73,9 @@ async def async_setup_entry(
     device = coordinator.get_device_by_unique_id(
         name_to_unique_id(entry.data[CONF_NAME])
     )
-    device = ManagedDevice(hass, entry.data, coordinator)
-    coordinator.add_device(device)
+    if device is None:
+        device = ManagedDevice(hass, entry.data, coordinator)
+        coordinator.add_device(device)
 
     entity1 = TodayOnTimeSensor(
         hass,
@@ -203,6 +204,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         self._device = device
         self._coordinator = coordinator
         self._last_datetime_on = None
+        self._old_state = None
 
     async def async_added_to_hass(self) -> None:
         """The entity have been added to hass, listen to state change of the underlying entity"""
@@ -277,7 +279,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             return
 
         new_state: State = event.data.get("new_state")
-        old_state: State = event.data.get("old_state")
+        # old_state: State = event.data.get("old_state")
 
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             _LOGGER.debug("No available state. Event is ignored")
@@ -285,14 +287,14 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
 
         need_save = False
         # We search for the date of the event
-        new_state = new_state.state == STATE_ON
-        old_state = old_state is not None and old_state.state == STATE_ON
-        if new_state and not old_state:
+        new_state = self._device.is_active  # new_state.state == STATE_ON
+        # old_state = old_state is not None and old_state.state == STATE_ON
+        if new_state and not self._old_state:
             _LOGGER.debug("The managed device becomes on - store the last_datetime_on")
             self._last_datetime_on = now
             need_save = True
 
-        if not new_state and old_state and self._last_datetime_on is not None:
+        if not new_state and self._old_state and self._last_datetime_on is not None:
             _LOGGER.debug("The managed device becomes off - increment the delta time")
             self._attr_native_value += round(
                 (now - self._last_datetime_on).total_seconds()
@@ -302,6 +304,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
 
         # On sauvegarde le nouvel état
         if need_save:
+            self._old_state = new_state
             self.update_custom_attributes()
             self.async_write_ha_state()
             self._device.set_on_time(self._attr_native_value)

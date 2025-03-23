@@ -66,126 +66,6 @@ def reset_coordinator_fixture():
     SolarOptimizerCoordinator.reset()
     yield
 
-
-@pytest.fixture(name="config_2_devices_power_not_power")
-def define_config_2_devices():
-    """ Define a configuration with 2 devices. One with power and the other without power """
-
-    return {
-        "solar_optimizer": {
-            "algorithm": {
-                "initial_temp": 1000,
-                "min_temp": 0.1,
-                "cooling_factor": 0.95,
-                "max_iteration_number": 1000,
-            },
-            "devices": [
-                {
-                    "name": "Equipement A",
-                    "entity_id": "input_boolean.fake_device_a",
-                    "power_max": 1000,
-                    "check_usable_template": "{{ True }}",
-                    "duration_min": 0.3,
-                    "duration_stop_min": 0.1,
-                    "action_mode": "action_call",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                    "max_on_time_per_day_min": 10,
-                },
-                {
-                    "name": "Equipement B",
-                    "entity_id": "input_boolean.fake_device_b",
-                    "power_max": 2000,
-                    "power_min": 100,
-                    "power_step": 150,
-                    "check_usable_template": "{{ False }}",
-                    "duration_min": 1,
-                    "duration_stop_min": 2,
-                    "duration_power_min": 3,
-                    "action_mode": "event",
-                    "convert_power_divide_factor": 6,
-                    "change_power_service": "input_number/set_value",
-                    "power_entity_id": "input_number.tesla_amps",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                },
-            ],
-        }
-    }
-
-@pytest.fixture(name="init_solar_optimizer_with_2_devices_power_not_power")
-async def init_solar_optimizer_with_2_devices_power_not_power(hass, config_2_devices_power_not_power) -> SolarOptimizerCoordinator:
-    """ Initialization of Solar Optimizer with 2 managed device:
-    The first don't have the power activated, and second is configured for power.
-    The second is also not usable because the temple returns always False
-    """
-    await async_setup_component(hass, "solar_optimizer", config_2_devices_power_not_power)
-    return hass.data[DOMAIN]["coordinator"]
-
-
-@pytest.fixture(name="config_2_devices_power_not_power_battery")
-def define_config_2_devices_battery():
-    """Define a configuration with 2 devices. One with power and the other without power"""
-
-    return {
-        "solar_optimizer": {
-            "algorithm": {
-                "initial_temp": 1000,
-                "min_temp": 0.1,
-                "cooling_factor": 0.95,
-                "max_iteration_number": 1000,
-            },
-            "devices": [
-                {
-                    "name": "Equipement A",
-                    "entity_id": "input_boolean.fake_device_a",
-                    "power_max": 1000,
-                    "check_usable_template": "{{ True }}",
-                    "duration_min": 0.3,
-                    "duration_stop_min": 0.1,
-                    "action_mode": "action_call",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                    "battery_soc_threshold": 30,
-                    "max_on_time_per_day_min": 10,
-                },
-                {
-                    "name": "Equipement B",
-                    "entity_id": "input_boolean.fake_device_b",
-                    "power_max": 2000,
-                    "power_min": 100,
-                    "power_step": 150,
-                    "check_usable_template": "{{ False }}",
-                    "duration_min": 1,
-                    "duration_stop_min": 2,
-                    "duration_power_min": 3,
-                    "action_mode": "event",
-                    "convert_power_divide_factor": 6,
-                    "change_power_service": "input_number/set_value",
-                    "power_entity_id": "input_number.tesla_amps",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                    "battery_soc_threshold": 50,
-                },
-            ],
-        }
-    }
-
-
-@pytest.fixture(name="init_solar_optimizer_with_2_devices_power_not_power_battery")
-async def init_solar_optimizer_with_2_devices_power_not_power_battery(
-    hass, config_2_devices_power_not_power_battery
-) -> SolarOptimizerCoordinator:
-    """Initialization of Solar Optimizer with 2 managed device:
-    The first don't have the power activated, and second is configured for power.
-    The second is also not usable because the temple returns always False
-    """
-    await async_setup_component(
-        hass, "solar_optimizer", config_2_devices_power_not_power_battery
-    )
-    return hass.data[DOMAIN]["coordinator"]
-
-
 @pytest.fixture(name="init_solar_optimizer_entry")
 async def init_solar_optimizer_entry(hass):
     """ Initialization of the integration from an Entry """
@@ -203,104 +83,6 @@ async def init_solar_optimizer_entry(hass):
     assert entry.state is ConfigEntryState.LOADED
 
 
-@pytest.fixture(name="config_2_devices_min_on_time_ok")
-def define_config_2_devices_min_on_time_ok():
-    """Define a configuration with 2 devices. One with min_on_time and offpeak, the other without"""
-
-    return {
-        "solar_optimizer": {
-            "algorithm": {
-                "initial_temp": 1000,
-                "min_temp": 0.1,
-                "cooling_factor": 0.95,
-                "max_iteration_number": 1000,
-            },
-            "devices": [
-                {
-                    "name": "Equipement A",
-                    "entity_id": "input_boolean.fake_device_a",
-                    "power_max": 1000,
-                    "check_usable_template": "{{ True }}",
-                    "duration_min": 2,
-                    "duration_stop_min": 1,
-                    "action_mode": "action_call",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                    "battery_soc_threshold": 30,
-                    "max_on_time_per_day_min": 10,
-                    "min_on_time_per_day_min": 5,
-                    "offpeak_time": "23:00",
-                },
-                {
-                    "name": "Equipement B",
-                    "entity_id": "input_boolean.fake_device_b",
-                    "power_max": 2000,
-                    "check_usable_template": "{{ False }}",
-                    "duration_min": 1,
-                    "duration_stop_min": 2,
-                    "duration_power_min": 3,
-                    "action_mode": "action_call",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                },
-            ],
-        }
-    }
-
-
-@pytest.fixture(name="init_solar_optimizer_with_2_devices_min_on_time_ok")
-async def init_solar_optimizer_with_2_devices_min_on_time_ok(
-    hass, config_2_devices_min_on_time_ok
-) -> SolarOptimizerCoordinator:
-    """Initialization of Solar Optimizer with 2 managed device"""
-    await async_setup_component(
-        hass, "solar_optimizer", config_2_devices_min_on_time_ok
-    )
-    return hass.data[DOMAIN]["coordinator"]
-
-
-@pytest.fixture(name="config_devices_offpeak_morning")
-def define_config_devices_offpeak_morning():
-    """Define a configuration with 1 devices which have its offpeak_time on morning"""
-
-    return {
-        "solar_optimizer": {
-            "algorithm": {
-                "initial_temp": 1000,
-                "min_temp": 0.1,
-                "cooling_factor": 0.95,
-                "max_iteration_number": 1000,
-            },
-            "devices": [
-                {
-                    "name": "Equipement A",
-                    "entity_id": "input_boolean.fake_device_a",
-                    "power_max": 1000,
-                    "check_usable_template": "{{ True }}",
-                    "duration_min": 2,
-                    "duration_stop_min": 1,
-                    "action_mode": "action_call",
-                    "activation_service": "input_boolean/turn_on",
-                    "deactivation_service": "input_boolean/turn_off",
-                    "battery_soc_threshold": 30,
-                    "max_on_time_per_day_min": 10,
-                    "min_on_time_per_day_min": 5,
-                    "offpeak_time": "01:00",
-                }
-            ],
-        }
-    }
-
-
-@pytest.fixture(name="init_solar_optimizer_with_devices_offpeak_morning")
-async def init_solar_optimizer_with_devices_offpeak_morning(
-    hass, config_devices_offpeak_morning
-) -> SolarOptimizerCoordinator:
-    """Initialization of Solar Optimizer with 2 managed device"""
-    await async_setup_component(hass, "solar_optimizer", config_devices_offpeak_morning)
-    return hass.data[DOMAIN]["coordinator"]
-
-
 @pytest.fixture(name="init_solar_optimizer_central_config")
 async def init_solar_optimizer_central_config(hass):
     """Initialization of the integration from an Entry"""
@@ -309,6 +91,7 @@ async def init_solar_optimizer_central_config(hass):
         title="Central",
         unique_id="centralUniqueId",
         data={
+            CONF_NAME: "Configuration",
             CONF_REFRESH_PERIOD_SEC: 60,
             CONF_DEVICE_TYPE: CONF_DEVICE_CENTRAL,
             CONF_POWER_CONSUMPTION_ENTITY_ID: "sensor.fake_power_consumption",
@@ -318,6 +101,7 @@ async def init_solar_optimizer_central_config(hass):
             CONF_SELL_TAX_PERCENT_ENTITY_ID: "input_number.fake_sell_tax_percent",
             CONF_SMOOTH_PRODUCTION: True,
             CONF_BATTERY_SOC_ENTITY_ID: "sensor.fake_battery_soc",
+            CONF_BATTERY_CHARGE_POWER_ENTITY_ID: "sensor.fake_battery_charge_power",
             CONF_RAZ_TIME: "05:00",
         },
     )

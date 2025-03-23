@@ -47,6 +47,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._smooth_production: bool = True
         self._last_production: float = 0.0
         self._battery_soc_entity_id: str = None
+        self._battery_charge_power_entity_id: str = None
         self._raz_time: time = None
 
         self._central_config_done = False
@@ -85,6 +86,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._buy_cost_entity_id = config.data.get("buy_cost_entity_id")
         self._sell_tax_percent_entity_id = config.data.get("sell_tax_percent_entity_id")
         self._battery_soc_entity_id = config.data.get("battery_soc_entity_id")
+        self._battery_charge_power_entity_id = config.data.get(
+            "battery_charge_power_entity_id"
+        )
         self._smooth_production = config.data.get("smooth_production") is True
         self._last_production = 0.0
 
@@ -144,17 +148,23 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         soc = get_safe_float(self.hass, self._battery_soc_entity_id)
         calculated_data["battery_soc"] = soc if soc is not None else 0
 
+        charge_power = get_safe_float(self.hass, self._battery_charge_power_entity_id)
+        calculated_data["battery_charge_power"] = (
+            charge_power if charge_power is not None else 0
+        )
+
         #
         # Call Algorithm Recuit simulé
         #
         best_solution, best_objective, total_power = self._algo.recuit_simule(
             self._devices,
-            calculated_data["power_consumption"],
+            calculated_data["power_consumption"]
+            + calculated_data["battery_charge_power"],
             calculated_data["power_production"],
             calculated_data["sell_cost"],
             calculated_data["buy_cost"],
             calculated_data["sell_tax_percent"],
-            calculated_data["battery_soc"]
+            calculated_data["battery_soc"],
         )
 
         calculated_data["best_solution"] = best_solution
@@ -164,10 +174,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         # Uses the result to turn on or off or change power
         should_log = False
         for _, equipement in enumerate(best_solution):
-            _LOGGER.debug("Dealing with best_solution for %s", equipement)
             name = equipement["name"]
             requested_power = equipement.get("requested_power")
             state = equipement["state"]
+            _LOGGER.debug("Dealing with best_solution for %s - %s", name, equipement)
             device = self.get_device_by_name(name)
             if not device:
                 continue
@@ -273,3 +283,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 self._devices[i] = device
                 return
         self._devices.append(device)
+
+    def remove_device(self, unique_id: str):
+        """Remove a device from the list of managed device"""
+        for i, dev in enumerate(self._devices):
+            if dev.unique_id == unique_id:
+                self._devices.pop(i)
+                return
