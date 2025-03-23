@@ -30,6 +30,7 @@ from .const import (
     SERVICE_RESET_ON_TIME,
     validate_time_format,
     name_to_unique_id,
+    CONF_NAME,
 )
 from .coordinator import SolarOptimizerCoordinator
 
@@ -122,8 +123,8 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        if coordinator := SolarOptimizerCoordinator.get_coordinator() is not None:
-            await coordinator.remove_device(name_to_unique_id(entry.data[CONF_NAME]))
+        if (coordinator := SolarOptimizerCoordinator.get_coordinator()) is not None:
+            coordinator.remove_device(name_to_unique_id(entry.data[CONF_NAME]))
         # hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded
 

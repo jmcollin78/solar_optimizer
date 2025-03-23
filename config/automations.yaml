@@ -1,45 +1,48 @@
 - id: '1686422006482'
   alias: Gestion des events de Solar Optimizer
   description: ''
-  trigger:
-  - platform: event
-    event_type: solar_optimizer_change_power_event
+  triggers:
+  - event_type: solar_optimizer_change_power_event
     id: power_event
-  - platform: event
-    event_type: solar_optimizer_state_change_event
+    trigger: event
+  - event_type: solar_optimizer_state_change_event
     id: state_change
-  - platform: state
-    entity_id:
+    trigger: event
+  - entity_id:
     - input_number.consommation_brut
     - input_number.production_solaire
-  condition: []
-  action:
+    - input_number.batterie_charging_power
+    trigger: state
+    id: power_change
+  conditions: []
+  actions:
   - choose:
     - conditions:
       - condition: trigger
         id: power_event
       sequence:
-      - service: persistent_notification.create
-        data:
+      - data:
           message: '{{ trigger.event.data.action_type }} pour entité {{ trigger.event.data.entity_id}}     avec
             requested_power {{ trigger.event.data.requested_power }}. (current_power
             is {{ trigger.event.data.current_power }})'
           title: ChangePower Event de Solar Optimizer
+        action: persistent_notification.create
     - conditions:
       - condition: trigger
         id: state_change
       sequence:
-      - service: persistent_notification.create
-        data:
+      - data:
           message: '{{ trigger.event.data.action_type }} pour entité {{ trigger.event.data.entity_id}}     avec
             requested_power {{ trigger.event.data.requested_power }}. (current_power
             is {{ trigger.event.data.current_power }})'
           title: StateChange Event de Solar Optimizer
-  - service: input_number.set_value
-    data:
+        action: persistent_notification.create
+  - data:
       value: '{{ states(''input_number.consommation_brut'') | float(0) - states(''input_number.production_solaire'')
-        | float(0) + states(''sensor.total_power'') | float(0) }}'
+        | float(0) + states(''sensor.total_power'') | float(0) + states(''input_number.batterie_charging_power'')
+        | float(0)}}'
     target:
       entity_id: input_number.consommation_net
+    action: input_number.set_value
   mode: parallel
   max: 50

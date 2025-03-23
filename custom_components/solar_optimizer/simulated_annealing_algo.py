@@ -8,7 +8,7 @@ from .managed_device import ManagedDevice
 
 _LOGGER = logging.getLogger(__name__)
 
-DEBUG = True
+DEBUG = False
 
 
 class SimulatedAnnealingAlgorithm:
@@ -111,7 +111,8 @@ class SimulatedAnnealingAlgorithm:
             # Force deactivation if active, not usable and not waiting
             force_state = (
                 False
-                if device.is_active and not usable and not waiting
+                if device.is_active
+                and ((not usable and not waiting) or device.current_power <= 0)
                 else device.is_active
             )
             self._equipements.append(
@@ -330,7 +331,7 @@ class SimulatedAnnealingAlgorithm:
             requested_power = self.calculer_new_power(
                 current_power, power_step, power_min, power_max, can_switch_off=True
             )
-            if requested_power < power_min:
+            if requested_power <= power_min:
                 # deactivate the equipment
                 eqt["state"] = False
                 requested_power = 0
