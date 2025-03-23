@@ -91,6 +91,7 @@ async def init_solar_optimizer_central_config(hass):
         title="Central",
         unique_id="centralUniqueId",
         data={
+            CONF_NAME: "Configuration",
             CONF_REFRESH_PERIOD_SEC: 60,
             CONF_DEVICE_TYPE: CONF_DEVICE_CENTRAL,
             CONF_POWER_CONSUMPTION_ENTITY_ID: "sensor.fake_power_consumption",
