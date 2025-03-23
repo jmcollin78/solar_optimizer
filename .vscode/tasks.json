@@ -12,6 +12,12 @@
             "type": "shell",
             "command": "pkill hass ; scripts/starts_ha.sh",
             "problemMatcher": []
-        }
+        },
+        {
+            "label": "Start coverage",
+            "type": "shell",
+            "command": "scripts/start_coverage.sh",
+            "problemMatcher": []
+        },
     ]
 }
