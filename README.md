@@ -479,18 +479,18 @@ template: !include templates.yaml
       unit_of_measurement: "W"
       state_class: measurement
       state: >
-        {% set power = [states('sensor.envoy_122307065303_current_power_production') | float(default=0), 0] | max %}
+        {% set power = [states('sensor.envoy_xxxxx_current_power_production') | float(default=0), 0] | max %}
         {{ power | round(2) }}
-      availability: "{{ is_number(states('sensor.envoy_122307065303_current_power_production')) }}"
+      availability: "{{ is_number(states('sensor.envoy_xxxxx_current_power_production')) }}"
     - name: "Total power consumption net instantaneous (W)"
       unique_id: total_power_consommee_net_w
       unit_of_measurement: "W"
       device_class: power
       state_class: measurement
       state: >
-        {%- set power_net = states('sensor.envoy_122307065303_current_net_power_consumption') | float(default=0) -%}
+        {%- set power_net = states('sensor.envoy_xxxxx_current_net_power_consumption') | float(default=0) -%}
         {{ power_net }}
-      availability: "{{ is_number(states('sensor.envoy_122307065303_current_net_power_consumption')) }}"
+      availability: "{{ is_number(states('sensor.envoy_xxxxx_current_net_power_consumption')) }}"
 ```
 
 Adapt these to fit your specific setup.
