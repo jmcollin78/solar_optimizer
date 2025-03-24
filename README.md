@@ -33,6 +33,9 @@
   - [Devices and Their Entities](#devices-and-their-entities)
     - [Switch Attributes](#switch-attributes)
 - [Events](#events)
+- [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
+    - [File `configuration.yaml`:](#file-configurationyaml)
+    - [File `templates.yaml`:](#file-templatesyaml)
 - [A Card for Your Dashboards as a complement](#a-card-for-your-dashboards-as-a-complement)
   - [Install the Plugins](#install-the-plugins)
   - [Install the Templates](#install-the-templates)
@@ -454,6 +457,43 @@ actions:
               title: StateChange Event de Solar Optimizer
             action: persistent_notification.create
 ```
+
+# Creating Sensor Templates for Your Installation
+
+Your setup may require the creation of specific sensors that need to be configured [here](README-en.md#configure-the-integration-for-the-first-time). The rules for these sensors are crucial and must be strictly followed to ensure the proper functioning of Solar Optimizer.
+
+Below are my sensor templates (applicable only for an Enphase installation):
+
+### File `configuration.yaml`:
+```
+template: !include templates.yaml
+```
+
+### File `templates.yaml`:
+```
+- sensor:
+    - name: "Total power instanteneous production (W)"
+      icon: mdi:solar-power-variant
+      unique_id: total_power_produite_w
+      device_class: power
+      unit_of_measurement: "W"
+      state_class: measurement
+      state: >
+        {% set power = [states('sensor.envoy_122307065303_current_power_production') | float(default=0), 0] | max %}
+        {{ power | round(2) }}
+      availability: "{{ is_number(states('sensor.envoy_122307065303_current_power_production')) }}"
+    - name: "Total power consumption net instantaneous (W)"
+      unique_id: total_power_consommee_net_w
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      state: >
+        {%- set power_net = states('sensor.envoy_122307065303_current_net_power_consumption') | float(default=0) -%}
+        {{ power_net }}
+      availability: "{{ is_number(states('sensor.envoy_122307065303_current_net_power_consumption')) }}"
+```
+
+Adapt these to fit your specific setup.
 
 # A Card for Your Dashboards as a complement
 As a complement, the following Lovelace code allows you to control each declared device.

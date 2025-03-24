@@ -31,6 +31,7 @@
   - [L'appareil "configuration"](#lappareil-configuration)
   - [Les appareils](#les-appareils)
 - [Les évènements](#les-évènements)
+- [Créer des modèles de capteur pour votre installation](#créer-des-modèles-de-capteur-pour-votre-installation)
 - [Une carte pour vos dashboards en complément](#une-carte-pour-vos-dashboards-en-complément)
   - [Installez les plugins](#installez-les-plugins)
   - [Installez les templates](#installez-les-templates)
@@ -445,6 +446,40 @@ actions:
             action: persistent_notification.create
 ```
 
+# Créer des modèles de capteur pour votre installation
+Votre installation peut nécessiter de créer des capteurs spécifiques qui doivent être configurer [ici](README-fr.md#configurer-lintégration-pour-la-première-fois). Les règles sur ces capteurs sont importantes et doivent être scrupuleusement respectées pour un bon fonctionnement de Solar Optimizer.
+Voici mes templates de capteurs (valable pour une installation Enphase uniquement):
+
+Fichier `configuration.yaml` :
+```
+template: !include templates.yaml
+```
+
+Fichier `templates.yaml` :
+```
+- sensor:
+    - name: "Total puissance produite instantanée (W)"
+      icon: mdi:solar-power-variant
+      unique_id: total_power_produite_w
+      device_class: power
+      unit_of_measurement: "W"
+      state_class: measurement
+      state: >
+        {% set power = [states('sensor.envoy_122307065303_current_power_production') | float(default=0), 0] | max %}
+        {{ power | round(2) }}
+      availability: "{{ is_number(states('sensor.envoy_122307065303_current_power_production')) }}"
+    - name: "Total puissance consommée net instantanée (W)"
+      unique_id: total_power_consommee_net_w
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      state: >
+        {%- set power_net = states('sensor.envoy_122307065303_current_net_power_consumption') | float(default=0) -%}
+        {{ power_net }}
+      availability: "{{ is_number(states('sensor.envoy_122307065303_current_net_power_consumption')) }}"
+```
+
+A adapter à votre cas bien sûr.
 
 # Une carte pour vos dashboards en complément
 En complément, les codes Lovelace suivant permet de controller chaque équipement déclaré.
