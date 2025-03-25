@@ -60,7 +60,7 @@ class SimulatedAnnealingAlgorithm:
         """The entrypoint of the algorithm:
         You should give:
          - devices: a list of ManagedDevices. devices that are is_usable false are not taken into account
-         - power_consumption: the current power consumption. Can be negeative if power is given back to grid. If a solar battery is used, this value should include the net battery power consumption
+         - power_consumption: the current power consumption. Can be negeative if power is given back to grid.
          - solar_power_production: the solar production power
          - sell_cost: the sell cost of energy
          - buy_cost: the buy cost of energy
