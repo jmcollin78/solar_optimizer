@@ -77,22 +77,12 @@ managed_device_schema = vol.Schema(
                 ]
             )
         ),
-        vol.Required(CONF_POWER_MAX): vol.Coerce(float),
+        vol.Required(CONF_POWER_MAX): str,
         vol.Optional(CONF_CHECK_USABLE_TEMPLATE, default="{{ True }}"): str,
         vol.Optional(CONF_CHECK_ACTIVE_TEMPLATE): str,
-        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Optional(
-            CONF_ACTION_MODE, default=CONF_ACTION_MODE_ACTION
-        ): selector.SelectSelector(
+        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
+        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
+        vol.Optional(CONF_ACTION_MODE, default=CONF_ACTION_MODE_ACTION): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=CONF_ACTION_MODES,
                 translation_key="action_mode",
@@ -101,9 +91,9 @@ managed_device_schema = vol.Schema(
         ),
         vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
         vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
-        vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): vol.Coerce(float),
-        vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
-        vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
+        vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
+        vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
+        vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
     }
 )
@@ -121,32 +111,16 @@ power_managed_device_schema = vol.Schema(
                 ]
             )
         ),
-        vol.Optional(CONF_POWER_ENTITY_ID): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN])
-        ),
+        vol.Optional(CONF_POWER_ENTITY_ID): selector.EntitySelector(selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN])),
         vol.Optional(CONF_POWER_MIN, default=220): vol.Coerce(float),
-        vol.Required(CONF_POWER_MAX): vol.Coerce(float),
+        vol.Required(CONF_POWER_MAX): str,
         vol.Optional(CONF_POWER_STEP, default=220): vol.Coerce(float),
         vol.Optional(CONF_CHECK_USABLE_TEMPLATE, default="{{ True }}"): str,
         vol.Optional(CONF_CHECK_ACTIVE_TEMPLATE): str,
-        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Optional(CONF_DURATION_POWER_MIN): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Optional(
-            CONF_ACTION_MODE, default=CONF_ACTION_MODE_ACTION
-        ): selector.SelectSelector(
+        vol.Optional(CONF_DURATION_MIN, default="60"): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
+        vol.Optional(CONF_DURATION_STOP_MIN): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
+        vol.Optional(CONF_DURATION_POWER_MIN): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=1440, step=0.1, mode=selector.NumberSelectorMode.BOX)),
+        vol.Optional(CONF_ACTION_MODE, default=CONF_ACTION_MODE_ACTION): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=CONF_ACTION_MODES,
                 translation_key="action_mode",
@@ -156,16 +130,12 @@ power_managed_device_schema = vol.Schema(
         vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
         vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
         vol.Optional(CONF_CHANGE_POWER_SERVICE, default="number/set_value"): str,
-        vol.Optional(
-            CONF_CONVERT_POWER_DIVIDE_FACTOR, default=220
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=1.0, max=9999, step=0.1, mode=selector.NumberSelectorMode.BOX
-            )
+        vol.Optional(CONF_CONVERT_POWER_DIVIDE_FACTOR, default=220): selector.NumberSelector(
+            selector.NumberSelectorConfig(min=1.0, max=9999, step=0.1, mode=selector.NumberSelectorMode.BOX)
         ),
-        vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): vol.Coerce(float),
-        vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
-        vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): vol.Coerce(int),
+        vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
+        vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
+        vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
     }
 )

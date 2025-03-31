@@ -9,6 +9,9 @@ from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from .const import (
     get_tz,
     name_to_unique_id,
+    get_template_or_value,
+    get_safe_float,
+    convert_to_template_or_value,
     CONF_ACTION_MODE_ACTION,
     CONF_ACTION_MODE_EVENT,
     CONF_ACTION_MODES,
@@ -23,7 +26,6 @@ ACTION_DEACTIVATE = "Deactivate"
 ACTION_CHANGE_POWER = "ChangePower"
 
 _LOGGER = logging.getLogger(__name__)
-
 
 async def do_service_action(
     hass: HomeAssistant,
@@ -111,35 +113,6 @@ def do_event_action(
 class ManagedDevice:
     """A Managed device representation"""
 
-    _name: str
-    _unique_id: str
-    _entity_id: str
-    _power_entity_id: str
-    _power_max: int
-    _power_min: int
-    _power_step: int
-    _can_change_power: bool
-    _current_power: int
-    _requested_power: int
-    _duration_sec: int
-    _duration_stop_sec: int
-    _duration_power_sec: int
-    _check_usable_template: Template
-    _check_active_template: Template
-    _next_date_available: datetime
-    _next_date_available_power: datetime
-    _action_mode: str
-    _activation_service: str
-    _deactivation_service: str
-    _change_power_service: str
-    _convert_power_divide_factor: int
-    _battery_soc: float
-    _battery_soc_threshold: float
-    _max_on_time_per_day_sec: int
-    _on_time_sec: int
-    _min_on_time_per_day_sec: int
-    _offpeak_time: time
-
     def __init__(self, hass: HomeAssistant, device_config, coordinator):
         """Initialize a manageable device"""
         self._now = None  # For testing purpose only
@@ -151,7 +124,8 @@ class ManagedDevice:
         self._unique_id = name_to_unique_id(self._name)
         self._entity_id = device_config.get("entity_id")
         self._power_entity_id = device_config.get("power_entity_id")
-        self._power_max = int(device_config.get("power_max"))
+        self._power_max = convert_to_template_or_value(hass, device_config.get("power_max"))
+
         self._power_min = (
             int(device_config.get("power_min"))
             if device_config.get("power_min") is not None
@@ -201,16 +175,12 @@ class ManagedDevice:
         self._change_power_service = device_config.get("change_power_service")
 
         self._battery_soc = None
-        self._battery_soc_threshold = float(device_config.get("battery_soc_threshold") or 0)
+        self._battery_soc_threshold = convert_to_template_or_value(hass, device_config.get("battery_soc_threshold") or 0)
 
-        self._max_on_time_per_day_sec = (
-            int(device_config.get("max_on_time_per_day_min") or 60 * 24) * 60
-        )
+        self._max_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("max_on_time_per_day_min") or 60 * 24)
         self._on_time_sec = 0
 
-        self._min_on_time_per_day_sec = (
-            int(device_config.get("min_on_time_per_day_min") or 0) * 60
-        )
+        self._min_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("min_on_time_per_day_min") or 0)
 
         offpeak_time = device_config.get("offpeak_time", None)
         self._offpeak_time = None
@@ -221,20 +191,18 @@ class ManagedDevice:
             ).time()
 
         if self.is_active:
-            self._requested_power = self._current_power = (
-                self._power_max if self._can_change_power else self._power_min
-            )
+            self._requested_power = self._current_power = self.power_max if self._can_change_power else self._power_min
 
         self._enable = True
 
         # Some checks
         # min_on_time_per_day_sec requires an offpeak_time
-        if self._min_on_time_per_day_sec > 0 and self._offpeak_time is None:
+        if self.min_on_time_per_day_sec > 0 and self._offpeak_time is None:
             msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec requires offpeak_time value"
             _LOGGER.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
 
-        if self._min_on_time_per_day_sec > self._max_on_time_per_day_sec:
+        if self.min_on_time_per_day_sec > self.max_on_time_per_day_sec:
             msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec should < max_on_time_per_day_sec"
             _LOGGER.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
@@ -342,7 +310,7 @@ class ManagedDevice:
             return
 
         if not self._can_change_power:
-            self._current_power = self._power_max
+            self._current_power = self.power_max
             _LOGGER.debug(
                 "Set current_power to %s for device %s cause active and not can_change_power",
                 self._current_power,
@@ -398,12 +366,12 @@ class ManagedDevice:
 
     def check_usable(self, check_battery=True) -> bool:
         """Check if the device is usable. The battery is checked optionally"""
-        if self._on_time_sec >= self._max_on_time_per_day_sec:
+        if self._on_time_sec >= self.max_on_time_per_day_sec:
             _LOGGER.debug(
                 "%s is not usable due to max_on_time_per_day_min exceeded %d >= %d",
                 self._name,
                 self._on_time_sec,
-                self._max_on_time_per_day_sec,
+                self.max_on_time_per_day_sec,
             )
             result = False
         else:
@@ -416,19 +384,14 @@ class ManagedDevice:
             if not result:
                 _LOGGER.debug("%s is not usable", self._name)
 
-            if (
-                check_battery
-                and result
-                and self._battery_soc is not None
-                and self._battery_soc_threshold is not None
-            ):
-                if self._battery_soc < self._battery_soc_threshold:
+            if check_battery and result and self._battery_soc is not None and self.battery_soc_threshold is not None:
+                if self._battery_soc < self.battery_soc_threshold:
                     result = False
                     _LOGGER.debug(
                         "%s is not usable due to battery soc threshold (%s < %s)",
                         self._name,
                         self._battery_soc,
-                        self._battery_soc_threshold,
+                        self.battery_soc_threshold,
                     )
 
         return result
@@ -447,16 +410,9 @@ class ManagedDevice:
             return False
 
         if self._offpeak_time >= self._coordinator.raz_time:
-            return (
-                self.now.time() >= self._offpeak_time
-                or self.now.time() < self._coordinator.raz_time
-            ) and self._on_time_sec < self._max_on_time_per_day_sec
+            return (self.now.time() >= self._offpeak_time or self.now.time() < self._coordinator.raz_time) and self._on_time_sec < self.max_on_time_per_day_sec
         else:
-            return (
-                self.now.time() >= self._offpeak_time
-                and self.now.time() < self._coordinator.raz_time
-                and self._on_time_sec < self._max_on_time_per_day_sec
-            )
+            return self.now.time() >= self._offpeak_time and self.now.time() < self._coordinator.raz_time and self._on_time_sec < self.max_on_time_per_day_sec
 
     @property
     def is_waiting(self):
@@ -481,7 +437,7 @@ class ManagedDevice:
     @property
     def power_max(self):
         """The power max of the managed device"""
-        return self._power_max
+        return get_template_or_value(self._hass, self._power_max)
 
     @property
     def power_min(self):
@@ -551,12 +507,12 @@ class ManagedDevice:
     @property
     def max_on_time_per_day_sec(self) -> int:
         """The max_on_time_per_day_sec configured"""
-        return self._max_on_time_per_day_sec
+        return get_template_or_value(self._hass, self._max_on_time_per_day_min) * 60
 
     @property
     def min_on_time_per_day_sec(self) -> int:
         """The min_on_time_per_day_sec configured"""
-        return self._min_on_time_per_day_sec
+        return get_template_or_value(self._hass, self._min_on_time_per_day_min) * 60
 
     @property
     def offpeak_time(self) -> int:
@@ -571,7 +527,7 @@ class ManagedDevice:
     @property
     def battery_soc_threshold(self) -> int:
         """The battery soc"""
-        return self._battery_soc_threshold
+        return get_template_or_value(self._hass, self._battery_soc_threshold)
 
     def set_battery_soc(self, battery_soc):
         """Define the battery soc. This is used with is_usable

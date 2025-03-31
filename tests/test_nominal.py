@@ -198,17 +198,17 @@ async def test_empty_start(hass: HomeAssistant, reset_coordinator):
         # fmt: off
         # consumption_power, production_power, battery_charge_power, battery_soc, device_a_power_max, device_b_power_min, device_b_power_max, battery_b_soc_threshold, is_a_activated, is_b_activated, device_a_power, device_b_power
         # not enough production
-        ( 500,               100,              0,                    0,           1000,               0,                  2000,               0,                       False,          False,          0,              0),
+        ( 500,               100,              0,                    0,           1000,               0,                  "2000",               "0",                       False,          False,          0,              0),
         # not enough production but battery is charging
-        ( 500,               100,              -600,                 0,           1000,               0,                  2000,               0,                       False,          True,           0,            100),
+        ( 500,               100,              -600,                 0,           1000,               0,                  "2000",               "0",                       False,          True,           0,            100),
         # not enough production but battery is charging but b power min too high
-        ( 500,               100,              -600,                 0,           1000,               200,                2000,               0,                       False,          False,          0,              0),
+        ( 500,               100,              -600,                 0,           1000,               200,                "2000",               "0",                       False,          False,          0,              0),
         # enough production rejected
-        ( -1000,            1000,              0,                    0,           1000,               0,                  2000,               0,                       True,           False,        1000,             0),
+        ( -1000,            1000,              0,                    0,           1000,               0,                  "2000",               "0",                       True,           False,        1000,             0),
         # enough production rejected + battery charge power
-        ( -1000,            1000,              -500,                 0,           1000,               0,                  2000,               0,                       True,           True,         1000,           500),
+        ( -1000,            1000,              -500,                 0,           1000,               0,                  "2000",               "0",                       True,           True,         1000,           500),
         # enough production rejected + battery charge power but equipement B soc threshold too low
-        ( -1000,            1000,              -500,                 10,          1000,               0,                  2000,              20,                       True,          False,         1000,             0),
+        ( -1000,            1000,              -500,                 10,          1000,               0,                  "2000",              "20",                       True,          False,         1000,             0),
         # fmt: on
     ],
 )
@@ -337,3 +337,44 @@ async def test_full_nominal_test(
         assert calculated_data["best_solution"][1]["state"] is is_b_activated
         assert calculated_data["best_solution"][1]["current_power"] == 0
         assert calculated_data["best_solution"][1]["requested_power"] == device_b_power
+
+
+async def test_migration_from_2_0(hass: HomeAssistant):
+    """A test for migration from 2.0 to 2.1"""
+
+    entry_a = MockConfigEntry(
+        version=CONFIG_VERSION,
+        minor_version=0,
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtAUniqueId",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0.3,
+            CONF_DURATION_STOP_MIN: 0.1,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_BATTERY_SOC_THRESHOLD: 50,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 1,
+            CONF_OFFPEAK_TIME: "22:00",
+        },
+    )
+    device_a = await create_managed_device(
+        hass,
+        entry_a,
+        "equipement_a",
+    )
+
+    assert device_a is not None
+
+    assert device_a.name == "Equipement A"
+    assert device_a.power_max == 1000
+    assert device_a.battery_soc_threshold == 50
+    assert device_a.max_on_time_per_day_sec == 10 * 60
+    assert device_a.min_on_time_per_day_sec == 1 * 60

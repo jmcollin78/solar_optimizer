@@ -227,7 +227,7 @@ async def test_simple_device_config(
     user_input = {
         CONF_NAME: "Equipement A",
         CONF_ENTITY_ID: "input_boolean.fake_device_a",
-        CONF_POWER_MAX: 1000,
+        CONF_POWER_MAX: "{{ 1000 }}",
         CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
         CONF_CHECK_ACTIVE_TEMPLATE: "{{ False }}",
         CONF_DURATION_MIN: 0.3,
@@ -235,9 +235,9 @@ async def test_simple_device_config(
         CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
         CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
         CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
-        CONF_BATTERY_SOC_THRESHOLD: 50,
-        CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
-        CONF_MIN_ON_TIME_PER_DAY_MIN: 1,
+        CONF_BATTERY_SOC_THRESHOLD: "{{ 50 }}",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: "{{ 10 }}",
+        CONF_MIN_ON_TIME_PER_DAY_MIN: "{{ 1 }}",
         CONF_OFFPEAK_TIME: "22:00",
     }
 
@@ -251,7 +251,7 @@ async def test_simple_device_config(
     assert data is not None
 
     assert data.get(CONF_NAME) == "Equipement A"
-    assert data.get(CONF_POWER_MAX) == 1000
+    assert data.get(CONF_POWER_MAX) == "{{ 1000 }}"
     assert data.get(CONF_POWER_MIN) is None
     assert data.get(CONF_POWER_STEP) is None
     assert data.get(CONF_CHECK_USABLE_TEMPLATE) == "{{ True }}"
@@ -265,9 +265,9 @@ async def test_simple_device_config(
     assert data.get(CONF_CONVERT_POWER_DIVIDE_FACTOR) is None
     assert data.get(CONF_CHANGE_POWER_SERVICE) is None
     assert data.get(CONF_POWER_ENTITY_ID) is None
-    assert data.get(CONF_BATTERY_SOC_THRESHOLD) == 50
-    assert data.get(CONF_MAX_ON_TIME_PER_DAY_MIN) == 10
-    assert data.get(CONF_MIN_ON_TIME_PER_DAY_MIN) == 1
+    assert data.get(CONF_BATTERY_SOC_THRESHOLD) == "{{ 50 }}"
+    assert data.get(CONF_MAX_ON_TIME_PER_DAY_MIN) == "{{ 10 }}"
+    assert data.get(CONF_MIN_ON_TIME_PER_DAY_MIN) == "{{ 1 }}"
     assert data.get(CONF_OFFPEAK_TIME) == "22:00"
 
 
@@ -294,7 +294,7 @@ async def test_powered_device_config(
     user_input = {
         CONF_NAME: "Equipement A",
         CONF_ENTITY_ID: "input_boolean.fake_device_a",
-        CONF_POWER_MAX: 1000,
+        CONF_POWER_MAX: "1000",
         CONF_POWER_MIN: 100,
         CONF_POWER_STEP: 150,
         CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
@@ -308,9 +308,9 @@ async def test_powered_device_config(
         CONF_CONVERT_POWER_DIVIDE_FACTOR: 6,
         CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
         CONF_POWER_ENTITY_ID: "input_number.tesla_amps",
-        CONF_BATTERY_SOC_THRESHOLD: 50,
-        CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
-        CONF_MIN_ON_TIME_PER_DAY_MIN: 1,
+        CONF_BATTERY_SOC_THRESHOLD: "50",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: "10",
+        CONF_MIN_ON_TIME_PER_DAY_MIN: "1",
         CONF_OFFPEAK_TIME: "22:00",
     }
 
@@ -324,7 +324,7 @@ async def test_powered_device_config(
     assert data is not None
 
     assert data.get(CONF_NAME) == "Equipement A"
-    assert data.get(CONF_POWER_MAX) == 1000
+    assert data.get(CONF_POWER_MAX) == "1000"
     assert data.get(CONF_POWER_MIN) == 100
     assert data.get(CONF_POWER_STEP) == 150
     assert data.get(CONF_CHECK_USABLE_TEMPLATE) == "{{ True }}"
@@ -338,7 +338,7 @@ async def test_powered_device_config(
     assert data.get(CONF_CONVERT_POWER_DIVIDE_FACTOR) == 6
     assert data.get(CONF_CHANGE_POWER_SERVICE) == "input_number/set_value"
     assert data.get(CONF_POWER_ENTITY_ID) == "input_number.tesla_amps"
-    assert data.get(CONF_BATTERY_SOC_THRESHOLD) == 50
-    assert data.get(CONF_MAX_ON_TIME_PER_DAY_MIN) == 10
-    assert data.get(CONF_MIN_ON_TIME_PER_DAY_MIN) == 1
+    assert data.get(CONF_BATTERY_SOC_THRESHOLD) == "50"
+    assert data.get(CONF_MAX_ON_TIME_PER_DAY_MIN) == "10"
+    assert data.get(CONF_MIN_ON_TIME_PER_DAY_MIN) == "1"
     assert data.get(CONF_OFFPEAK_TIME) == "22:00"
