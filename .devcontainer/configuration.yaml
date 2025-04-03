@@ -135,6 +135,38 @@ input_number:
     unit_of_measurement: "%"
     mode: slider
     step: 1
+  battery_soc_threshold:
+    name: Battery SOC threshold
+    min: 0
+    max: 100
+    icon: mdi:battery-charging
+    unit_of_measurement: "%"
+    mode: slider
+    step: 1
+  max_on_time_per_day_min:
+    name: Max on time per day (min)
+    min: 0
+    max: 1440
+    icon: mdi:clock
+    unit_of_measurement: "min"
+    mode: slider
+    step: 1
+  min_on_time_per_day_min:
+    name: Min on time per day (min)
+    min: 0
+    max: 1440
+    icon: mdi:clock
+    unit_of_measurement: "min"
+    mode: slider
+    step: 1
+  power_max:
+    name: Max power (W)
+    min: 0
+    max: 10000
+    icon: mdi:flash
+    unit_of_measurement: "W"
+    mode: slider
+    step: 100
 #template:
 #  - trigger:
 #      - trigger: time_pattern

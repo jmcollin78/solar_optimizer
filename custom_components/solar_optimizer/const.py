@@ -1,12 +1,15 @@
 """ Les constantes pour l'intégration Solar Optimizer """
 
 import re
+import logging
+import math
 from slugify import slugify
 from voluptuous.error import Invalid
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, HomeAssistantError
 from homeassistant.util import dt as dt_util
+from homeassistant.helpers.template import Template, is_template_string
 
 SOLAR_OPTIMIZER_DOMAIN = DOMAIN = "solar_optimizer"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
@@ -37,7 +40,7 @@ SERVICE_RESET_ON_TIME = "reset_on_time"
 
 TIME_REGEX = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
 CONFIG_VERSION = 2
-CONFIG_MINOR_VERSION = 0
+CONFIG_MINOR_VERSION = 1
 
 CONF_DEVICE_TYPE = "device_type"
 CONF_DEVICE_CENTRAL = "central_config"
@@ -76,6 +79,7 @@ CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
 CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
 CONF_OFFPEAK_TIME = "offpeak_time"
 
+_LOGGER = logging.getLogger(__name__)
 
 def get_tz(hass: HomeAssistant):
     """Get the current timezone"""
@@ -90,6 +94,7 @@ def name_to_unique_id(name: str) -> str:
 
 def seconds_to_hms(seconds):
     """Convert seconds to a formatted string of hours:minutes:seconds."""
+    seconds = int(seconds)
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
@@ -104,6 +109,51 @@ def validate_time_format(value: str) -> str:
     if value is not None and not re.match(TIME_REGEX, value):
         raise Invalid("The time value should be formatted like 'hh:mm'")
     return value
+
+
+def get_safe_float(hass, str_as_float) -> float | None:
+    """Get a safe float state value for an str_as_float string.
+    Return None if str_as_float is None or not a valid float.
+    """
+    if str_as_float is None:
+        return None
+
+    if isinstance(str_as_float, int):
+        return float(str_as_float)
+
+    if isinstance(str_as_float, float):
+        return str_as_float
+
+    str_as_float = str_as_float.strip()
+    try:
+        float_val = float(str_as_float)
+        return None if math.isinf(float_val) or not math.isfinite(float_val) else float_val
+    except Exception as exc:
+        _LOGGER.error("Error converting %s to float %s. SolarOptimizer will not work until this issue is fixed.", str_as_float, exc)
+        raise exc
+
+
+def get_template_or_value(hass: HomeAssistant, value):
+    """Get the template or the value"""
+    if isinstance(value, Template):
+        return value.async_render(context={})
+    return value
+
+
+def convert_to_template_or_value(hass: HomeAssistant, value):
+    """Convert the value to a template or a value"""
+    if isinstance(value, str):
+        if is_template_string(value):
+            return Template(value, hass)
+    if isinstance(value, str):
+        value = value.strip()
+    if value == "None":
+        return None
+    if value == "True":
+        return True
+    if value == "False":
+        return False
+    return get_safe_float(hass, value)
 
 
 class ConfigurationError(Exception):

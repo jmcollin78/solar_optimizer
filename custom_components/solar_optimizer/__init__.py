@@ -31,6 +31,10 @@ from .const import (
     validate_time_format,
     name_to_unique_id,
     CONF_NAME,
+    CONF_POWER_MAX,
+    CONF_BATTERY_SOC_THRESHOLD,
+    CONF_MAX_ON_TIME_PER_DAY_MIN,
+    CONF_MIN_ON_TIME_PER_DAY_MIN,
 )
 from .coordinator import SolarOptimizerCoordinator
 
@@ -142,16 +146,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         "Migrating from version %s/%s", config_entry.version, config_entry.minor_version
     )
 
-    if (
-        config_entry.version != CONFIG_VERSION
-        or config_entry.minor_version != CONFIG_MINOR_VERSION
-    ):
-        _LOGGER.debug(
-            "Migration to %s/%s is needed", CONFIG_VERSION, CONFIG_MINOR_VERSION
-        )
+    if config_entry.version == CONFIG_VERSION and config_entry.minor_version == 0:
+        _LOGGER.debug("Migration from version 0 to %s/%s is needed", CONFIG_VERSION, CONFIG_MINOR_VERSION)
         new = {**config_entry.data}
-
-        # Put migration code here
+        for key in (CONF_POWER_MAX, CONF_BATTERY_SOC_THRESHOLD, CONF_MAX_ON_TIME_PER_DAY_MIN, CONF_MIN_ON_TIME_PER_DAY_MIN):
+            if key in new:
+                new[key] = str(new[key])
 
         hass.config_entries.async_update_entry(
             config_entry,
