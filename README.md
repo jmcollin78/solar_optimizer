@@ -235,7 +235,7 @@ To turn on an air conditioner if the temperature is above 27°C:
     entity_id: "climate.clim_salon"
     power_max: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
-    active_template: "{{ states('climate.vtherm', 'cool') }}"
+    active_template: "{{ is_state('climate.vtherm', 'cool') }}"
     # 1 h minimum
     duration_min: 60
     action_mode: "service_call"
