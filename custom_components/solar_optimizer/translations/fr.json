@@ -1,7 +1,7 @@
 {
     "title": "Configuration de Solar Optimizer",
     "config": {
-        "flow_title": "Configuration de Solar Optimizer",
+        "flow_title": "Solar Optimizer",
         "step": {
             "user": {
                 "title": "Type de configuration",
