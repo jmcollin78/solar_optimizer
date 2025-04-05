@@ -12,6 +12,11 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
+from homeassistant.util.unit_conversion import (
+    BaseUnitConverter,
+    PowerConverter
+)
+
 from homeassistant.config_entries import ConfigEntry
 
 from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN, DEFAULT_RAZ_TIME
@@ -21,12 +26,20 @@ from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_safe_float(hass, entity_id: str):
+def get_safe_float(hass, entity_id: str, unit: str = None):
     """Get a safe float state value for an entity.
     Return None if entity is not available"""
     if entity_id is None or not (state := hass.states.get(entity_id)) or state.state == "unknown" or state.state == "unavailable":
         return None
+
     float_val = float(state.state)
+
+    if (unit is not None) and ('device_class' in state.attributes) and (state.attributes["device_class"] == "power"):
+        float_val = PowerConverter.convert(float_val,
+            state.attributes["unit_of_measurement"],
+            unit
+        )
+
     return None if math.isinf(float_val) or not math.isfinite(float_val) else float_val
 
 
@@ -112,7 +125,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             device.set_current_power_with_device_state()
 
         # Add a power_consumption and power_production
-        power_production = get_safe_float(self.hass, self._power_production_entity_id)
+        power_production = get_safe_float(self.hass, self._power_production_entity_id, "W")
         if power_production is None:
             _LOGGER.warning(
                 "Power production is not valued. Solar Optimizer will be disabled"
@@ -130,7 +143,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         calculated_data["power_production_brut"] = power_production
 
         calculated_data["power_consumption"] = get_safe_float(
-            self.hass, self._power_consumption_entity_id
+            self.hass, self._power_consumption_entity_id, "W"
         )
 
         calculated_data["sell_cost"] = get_safe_float(
