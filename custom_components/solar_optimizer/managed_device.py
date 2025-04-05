@@ -177,6 +177,9 @@ class ManagedDevice:
         self._battery_soc = None
         self._battery_soc_threshold = convert_to_template_or_value(hass, device_config.get("battery_soc_threshold") or 0)
 
+        self._power_production = None
+        self._power_production_threshold = convert_to_template_or_value(hass, device_config.get("power_production_threshold") or 0)
+
         self._max_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("max_on_time_per_day_min") or 60 * 24)
         self._on_time_sec = 0
 
@@ -394,6 +397,16 @@ class ManagedDevice:
                         self.battery_soc_threshold,
                     )
 
+            if result and self._power_production is not None and self._power_production_threshold is not None:
+                if self._power_production < self._power_production_threshold:
+                    result = False
+                    _LOGGER.debug(
+                        "%s is not usable due to power production threshold (%s < %s)",
+                        self._name,
+                        self._power_production,
+                        self._power_production_threshold,
+                    )
+
         return result
 
     @property
@@ -524,15 +537,30 @@ class ManagedDevice:
         """The battery soc"""
         return self._battery_soc
 
-    @property
-    def battery_soc_threshold(self) -> int:
-        """The battery soc"""
-        return get_template_or_value(self._hass, self._battery_soc_threshold)
-
     def set_battery_soc(self, battery_soc):
         """Define the battery soc. This is used with is_usable
         to determine if the device is usable"""
         self._battery_soc = battery_soc
+
+    @property
+    def battery_soc_threshold(self) -> int:
+        """The battery soc threshold"""
+        return get_template_or_value(self._hass, self._battery_soc_threshold)
+
+    @property
+    def power_production(self) -> int:
+        """The battery soc"""
+        return self._power_production
+
+    def set_power_production(self, power_production):
+        """Define the power production threshold. This is used with is_usable
+        to determine if the device is usable"""
+        self._power_production = power_production
+
+    @property
+    def power_production_threshold(self) -> int:
+        """The battery soc"""
+        return get_template_or_value(self._hass, self._power_production_threshold)
 
     def publish_enable_state_change(self) -> None:
         """Publish an event when the state is changed"""

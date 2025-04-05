@@ -92,6 +92,8 @@ In addition, it is possible to define a usability rule for equipment. For exampl
 
 If a battery is specified when configuring the integration and if the threshold `battery_soc_threshold` is specified, the equipment will only be usable if the soc (percentage of battery charge) is greater than or equal to the threshold.
 
+If `power_production_threshold` is specified, the device will only be usable if the power production is greater than the threshold.
+
 A maximum daily usage time is optionally configurable. If it is valued and if the duration of use of the equipment is exceeded, then the equipment will not be usable by the algorithm and therefore leaves power for other equipment.
 
 A minimum daily usage time is also optionally configurable. This parameter ensures that the equipment will be on for a certain minimum duration. You specify at what time the off-peak hours start (`offpeak_time`) and the minimum duration in minutes (`min_on_time_per_day_min`). If at the time indicated by `offpeak_time`, the minimum activation duration has not been reached, then the equipment is activated until the change of day (configurable in the integration and 05:00 by default) or until the maximum usage is reached (`max_on_time_per_day_min`) or during all the off-peak hours if `max_on_time_per_day_min` is not set. This ensures that the water heater or the car will be charged the next morning even if the solar production has not allowed the device to be recharged. It is up to you to invent the uses of this function.
@@ -177,6 +179,7 @@ You need to specify the following attributes:
 | `activation_service`      | Only if `action_mode="action_call"` | The service to call for activating the device, in the format `"domain/service[/parameter:value]"`.                                                                                                                                     | switch/turn_on                                   | Activating the device will trigger the `"switch/turn_on"` service on the `entity_id` specified.                                                                                                                   |
 | `deactivation_service`    | Only if `action_mode="action_call"` | The service to call for deactivating the device, in the format `"domain/service[/parameter:value]"`.                                                                                                                                   | switch/turn_off                                  | Deactivating the device will trigger the `"switch/turn_off"` service on the `entity_id` specified.                                                                                                                |
 | `battery_soc_threshold`   | All                                 | The minimum battery charge percentage required for the device to be usable.                                                                                                                                                            | 30                                               | In this example, the device will not be used by the algorithm if the solar battery is not charged to at least 30%. Requires the battery charge state entity to be configured in the common parameters. See above. |
+| `power_production_threshold` | All                              | The minimum power production required for the device to be usable.                                                                                                                                                                     | 4000                                             | In this example, the device will not be used by the algorithm if the solar production is greater than 4000W.                                                                                                      |
 | `max_on_time_per_day_min` | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
 | `min_on_time_per_day_min` | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
 | `offpeak_time`            | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
@@ -198,7 +201,7 @@ All the parameters described [here](#configuring-a-simple-device-onoff) apply an
 The examples below should be adapted to your specific case.
 
 ### Controlling Tesla Charging
-To control the charging of a Tesla vehicle with adjustable charging intensity, if the solar battery is charged to 50%, in three-phase mode with off-peak charging starting at 11:00 PM, here are the parameters:
+To control the charging of a Tesla vehicle with adjustable charging intensity, if the solar battery is charged to 50% and production is greater than 9000W, in three-phase mode with off-peak charging starting at 11:00 PM, here are the parameters:
 
 ```yaml
   name: "Recharge Tesla"
@@ -221,6 +224,7 @@ To control the charging of a Tesla vehicle with adjustable charging intensity, i
   change_power_service: "number/set_value"
   convert_power_divide_factor: 660
   battery_soc_threshold: 50
+  power_production_threshold: 9000
   min_on_time_per_day_min: 300
   offpeak_time: "23:00"
 ```
@@ -367,6 +371,8 @@ The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Dev
 | `next_date_available_power` | The **next available time** for a power adjustment.                                         |
 | `battery_soc_threshold`     | The **minimum** battery **state of charge (SOC)** required for the device to be considered. |
 | `battery_soc`               | The **current** battery **state of charge (SOC)**.                                          |
+| `power_production_threshold` | The **minimum** **Power Production** required for the device to be considered.             |
+| `power_production`           | The **current** **Power Production**.                                                      |
 
 # Events
 

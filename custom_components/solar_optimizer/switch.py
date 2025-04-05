@@ -74,6 +74,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
                     "next_date_available_power",
                     "battery_soc_threshold",
                     "battery_soc",
+                    "power_production_threshold",
+                    "power_production",
                 }
             )
         )
@@ -203,6 +205,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             ).isoformat(),
             "battery_soc_threshold": device.battery_soc_threshold,
             "battery_soc": device.battery_soc,
+            "power_production_threshold": device.power_production_threshold,
+            "power_production": device.power_production,
             "device_name": device.name,
         }
 

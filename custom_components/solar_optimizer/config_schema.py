@@ -92,6 +92,7 @@ managed_device_schema = vol.Schema(
         vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
         vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
         vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
+        vol.Optional(CONF_POWER_PRODUCTION_THRESHOLD, default=0): str,
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
@@ -134,6 +135,7 @@ power_managed_device_schema = vol.Schema(
             selector.NumberSelectorConfig(min=1.0, max=9999, step=0.1, mode=selector.NumberSelectorMode.BOX)
         ),
         vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
+        vol.Optional(CONF_POWER_PRODUCTION_THRESHOLD, default=0): str,
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
