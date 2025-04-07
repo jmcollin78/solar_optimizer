@@ -5,8 +5,11 @@ import math
 from datetime import datetime, timedelta, time
 from typing import Any
 
+from homeassistant.core import HomeAssistant, Event, EventStateChangedData
 
-from homeassistant.core import HomeAssistant  # callback
+from homeassistant.helpers.event import (
+    async_track_state_change_event,
+)
 
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
@@ -54,6 +57,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._devices: list[ManagedDevice] = []
         self._power_consumption_entity_id: str = None
         self._power_production_entity_id: str = None
+        self._subscribe_to_events: bool = False
+        self._unsub_events = None
         self._sell_cost_entity_id: str = None
         self._buy_cost_entity_id: str = None
         self._sell_tax_percent_entity_id: str = None
@@ -95,6 +100,18 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             "power_consumption_entity_id"
         )
         self._power_production_entity_id = config.data.get("power_production_entity_id")
+        self._subscribe_to_events = config.data.get("subscribe_to_events")
+
+        if self._unsub_events is not None:
+            self._unsub_events()
+            self._unsub_events = None
+
+        if self._subscribe_to_events:
+            self._unsub_events = async_track_state_change_event(
+                self.hass,
+                [self._power_consumption_entity_id, self._power_production_entity_id],
+                self._async_on_change)
+
         self._sell_cost_entity_id = config.data.get("sell_cost_entity_id")
         self._buy_cost_entity_id = config.data.get("buy_cost_entity_id")
         self._sell_tax_percent_entity_id = config.data.get("sell_tax_percent_entity_id")
@@ -113,6 +130,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     async def on_ha_started(self, _) -> None:
         """Listen the homeassistant_started event to initialize the first calculation"""
         _LOGGER.info("First initialization of Solar Optimizer")
+
+    async def _async_on_change(self, event: Event[EventStateChangedData]) -> None:
+        await self.async_refresh()
+        self._schedule_refresh()
 
     async def _async_update_data(self):
         _LOGGER.info("Refreshing Solar Optimizer calculation")

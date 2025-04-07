@@ -20,6 +20,7 @@
                     "refresh_period_sec": "Refresh period",
                     "power_consumption_entity_id": "Net power consumption",
                     "power_production_entity_id": "Solar power production",
+                    "subscribe_to_events": "Recalculate with every new Production/Consumption Value",
                     "sell_cost_entity_id": "Energy sell price",
                     "buy_cost_entity_id": "Energy buy price",
                     "sell_tax_percent_entity_id": "Sell taxe percent",
@@ -29,9 +30,10 @@
                     "raz_time": "Reset counter time"
                 },
                 "data_description": {
-                    "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
+                    "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
                     "power_consumption_entity_id": "The entity_id of the net power consumption sensor. Net power should be negative if power is exported to grid.",
                     "power_production_entity_id": "The entity_id of the solar power production sensor.",
+                    "subscribe_to_events": "Subscribe to events to recalculate with new data, as soon as they are avalaible. Keep an eye on the CPU load.",
                     "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
                     "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
@@ -150,6 +152,7 @@
                     "refresh_period_sec": "Refresh period",
                     "power_consumption_entity_id": "Net power consumption",
                     "power_production_entity_id": "Solar power production",
+                    "subscribe_to_events": "Recalculate with every new Production/Consumption Value",
                     "sell_cost_entity_id": "Energy sell price",
                     "buy_cost_entity_id": "Energy buy price",
                     "sell_tax_percent_entity_id": "Sell taxe percent",
@@ -159,9 +162,10 @@
                     "raz_time": "Reset counter time"
                 },
                 "data_description": {
-                    "refresh_period_sec": "Refresh period in seconds. Warning heavy calculs are done at each period. Don't refresh to often",
+                    "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
                     "power_consumption_entity_id": "the entity_id of the net power consumption sensor. Net power should be negative if power is exported to grid.",
                     "power_production_entity_id": "the entity_id of the solar power production sensor.",
+                    "subscribe_to_events": "Subscribe to events to recalculate with new data, as soon as they are avalaible. Keep an eye on the CPU load.",
                     "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
                     "buy_cost_entity_id": "The entity_id which holds the current energy buy price.",
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",

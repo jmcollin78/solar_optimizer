@@ -41,6 +41,7 @@ central_config_schema = vol.Schema(
         vol.Required(CONF_POWER_PRODUCTION_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
+        vol.Optional(CONF_SUBSCRIBE_TO_EVENTS, default=False): cv.boolean,
         vol.Required(CONF_SELL_COST_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
