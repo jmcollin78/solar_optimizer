@@ -37,8 +37,15 @@ async def do_service_action(
     convert_power_divide_factor,
 ):
     """Activate an entity via a service call"""
-    _LOGGER.info("Calling service %s for entity %s", service_name, entity_id)
 
+    if service_name is None or len(service_name) == 0:
+        _LOGGER.info(
+            "No service name defined for entity %s. Cannot call service",
+            entity_id,
+        )
+        return
+
+    _LOGGER.info("Calling service %s for entity %s", service_name, entity_id)
     parties = service_name.split("/")
     if len(parties) < 2:
         raise ConfigurationError(
