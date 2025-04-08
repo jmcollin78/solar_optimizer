@@ -186,7 +186,7 @@ async def test_fan_device(
     hass: HomeAssistant,
     init_solar_optimizer_central_config,
 ):
-    """Testing humidifier device"""
+    """Testing fan device"""
 
     entry_a = MockConfigEntry(
         domain=DOMAIN,
@@ -270,7 +270,7 @@ async def test_light_device(
     hass: HomeAssistant,
     init_solar_optimizer_central_config,
 ):
-    """Testing humidifier device"""
+    """Testing light device"""
 
     entry_a = MockConfigEntry(
         domain=DOMAIN,
@@ -354,7 +354,7 @@ async def test_select_device(
     hass: HomeAssistant,
     init_solar_optimizer_central_config,
 ):
-    """Testing humidifier device"""
+    """Testing select device"""
 
     entry_a = MockConfigEntry(
         domain=DOMAIN,
@@ -436,3 +436,84 @@ async def test_select_device(
                     ),
                 ]
             )
+
+
+async def test_button_device(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """Testing button device"""
+
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtAUniqueId",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "button.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0.3,
+            CONF_DURATION_STOP_MIN: 0.1,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "button/press",
+            CONF_DEACTIVATION_SERVICE: "",
+        },
+    )
+
+    device = await create_managed_device(
+        hass,
+        entry_a,
+        "equipement_a",
+    )
+    assert device is not None
+    assert device.name == "Equipement A"
+
+    #
+    # Disable the device by simulating a call into the switch enable sensor
+    #
+    enable_switch = search_entity(hass, "switch.enable_solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    assert enable_switch is not None
+
+    device_switch = search_entity(hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    assert device_switch is not None
+
+    # try to activate the device directly
+    # fmt: off
+    with patch("homeassistant.core.ServiceRegistry.async_call") as mock_service_call:
+    # fmt: on
+        await device.activate()
+
+        mock_service_call.assert_has_calls(
+                [
+                    call.service_call(
+                        "button",
+                        "press",
+                        service_data= {},
+                        target= {
+                            "entity_id": "button.fake_device_a",
+                        },
+                    ),
+                ]
+            )
+
+    # try to de-activate the device directly
+    # fmt: off
+    with patch("homeassistant.core.ServiceRegistry.async_call") as mock_service_call:
+    # fmt: on
+        await device.deactivate()
+
+        mock_service_call.call_count == 0
+        # mock_service_call.assert_has_calls(
+        #         [
+        #             call.service_call(
+        #                 "light",
+        #                 "turn_off",
+        #                 service_data= {},
+        #                 target= {
+        #                     "entity_id": "light.fake_device_a",
+        #                 },
+        #             ),
+        #         ]
+        #     )

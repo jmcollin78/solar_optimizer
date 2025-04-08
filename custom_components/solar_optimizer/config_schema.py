@@ -14,6 +14,7 @@ from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
+from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
 
 
 from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -66,17 +67,7 @@ managed_device_schema = vol.Schema(
     {
         vol.Required(CONF_NAME): str,
         vol.Required(CONF_ENTITY_ID): selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain=[
-                    INPUT_BOOLEAN_DOMAIN,
-                    SWITCH_DOMAIN,
-                    HUMIDIFIER_DOMAIN,
-                    CLIMATE_DOMAIN,
-                    FAN_DOMAIN,
-                    LIGHT_DOMAIN,
-                    SELECT_DOMAIN,
-                ]
-            )
+            selector.EntitySelectorConfig(domain=[INPUT_BOOLEAN_DOMAIN, SWITCH_DOMAIN, HUMIDIFIER_DOMAIN, CLIMATE_DOMAIN, FAN_DOMAIN, LIGHT_DOMAIN, SELECT_DOMAIN, BUTTON_DOMAIN])
         ),
         vol.Required(CONF_POWER_MAX): str,
         vol.Optional(CONF_CHECK_USABLE_TEMPLATE, default="{{ True }}"): str,
@@ -91,7 +82,7 @@ managed_device_schema = vol.Schema(
             )
         ),
         vol.Required(CONF_ACTIVATION_SERVICE, default="switch/turn_on"): str,
-        vol.Required(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
+        vol.Optional(CONF_DEACTIVATION_SERVICE, default="switch/turn_off"): str,
         vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
