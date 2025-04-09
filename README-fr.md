@@ -31,6 +31,8 @@
   - [L'appareil "configuration"](#lappareil-configuration)
   - [Les appareils](#les-appareils)
 - [Les évènements](#les-évènements)
+- [Les actions](#les-actions)
+  - [reset\_on\_time](#reset_on_time)
 - [Créer des modèles de capteur pour votre installation](#créer-des-modèles-de-capteur-pour-votre-installation)
 - [Une carte pour vos dashboards en complément](#une-carte-pour-vos-dashboards-en-complément)
   - [Installez les plugins](#installez-les-plugins)
@@ -445,6 +447,30 @@ actions:
               title: StateChange Event de Solar Optimizer
             action: persistent_notification.create
 ```
+# Les actions
+
+Solar Opitmizer propose des actions qui permettent d'interagir avec SO. Les actions sont utilisables à travers les Outils de dev / Actions et aussi à travers des automatisations.
+
+## reset_on_time
+Cette action permet de remettre à zéro le temps d'allumage d'un équipement.
+Pour l'utiliser, allez dans Outils de dev / Actions, tapez Solar optimizer et vous verrez l'action reset_on_time.
+Sélectionnez là, choisissez le ou les appareils concernés sur lesquels appliquer l'action et appuyez sur 'Exécutez l'action'.
+
+Vous devez obtenir quelque-chose comme ça :
+
+![action reset_on_time](images/run-action-reset-on-time.png)
+
+En mode yaml vous devez obtenir ça :
+
+```yaml
+action: solar_optimizer.reset_on_time
+target:
+  device_id: 825afe5fcee088d82d024f5f925cdb3e
+data: {}
+```
+
+Après avoir lancé l'action, le temps d'allumage est remis à 0 ce qui peut autoriser l'algorithme a reprendre l'appareil en considération.
+
 
 # Créer des modèles de capteur pour votre installation
 Votre installation peut nécessiter de créer des capteurs spécifiques qui doivent être configurer [ici](README-fr.md#configurer-lintégration-pour-la-première-fois). Les règles sur ces capteurs sont importantes et doivent être scrupuleusement respectées pour un bon fonctionnement de Solar Optimizer.

@@ -33,6 +33,8 @@
   - [Devices and Their Entities](#devices-and-their-entities)
     - [Switch Attributes](#switch-attributes)
 - [Events](#events)
+- [Actions](#actions)
+  - [reset\_on\_time](#reset_on_time)
 - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
     - [File `configuration.yaml`:](#file-configurationyaml)
     - [File `templates.yaml`:](#file-templatesyaml)
@@ -456,6 +458,29 @@ actions:
                 trigger.event.data.current_power }})
               title: StateChange Event de Solar Optimizer
             action: persistent_notification.create
+```
+# Actions
+
+Solar Optimizer provides actions that allow you to interact with SO. These actions can be used through Developer Tools / Actions as well as in automations.
+
+## reset_on_time
+
+This action resets the activation time of a device.
+
+To use it, go to Developer Tools / Actions, type "Solar Optimizer" and you will see the `reset_on_time` action.
+Select it, choose the relevant device(s) to apply the action to, and click **"Run Action"**.
+
+You should see something like this:
+
+![action reset_on_time](images/run-action-reset-on-time.png)
+
+In YAML mode, it should look like this:
+
+```yaml
+action: solar_optimizer.reset_on_time
+target:
+  device_id: 825afe5fcee088d82d024f5f925cdb3e
+data: {}
 ```
 
 # Creating Sensor Templates for Your Installation
