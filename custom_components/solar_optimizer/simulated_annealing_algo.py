@@ -106,6 +106,7 @@ class SimulatedAnnealingAlgorithm:
                 continue
 
             device.set_battery_soc(battery_soc)
+            device.set_power_production(solar_power_production)
             usable = device.is_usable
             waiting = device.is_waiting
             # Force deactivation if active, not usable and not waiting
