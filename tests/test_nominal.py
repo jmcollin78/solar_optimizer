@@ -192,6 +192,8 @@ async def test_empty_start(hass: HomeAssistant, reset_coordinator):
     assert coordinator is None
 
 
+# no_parallel is not useful here but it is a good example
+@pytest.mark.no_parallel
 @pytest.mark.parametrize(
     "consumption_power, production_power, battery_charge_power, battery_soc, device_a_power_max, device_b_power_min, device_b_power_max, battery_b_soc_threshold, is_a_activated, is_b_activated, device_a_power, device_b_power",
     [
@@ -204,7 +206,7 @@ async def test_empty_start(hass: HomeAssistant, reset_coordinator):
         # not enough production but battery is charging but b power min too high
         ( 500,               100,              -600,                 0,           1000,               200,                "2000",               "0",                       False,          False,          0,              0),
         # enough production rejected
-        ( -1000,            1000,              0,                    0,           1000,               0,                  "2000",               "0",                       True,           False,        1000,             0),
+        ( -1000,            1000,              0,                    0,           1000,               200,                "2000",               "0",                       True,           False,        1000,             0),
         # enough production rejected + battery charge power
         ( -1000,            1000,              -500,                 0,           1000,               0,                  "2000",               "0",                       True,           True,         1000,           500),
         # enough production rejected + battery charge power but equipement B soc threshold too low
