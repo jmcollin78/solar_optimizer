@@ -99,6 +99,15 @@ class SimulatedAnnealingAlgorithm:
         self._consommation_net = power_consumption
         self._production_solaire = solar_power_production
 
+        # fix #131 - costs cannot be negative or 0
+        if self._cout_achat <= 0 or self._cout_revente <= 0:
+            _LOGGER.warning(
+                "The cost of energy cannot be negative or 0. Buy cost=%.2f, Sell cost=%.2f. Setting them to 1",
+                self._cout_achat,
+                self._cout_revente,
+            )
+            self._cout_achat = self._cout_revente = 1
+
         self._equipements = []
         for _, device in enumerate(devices):
             if not device.is_enabled:
