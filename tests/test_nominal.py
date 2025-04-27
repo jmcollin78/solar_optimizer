@@ -380,3 +380,65 @@ async def test_migration_from_2_0(hass: HomeAssistant):
     assert device_a.battery_soc_threshold == 50
     assert device_a.max_on_time_per_day_sec == 10 * 60
     assert device_a.min_on_time_per_day_sec == 1 * 60
+
+
+@pytest.mark.parametrize(
+    "sell_cost, buy_cost, best_objective",
+    [
+        (1, 2, 0),
+        (1, 1, 0),
+        (0, 1, 0),
+        (1, 0, 0),
+        (-1, 1, 0),
+        (1, -1, 0),
+        (0, 0, 0),
+    ],
+)
+async def test_negative_or_null_costs(hass: HomeAssistant, init_solar_optimizer_central_config, sell_cost, buy_cost, best_objective):
+    """Test handling of negative or null costs."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Test Device",
+        unique_id="testDeviceUniqueId",
+        data={
+            CONF_NAME: "Test Device",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device",
+            CONF_POWER_MAX: 1000,
+            CONF_DURATION_MIN: 0.3,
+            CONF_DURATION_STOP_MIN: 0.1,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        },
+    )
+
+    device = await create_managed_device(hass, entry, "test_device")
+    assert device is not None
+
+    side_effects = SideEffects(
+        {
+            "sensor.fake_power_consumption": State("sensor.fake_power_consumption", -1000),
+            "sensor.fake_power_production": State("sensor.fake_power_production", 5000),
+            "sensor.fake_battery_charge_power": State("sensor.fake_battery_charge_power", 0),
+            "input_number.fake_sell_cost": State("input_number.fake_sell_cost", sell_cost),
+            "input_number.fake_buy_cost": State("input_number.fake_buy_cost", buy_cost),
+            "input_number.fake_sell_tax_percent": State("input_number.fake_sell_tax_percent", 0),
+        },
+        State("unknown.entity_id", "unknown"),
+    )
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+
+    # fmt:off
+    with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), patch("homeassistant.core.ServiceRegistry.async_call") as mock_service_call:
+    # fmt:on
+        calculated_data = await coordinator._async_update_data()
+        await hass.async_block_till_done()
+        assert calculated_data is not None
+        assert calculated_data["sell_cost"] == sell_cost
+        assert calculated_data["buy_cost"] == buy_cost
+        assert calculated_data["best_solution"] is not None
+        assert calculated_data["best_solution"][0]["name"] == "Test Device"
+        assert calculated_data["best_solution"][0]["state"] is True
+        assert calculated_data["best_objective"] == best_objective
