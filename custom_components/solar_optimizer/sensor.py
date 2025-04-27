@@ -294,11 +294,10 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             self._last_datetime_on = now
             need_save = True
 
-        if not new_state and self._old_state and self._last_datetime_on is not None:
-            _LOGGER.debug("The managed device becomes off - increment the delta time")
-            self._attr_native_value += round(
-                (now - self._last_datetime_on).total_seconds()
-            )
+        if not new_state:
+            if self._old_state and self._last_datetime_on is not None:
+                _LOGGER.debug("The managed device becomes off - increment the delta time")
+                self._attr_native_value += round((now - self._last_datetime_on).total_seconds())
             self._last_datetime_on = None
             need_save = True
 
@@ -331,7 +330,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         now = self._device.now
         _LOGGER.debug("Call of _on_update_on_time at %s", now)
 
-        if self._last_datetime_on is not None:
+        if self._last_datetime_on is not None and self._device.is_active:
             self._attr_native_value += round(
                 (now - self._last_datetime_on).total_seconds()
             )
