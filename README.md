@@ -12,6 +12,7 @@
 - [How does it work?](#how-does-it-work)
   - [Anti-flickering](#anti-flickering)
   - [Usability](#usability)
+  - [Device Prioritization](#device-prioritization)
 - [Installation](#installation)
   - [Migration Procedure from Version 2.x to 3.x](#migration-procedure-from-version-2x-to-3x)
   - [HACS installation (recommended)](#hacs-installation-recommended)
@@ -31,6 +32,9 @@
   - [The "configuration" Device](#the-configuration-device)
   - [Devices and Their Entities](#devices-and-their-entities)
     - [Switch Attributes](#switch-attributes)
+- [Priority Management](#priority-management)
+  - [Priority Weight](#priority-weight)
+  - [Device Priority](#device-priority)
 - [Events](#events)
 - [Actions](#actions)
   - [reset\_on\_time](#reset_on_time)
@@ -49,6 +53,8 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.5.0**:
+>   - added support for priority management. See [Priority Management](#priority-management)
 > * **release 3.2.0** :
 > - Added an optional sensor for the net instantaneous power charged or discharged in the battery. This value is added to the net consumed power. Since the battery charging power affects the power available for the devices, it is taken into account. The sensor must report a value in watts, positive when the battery is discharging and negative when the battery is charging.
 > * **release 3.0.0** :
@@ -98,6 +104,9 @@ A maximum daily usage time is optionally configurable. If it is valued and if th
 A minimum daily usage time is also optionally configurable. This parameter ensures that the equipment will be on for a certain minimum duration. You specify at what time the off-peak hours start (`offpeak_time`) and the minimum duration in minutes (`min_on_time_per_day_min`). If at the time indicated by `offpeak_time`, the minimum activation duration has not been reached, then the equipment is activated until the change of day (configurable in the integration and 05:00 by default) or until the maximum usage is reached (`max_on_time_per_day_min`) or during all the off-peak hours if `max_on_time_per_day_min` is not set. This ensures that the water heater or the car will be charged the next morning even if the solar production has not allowed the device to be recharged. It is up to you to invent the uses of this function.
 
 These 5 rules allow the algorithm to only order what is really useful at a time t. These rules are re-evaluated at each cycle.
+
+## Device Prioritization
+Priority management is described [here](#priority-management).
 
 # Installation
 
@@ -342,6 +351,7 @@ Once the integration is properly configured, a **device** named `'configuration'
 2. A sensor named `best_objective`: the cost function value (see algorithm operation). The **lower** the value, the **better** the solution.
 3. A sensor named `power_production`: the last **smoothed** solar production value considered (if the option is enabled).
 4. A sensor named `power_production_brut`: the last **raw** solar production value considered.
+5. a dropdown list named `priority weight` which defines the weight given to priority management compared to solar consumption optimization. See [priority management](#priority-management).
 
 ![Configuration Entities](images/entities-configuration.png)
 
@@ -360,6 +370,8 @@ Each controlled device has the following entities:
 
 3. A **switch** named `switch.solar_optimizer_<name>`:
    - Reflects the **activation state** requested by **Solar Optimizer**.
+
+4. A dropdown list named **"Priority"** which defines the priority level of this device. Possible values range from 'Very low' to 'Very high'. See [priority management](#priority-management).
 
 ![Simple Device Entities](images/entities-simple-device.png)
 
@@ -382,6 +394,30 @@ The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Dev
 | `next_date_available_power` | The **next available time** for a power adjustment.                                         |
 | `battery_soc_threshold`     | The **minimum** battery **state of charge (SOC)** required for the device to be considered. |
 | `battery_soc`               | The **current** battery **state of charge (SOC)**.                                          |
+
+# Priority Management
+
+From the user’s perspective, two values must be provided:
+
+1. **Priority weight** — this is the weight given to priority compared to solar consumption optimization. These two notions are somewhat contradictory: optimizing solar production usage can conflict with prioritizing specific devices. A prioritized device may be turned on more often, potentially reducing optimization efficiency. This setting is available in the "Configuration" device as a `select` entity.
+
+2. **Device priority** — this defines the priority level for each individual device. It is a selectable list with five values ranging from 'Very low' to 'Very high'. The higher the priority, the more likely the device is to be activated by the algorithm. This setting is available in the device entity as a `select`.
+
+## Priority Weight
+
+![priority weight](images/entity-priority-weight.png)
+
+The higher this value is, the more priority is considered by the algorithm at the expense of optimization. Selecting `None` fully disables the priority mechanism and ensures maximum optimization of solar consumption.
+
+## Device Priority
+
+![priority](images/entities-priority.png)
+
+The higher the priority, the more often the device will be activated by the algorithm, potentially at the expense of lower-priority devices.
+
+> ![Note](images/tips.png) _*Notes*_
+> 1. Prioritizing certain devices can reduce solar production consumption efficiency. It is normal to observe unused surplus if priorities are enabled. You can adjust how much priority impacts the algorithm by changing the [priority weight](#priority-weight).
+> 2. Priority is not absolute — it is possible for a lower-priority device to be turned on while a higher-priority one is not. This depends on factors like device power usage, available solar power, minimum run times, etc. If this happens too often, fine-tune the priority level or the priority weight as explained above.
 
 # Events
 
