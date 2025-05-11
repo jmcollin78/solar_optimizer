@@ -56,8 +56,13 @@
                 "python.analysis.autoSearchPaths": true,
                 "pylint.lintOnChange": false,
                 "python.formatting.provider": "black",
-                "python.formatting.blackArgs": ["--line-length", "180"],
-                "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
+                "black-formatter.args": [
+                    "--line-length",
+                    "180"
+                ],
+                // "python.formatting.blackArgs": ["--line-length", "180"],
+                "black-formatter.path": ["/usr/local/py-utils/bin/black"],
+                // "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
                 "editor.formatOnPaste": false,
                 "editor.formatOnSave": true,
                 "editor.formatOnType": true,

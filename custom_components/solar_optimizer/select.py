@@ -87,7 +87,7 @@ class SolarOptimizerPriorityWeightSelect(SelectEntity, RestoreEntity):
         _LOGGER.debug(
             "%s - Calling async_added_to_hass old_state is %s", self, old_state
         )
-        if old_state is not None:
+        if old_state is not None and old_state.state in PRIORITY_WEIGHTS:
             self._attr_current_option = old_state.state
 
         self._coordinator.set_priority_weight_entity(self)
@@ -131,6 +131,7 @@ class SolarOptimizerPrioritySelect(SelectEntity, RestoreEntity):
         self._attr_unique_id = "solar_optimizer_priority_" + idx
         self._attr_options = PRIORITIES
         self._attr_current_option = PRIORITY_MEDIUM
+        self._attr_translation_key = "priority"
 
     @property
     def icon(self) -> str:
@@ -153,7 +154,7 @@ class SolarOptimizerPrioritySelect(SelectEntity, RestoreEntity):
 
         old_state = await self.async_get_last_state()
         _LOGGER.debug("%s - Calling async_added_to_hass old_state is %s", self, old_state)
-        if old_state is not None:
+        if old_state is not None and old_state.state in PRIORITIES:
             self._attr_current_option = old_state.state
 
         self._device.set_priority_entity(self)
