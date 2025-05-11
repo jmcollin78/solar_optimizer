@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, time
 from typing import Any
 
 from homeassistant.core import HomeAssistant, Event, EventStateChangedData
+from homeassistant.components.select import SelectEntity
 
 from homeassistant.helpers.event import (
     async_track_state_change_event,
@@ -69,17 +70,18 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._raz_time: time = None
 
         self._central_config_done = False
+        self._priority_weight_entity = None
 
         super().__init__(hass, _LOGGER, name="Solar Optimizer")
 
         init_temp = 1000
-        min_temp = 0.1
+        min_temp = 0.05
         cooling_factor = 0.95
         max_iteration_number = 1000
 
         if config and (algo_config := config.get("algorithm")):
             init_temp = float(algo_config.get("initial_temp", 1000))
-            min_temp = float(algo_config.get("min_temp", 0.1))
+            min_temp = float(algo_config.get("min_temp", 0.05))
             cooling_factor = float(algo_config.get("cooling_factor", 0.95))
             max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
 
@@ -187,18 +189,20 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             charge_power if charge_power is not None else 0
         )
 
+        calculated_data["priority_weight"] = self.priority_weight
+
         #
         # Call Algorithm Recuit simulé
         #
         best_solution, best_objective, total_power = self._algo.recuit_simule(
             self._devices,
-            calculated_data["power_consumption"]
-            + calculated_data["battery_charge_power"],
+            calculated_data["power_consumption"] + calculated_data["battery_charge_power"],
             calculated_data["power_production"],
             calculated_data["sell_cost"],
             calculated_data["buy_cost"],
             calculated_data["sell_tax_percent"],
             calculated_data["battery_soc"],
+            calculated_data["priority_weight"],
         )
 
         calculated_data["best_solution"] = best_solution
@@ -303,6 +307,17 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             if device.unique_id == uid:
                 return device
         return None
+
+    def set_priority_weight_entity(self, entity: SelectEntity):
+        """Set the priority weight entity"""
+        self._priority_weight_entity = entity
+
+    @property
+    def priority_weight(self) -> int:
+        """Get the priority weight"""
+        if self._priority_weight_entity is None:
+            return 0
+        return self._priority_weight_entity.current_priority_weight
 
     @property
     def raz_time(self) -> time:
