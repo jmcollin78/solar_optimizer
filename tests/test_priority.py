@@ -97,7 +97,6 @@ async def test_priority_select_creation(hass: HomeAssistant):
     assert priority_entity_a.current_option == PRIORITY_HIGH
     assert device_a.priority == PRIORITY_MAP.get(PRIORITY_HIGH)
 
-
     entry_b = MockConfigEntry(
         domain=DOMAIN,
         title="Equipement B",

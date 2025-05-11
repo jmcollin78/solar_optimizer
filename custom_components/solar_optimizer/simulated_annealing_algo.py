@@ -170,7 +170,7 @@ class SimulatedAnnealingAlgorithm:
             if objectif_voisin < objectif_actuel:
                 _LOGGER.debug("---> On garde l'objectif voisin")
                 solution_actuelle = voisin
-                if objectif_voisin < self.calculer_objectif(meilleure_solution):
+                if objectif_voisin < meilleure_objectif:
                     _LOGGER.debug("---> C'est la meilleure jusque là")
                     meilleure_solution = voisin
                     meilleure_objectif = objectif_voisin
