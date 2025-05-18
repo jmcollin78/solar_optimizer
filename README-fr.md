@@ -12,6 +12,7 @@
 - [Comment fonctionne-t-elle ?](#comment-fonctionne-t-elle-)
   - [Anti-bagot](#anti-bagot)
   - [Utilisabilité](#utilisabilité)
+  - [Priorisation des équipements](#priorisation-des-équipements)
 - [Installation](#installation)
   - [Procédure de migration d'une version 2.x vers la 3.x](#procédure-de-migration-dune-version-2x-vers-la-3x)
   - [HACS installation (recommendé)](#hacs-installation-recommendé)
@@ -31,6 +32,9 @@
 - [Entités disponibles](#entités-disponibles)
   - [L'appareil "configuration"](#lappareil-configuration)
   - [Les appareils](#les-appareils)
+- [La gestion de la priorité](#la-gestion-de-la-priorité)
+  - [Le poids de la priorité](#le-poids-de-la-priorité)
+  - [La priorité d'un équipement](#la-priorité-dun-équipement)
 - [Les évènements](#les-évènements)
 - [Les actions](#les-actions)
   - [reset\_on\_time](#reset_on_time)
@@ -46,6 +50,8 @@
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.5.0** :
+>   - ajout d'une gestion de la priorité. Cf. [la gestion de la priorité](#la-gestion-de-la-priorité)
 > * **release 3.2.0** :
 >   - ajout d'un capteur optionnelle de la puissance nette instantanée chargée ou déchargée dans la batterie. Elle vient s'ajouter à la puissance nette consommée. En effet si la puissance de charge de la batterie est de la puissance disponible pour les équipements. Le capteur doit remonter une valeur en watt, positive si la batterie se décharge et négative si la batterie charge.
 > * **release 3.0.0** :
@@ -95,6 +101,9 @@ Un temps d'utilisation maximal journalier est paramétrable en facultatif. Si il
 Un temps d'utilisation minimal journalier est aussi paramétrable en facultatif. Ce paramètre permet d'assurer que l'équipement sera allumé pendant une certaine durée minimale. Vous spécifiez à quelle heure commence les heures creuses, (`offpeak_time`) et la durée minimale en minutes (`min_on_time_per_day_min`). Si à l'heure indiquée par `offpeak_time`, la durée minimale d'activation n'a pas été atteinte, alors l'équipement est activé jusqu'au changement de jour (paramètrable dans l'intégration et 05:00 par défaut) ou jusqu'à ce que le maximum d'utilisation soit atteint (`max_on_time_per_day_min`) ou pendant toute la durée des heures creuses si `max_on_time_per_day_min` n'est pas précisé. Vous assurez ainsi que le chauffe-eau ou la voiture sera chargée le lendemain matin même si la production solaire n'a pas permise de recharger l'appareil. A vous d'inventer les usages de cette fonction.
 
 Ces 5 règles permettent à l'algorithme de ne commander que ce qui est réellement utile à un instant t. Ces règles sont ré-évaluées à chaque cycle.
+
+## Priorisation des équipements
+La gestion de la priorité est décrite [ici](#la-gestion-de-la-priorité).
 
 # Installation
 
@@ -333,6 +342,7 @@ L'intégration, une fois correctement configurée, créée un appareil (device) 
 2. un sensor nommé "best_objective" qui est la valeur de la fonction de coût (cf. fonctionnement de l'algo). Plus la valeur est faible et plus la solution trouvée est bonne,
 3. un sensor nommé "power_production" qui est la dernière valeur de la production solaire lissée (si l'option a été choisie) prise en compte,
 3. un sensor nommé "power_production_brut" qui est la dernière valeur de la production solaire brute prise en compte.
+4. une liste de choix nommé "Priority weight" qui est le poids donné à la gestion de la priorité par rapport à l'optimisation de la consommation solaire. Cf. [la gestion de la priorité](#la-gestion-de-la-priorité)
 
 ![Configuration entités](images/entities-configuration.png)
 
@@ -343,6 +353,7 @@ La reconfiguration de cet appareil permet de configurer Solar Optimizer.
 1. un switch nommé `switch.enable_solar_optimizer_<name>`. Si le switch est "Off", l'algorithme ne considérera pas cet équipement pour le calcul. Ca permet de manuellement sortir un équipement de la liste sans avoir à modifier la liste. Ce switch contient des attributs additionnels qui permettent de suivre l'état interne de l'équipement vu de l'algorithme,
 2. un sensor nommé `sensor.on_time_today_solar_optimizer_<name>` qui donne la durée d'activation depuis la remise à zéro (cf. raz_time)
 3. un switch nommé `switch.solar_optimizer_<name>` qui reflète l'état d'activation demandé par Solar Optimizer
+4. une liste de choix nommé "Priority" qui est la priorité de cet appareil. Les valeurs possibles vont de 'Very low' à 'Very high'. Cf. [la gestion de la priorité](#la-gestion-de-la-priorité)
 
 ![Simple appareil entités](images/entities-simple-device.png)
 
@@ -362,6 +373,27 @@ Ce dernier switch possède des attributs consultables via Outils de developpemen
 10. `next_date_available_power` : à quelle date et heure le changement de puissance de l'équipement sera de nouveau disponible pour un changement,
 11. `battery_soc_threshold` : l'état de charge minimal de la batterie solaire pour que l'équipement soit utilisable par l'algorithme,
 12. `battery_soc` : l'état de charge courant de la batterie solaire.
+
+# La gestion de la priorité
+D'un point de vue de l'utilisateur vous devez fournir 2 valeurs :
+1. le poids de la priorité (`priority weight`) par rapport à l'optimisation de la consommation solaire. En effet, ces 2 notions sont contradictoires : optimiser la consommation de la production est contraire à prioriser certains équipements par rapport à d'autres. Si un équipement est privilégié alors il sera allumé plus souvent ce qui peut avoir pour effet de dégrader l'optimisation de la consommation. Cet attribut est disponible dans l'appareil nommé 'Configuration' sous la forme d'une entité de type `select`.
+2. la priorité de chaque équipement. Cette priorité est une liste de choix entre 5 valeurs de 'Very low' à 'Very high'. Plus la priorité va vers 'Very high' et plus l'équipement sera démarré par l'algorithme. Cet attribut est disponible dans l'appareil de l'équipement sous la forme d'une entité de type `select`.
+
+## Le poids de la priorité
+
+![poids de la priorité](images/entity-priority-weight.png)
+
+Plus la valeur est élevé et plus la priorité sera prise en compte par l'algorithme au détriment de l'optimisation. La valeur `None` permet de désactiver totalement la gestion de la priorité. L'optimisation de la consommation de la production solaire est alors maximale.
+
+## La priorité d'un équipement
+
+![priorité](images/entities-priority.png)
+
+Plus la priorité est élevée et plus l'équipement sera sollicité par l'algorithme au détriment des autres de priorité plus faible.
+
+> ![Nouveau](images/tips.png) _*Notes*_
+> 1. la priorisation d'équipements par rapport à d'autres peut dégrader l'optimisation de la consommation de la production solaire. Il est donc normal d'avoir du surplus non consommé si vous utilisez les priorités. Vous pouvez régler le dégré de prise en charge de $la priorité en réglant le [poids de la priorité](#le-poids-de-la-priorité)
+> 2. la priorité n'est pas absolue : il est tout à fait possible d'avoir un équipement de moindre priorité d'activé alors qu'un plus prioritaire n'est pas activé. Ca dépend de la consommation de chaque équipement, de la puissance disponible, des durées d'allumage de chaque équipement, ... Bref, rien n'interdit ce cas de figure. Si il se produit trop souvent, vous pouvez régler plus finement la priorité de l'équipement ou de la poids de la priorité dans l'algorithme, comme expliqué ci-dessus.
 
 # Les évènements
 Solar Optimizer produit des évènements à chaque allumage ou extinction d'un appareil. Cela vous permet de capter ces évènements dans une automatisation par exemple.

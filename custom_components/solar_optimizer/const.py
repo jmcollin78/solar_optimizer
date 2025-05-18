@@ -12,7 +12,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.template import Template, is_template_string
 
 SOLAR_OPTIMIZER_DOMAIN = DOMAIN = "solar_optimizer"
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT]
 
 DEVICE_MANUFACTURER = "JMCOLLIN"
 DEVICE_MODEL = "Solar Optimizer"
@@ -79,6 +79,51 @@ CONF_BATTERY_SOC_THRESHOLD = "battery_soc_threshold"
 CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
 CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
 CONF_OFFPEAK_TIME = "offpeak_time"
+
+PRIORITY_WEIGHT_NULL = "None"
+PRIORITY_WEIGHT_LOW = "Low"
+PRIORITY_WEIGHT_MEDIUM = "Medium"
+PRIORITY_WEIGHT_HIGH = "High"
+PRIORITY_WEIGHT_VERY_HIGH = "Very high"
+PRIORITY_WEIGHTS = [
+    PRIORITY_WEIGHT_NULL,
+    PRIORITY_WEIGHT_LOW,
+    PRIORITY_WEIGHT_MEDIUM,
+    PRIORITY_WEIGHT_HIGH,
+    PRIORITY_WEIGHT_VERY_HIGH,
+]
+
+# Gives the percentage of priority in the cost calculation. 10 means 10%
+PRIORITY_WEIGHT_MAP = {
+    PRIORITY_WEIGHT_NULL: 0,
+    PRIORITY_WEIGHT_LOW: 10,
+    PRIORITY_WEIGHT_MEDIUM: 25,
+    PRIORITY_WEIGHT_HIGH: 50,
+    PRIORITY_WEIGHT_VERY_HIGH: 75,
+}
+
+
+PRIORITY_VERY_LOW = "Very low"
+PRIORITY_LOW = "Low"
+PRIORITY_MEDIUM = "Medium"
+PRIORITY_HIGH = "High"
+PRIORITY_VERY_HIGH = "Very high"
+PRIORITIES = [
+    PRIORITY_VERY_LOW,
+    PRIORITY_LOW,
+    PRIORITY_MEDIUM,
+    PRIORITY_HIGH,
+    PRIORITY_VERY_HIGH,
+]
+
+PRIORITY_MAP = {
+    PRIORITY_VERY_LOW: 16,
+    PRIORITY_LOW: 8,
+    PRIORITY_MEDIUM: 4,
+    PRIORITY_HIGH: 2,
+    PRIORITY_VERY_HIGH: 1,
+}
+
 
 _LOGGER = logging.getLogger(__name__)
 

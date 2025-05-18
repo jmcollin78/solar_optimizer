@@ -55,7 +55,8 @@ class SimulatedAnnealingAlgorithm:
         sell_cost: float,
         buy_cost: float,
         sell_tax_percent: float,
-        battery_soc: float
+        battery_soc: float,
+        priority_weight: int,
     ):
         """The entrypoint of the algorithm:
         You should give:
@@ -65,6 +66,8 @@ class SimulatedAnnealingAlgorithm:
          - sell_cost: the sell cost of energy
          - buy_cost: the buy cost of energy
          - sell_tax_percent: a sell taxe applied to sell energy (a percentage)
+         - battery_soc: the state of charge of the battery (0-100)
+         - priority_weight: the weight of the priority in the cost calculation. 10 means 10%
 
          In return you will have:
           - best_solution: a list of object in whitch name, power_max and state are set,
@@ -98,6 +101,7 @@ class SimulatedAnnealingAlgorithm:
         self._taxe_revente = sell_tax_percent
         self._consommation_net = power_consumption
         self._production_solaire = solar_power_production
+        self._priority_weight = priority_weight / 100.0  # to get percentage
 
         # fix #131 - costs cannot be negative or 0
         if self._cout_achat <= 0 or self._cout_revente <= 0:
@@ -137,6 +141,7 @@ class SimulatedAnnealingAlgorithm:
                     "is_usable": device.is_usable,
                     "is_waiting": waiting,
                     "can_change_power": device.can_change_power,
+                    "priority": device.priority,
                 }
             )
         if DEBUG:
@@ -165,7 +170,7 @@ class SimulatedAnnealingAlgorithm:
             if objectif_voisin < objectif_actuel:
                 _LOGGER.debug("---> On garde l'objectif voisin")
                 solution_actuelle = voisin
-                if objectif_voisin < self.calculer_objectif(meilleure_solution):
+                if objectif_voisin < meilleure_objectif:
                     _LOGGER.debug("---> C'est la meilleure jusque là")
                     meilleure_solution = voisin
                     meilleure_objectif = objectif_voisin
@@ -233,7 +238,17 @@ class SimulatedAnnealingAlgorithm:
         coef_import = (self._cout_achat) / (self._cout_achat + cout_revente_impose)
         coef_rejets = (cout_revente_impose) / (self._cout_achat + cout_revente_impose)
 
-        return coef_import * new_import + coef_rejets * new_rejets
+        consumption_coef = coef_import * new_import + coef_rejets * new_rejets
+        # calculate the priority coef as the sum of the priority of all devices
+        # in the solution
+        if puissance_totale_eqt > 0:
+            priority_coef = sum((equip["priority"] * equip["requested_power"] / puissance_totale_eqt) for i, equip in enumerate(solution) if equip["state"])
+        else:
+            priority_coef = 0
+        priority_weight = self._priority_weight
+
+        ret = consumption_coef * (1.0 - priority_weight) + priority_coef * priority_weight
+        return ret
 
     def generer_solution_initiale(self, solution):
         """Generate the initial solution (which is the solution given in argument) and calculate the total initial power"""
@@ -254,10 +269,27 @@ class SimulatedAnnealingAlgorithm:
         """Calcul une nouvelle puissance"""
         choices = []
         power_min_to_use = power_min if can_switch_off else power_min + power_step
-        if current_power > power_min_to_use:
-            choices.append(-1)
-        if current_power < power_max:
-            choices.append(1)
+
+        # add all choices from current_power to power_min_to_use descending
+        cp = current_power
+        choice = -1
+        while cp > power_min_to_use:
+            cp -= power_step
+            choices.append(choice)
+            choice -= 1
+
+        # if current_power > power_min_to_use:
+        #    choices.append(-1)
+
+        # add all choices from current_power to power_max ascending
+        cp = current_power
+        choice = 1
+        while cp < power_max:
+            cp += power_step
+            choices.append(choice)
+            choice += 1
+        # if current_power < power_max:
+        #     choices.append(1)
 
         if len(choices) <= 0:
             # No changes
@@ -268,12 +300,6 @@ class SimulatedAnnealingAlgorithm:
         requested_power = current_power + power_add
         _LOGGER.debug("New requested_power is %s", requested_power)
         return requested_power
-        # if requested_power < power_min:
-        # deactivate the equipment
-        #    requested_power = 0
-        # elif requested_power > power_max:
-        # Do nothing
-        #    requested_power = current_power
 
     def permuter_equipement(self, solution):
         """Permuter le state d'un equipement eau hasard"""

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, time
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import Template
+from homeassistant.components.select import SelectEntity
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 
 from .const import (
@@ -213,6 +214,8 @@ class ManagedDevice:
             msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec should < max_on_time_per_day_sec"
             _LOGGER.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
+
+        self._priority_entity = None
 
     async def _apply_action(self, action_type: str, requested_power=None):
         """Apply an action to a managed device.
@@ -554,6 +557,17 @@ class ManagedDevice:
                 "is_waiting": self.is_waiting,
             },
         )
+
+    def set_priority_entity(self, entity: SelectEntity):
+        """Set the priority entity"""
+        self._priority_entity = entity
+
+    @property
+    def priority(self) -> int:
+        """Get the priority"""
+        if self._priority_entity is None:
+            return 0
+        return self._priority_entity.current_priority
 
     # For testing purpose only
     def _set_now(self, now: datetime):

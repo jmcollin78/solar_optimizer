@@ -39,12 +39,14 @@ async def async_setup_entry(
     if entry.data[CONF_DEVICE_TYPE] == CONF_DEVICE_CENTRAL:
         return
 
-    device = coordinator.get_device_by_unique_id(
-        name_to_unique_id(entry.data[CONF_NAME])
-    )
+    unique_id = name_to_unique_id(entry.data[CONF_NAME])
+    device = coordinator.get_device_by_unique_id(unique_id)
     if device is None:
-        device = ManagedDevice(hass, entry.data, coordinator)
-        coordinator.add_device(device)
+        _LOGGER.error("Calling switch.async_setup_entry in error cause device with unique_id %s not found", unique_id)
+        return
+    # Not needed because the device is created in sensor.py which is the first to be called (see order in const.py)
+    #     device = ManagedDevice(hass, entry.data, coordinator)
+    #     coordinator.add_device(device)
 
     entity = ManagedDeviceSwitch(coordinator, hass, device)
     entities.append(entity)
