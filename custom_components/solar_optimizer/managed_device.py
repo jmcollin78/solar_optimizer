@@ -420,9 +420,9 @@ class ManagedDevice:
             return False
 
         if self._offpeak_time >= self._coordinator.raz_time:
-            return (self.now.time() >= self._offpeak_time or self.now.time() < self._coordinator.raz_time) and self._on_time_sec < self.max_on_time_per_day_sec
+            return (self.now.time() >= self._offpeak_time or self.now.time() < self._coordinator.raz_time) and self._on_time_sec < min_on_time_per_day_sec and self._on_time_sec < self.max_on_time_per_day_sec
         else:
-            return self.now.time() >= self._offpeak_time and self.now.time() < self._coordinator.raz_time and self._on_time_sec < self.max_on_time_per_day_sec
+            return self.now.time() >= self._offpeak_time and self.now.time() < self._coordinator.raz_time and self._on_time_sec < min_on_time_per_day_sec and self._on_time_sec < self.max_on_time_per_day_sec
 
     @property
     def is_waiting(self):
