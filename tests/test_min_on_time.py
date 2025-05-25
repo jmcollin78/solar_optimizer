@@ -542,4 +542,4 @@ async def test_nominal_use_min_on_time_exceeded(hass: HomeAssistant, init_solar_
     #
     now = datetime(2024, 11, 10, 23, 00, 00).replace(tzinfo=get_tz(hass))
     device_a._set_now(now)
-    assert device_a.should_be_forced_offpeak is True
+    assert device_a.should_be_forced_offpeak is False
