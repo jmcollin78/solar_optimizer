@@ -191,11 +191,11 @@ Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'a
 
 | attribut                      | valable pour                    | signification                                                 | exemple                      | commentaire                                                                                                                                                                                                                                                                                              |
 | ----------------------------- | ------------------------------- | ------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `power_entity_id`             | équipement à puissance variable | l'entity_id de l'entité gérant la puissance                   | `number.tesla_charging_amps` | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité. Elle peut être un `number` ou un `input_number`                                                                                                                                                      |
+| `power_entity_id`             | équipement à puissance variable | l'entity_id de l'entité gérant la puissance                   | `number.tesla_charging_amps` | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité. Elle peut être un `number`, un `input_number`, un `fan` ou une `light`. Si l'entité n'est pas un `number`, le champ `change_power_service` doit être adaptés.                                                                                                                                                      |
 | `power_min`                   | équipement a puissance variable | La puissance minimale en watt de l'équipement                 | 100                          | Lorsque la consigne de puissance passe en dessous de cette valeur, l'équipement sera éteint par l'appel du `deactivation_service`. Ce paramètre fonctionne avec `power_max` pour définir l'interval possible de variation de la puissance                                                                |
-| `power_step`                  | équipement a puissance variable | Le pas de puissance en watt                                   | 10                           | Pour une voiture mettre 230 (230 v x 1 A)                                                                                                                                                                                                                                                                |
-| `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `"number/set_value"`         | -                                                                                                                                                                                                                                                                                                        |
-| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (230 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 230. |
+| `power_step`                  | équipement a puissance variable | Le pas de puissance en watt                                   | 10                           | Pour une voiture mettre 230 (230 v x 1 A).<br/>Pour une entité `light` mettre `power_max / 255`<br/>Pour une entité `fan` mettre `power_max / 100`                                                                                                                                                                                                                                                                |
+| `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `number/set_value`<br/>or<br/>`light/turn_on/brightness`         | -                                                                                                                                                                                                                                                                                                        |
+| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (230 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 230.<br/>Pour une entité `light` ou `fan` mettre la même valeur que dans le champ `power_step` |
 
 ## Exemples de configurations
 Les exemples ci-dessus sont à adapter à votre cas.
@@ -293,6 +293,28 @@ Pour allumer une lampe témoin de production disponible:
   action_mode: "service_call"
   activation_service: "light/turn_on"
   deactivation_service: "light/turn_off"
+  offpeak_time: "02:00"
+```
+
+### Commande pour une lampe dimmable
+Pour allumer une lampe témoin de production disponible:
+```yaml
+  name: "Eclairage dimmable"
+  entity_id: "light.shelly_dimmer"
+  power_min: 10
+  power_max: 100
+  # power_max / 255
+  power_step: 0.4
+  check_usable_template: "{{ True }}"
+  power_entity_id: "light.shelly_dimmer"
+  # 5 min
+  duration_power_min: 5
+  action_mode: "service_call"
+  activation_service: "light/turn_on/brightness:0"
+  deactivation_service: "light/turn_off"
+  change_power_service: "nlight/turn_on/brightness"
+  # même valeur que power_step
+  convert_power_divide_factor: 0.4
   offpeak_time: "02:00"
 ```
 

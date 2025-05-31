@@ -100,10 +100,19 @@ power_managed_device_schema = vol.Schema(
                     SWITCH_DOMAIN,
                     HUMIDIFIER_DOMAIN,
                     CLIMATE_DOMAIN,
+                    FAN_DOMAIN,
+                    LIGHT_DOMAIN,
                 ]
             )
         ),
-        vol.Optional(CONF_POWER_ENTITY_ID): selector.EntitySelector(selector.EntitySelectorConfig(domain=[INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN])),
+        vol.Optional(CONF_POWER_ENTITY_ID): selector.EntitySelector(selector.EntitySelectorConfig(
+            domain=[
+                INPUT_NUMBER_DOMAIN,
+                NUMBER_DOMAIN,
+                FAN_DOMAIN,
+                LIGHT_DOMAIN,
+            ]
+        )),
         vol.Optional(CONF_POWER_MIN, default=220): vol.Coerce(float),
         vol.Required(CONF_POWER_MAX): str,
         vol.Optional(CONF_POWER_STEP, default=220): vol.Coerce(float),
