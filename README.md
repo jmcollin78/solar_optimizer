@@ -323,8 +323,8 @@ To control light brightness
   action_mode: "service_call"
   activation_service: "light/turn_on/brightness:0"
   deactivation_service: "light/turn_off"
-  change_power_service: "nlight/turn_on/brightness"
-  # même valeur que power_step
+  change_power_service: "light/turn_on/brightness"
+  # same value of power_step
   convert_power_divide_factor: 0.4
   offpeak_time: "02:00"
 ```
