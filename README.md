@@ -198,11 +198,11 @@ All the parameters described [here](#configuring-a-simple-device-onoff) apply an
 
 | Attribute                     | Applicable to         | Meaning                                                      | Example                      | Comment                                                                                                                                                                                                                                                    |
 | ----------------------------- | --------------------- | ------------------------------------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `power_entity_id`             | Variable power device | The `entity_id` of the entity managing power levels          | `number.tesla_charging_amps` | The power adjustment is done by calling the `change_power_service` on this entity. It can be either a `number` or an `input_number`.                                                                                                                       |
+| `power_entity_id`             | Variable power device | The `entity_id` of the entity managing power levels          | `number.tesla_charging_amps` | The power adjustment is done by calling the `change_power_service` on this entity. It can be either a `number`, an `input_number`, a `fan` or a `light`. If it is not a `number`, the `change_power_service` field must be adjusted.                                                                                                                       |
 | `power_min`                   | Variable power device | The minimum power in watts for the device                    | 100                          | If the power setting drops below this value, the device will be turned off via the `deactivation_service`. This parameter works with `power_max` to define the range of power adjustment.                                                                  |
-| `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                           | For an electric vehicle, set this to 220 (200V x 1A).                                                                                                                                                                                                      |
-| `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `"number/set_value"`         | -                                                                                                                                                                                                                                                          |
-| `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                           | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220. |
+| `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                           | For an electric vehicle, set this to 220 (220V x 1A).<br/>For `light` entity with `brightness` attribute set it to `power_max / 255`<br/>For `fan` entity with `percentage` attribute set it to `power_max / 100`                                                                                                                                                                                                     |
+| `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `number/set_value`<br/>or<br/>`light/turn_on/brightness`    | For `fan` or `light` power entities, you must provide the attribute to set power, typically `brightness` or `percentage`                                                                                                                                                                                                                                                          |
+| `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                           | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220.<br/>For `light` or `fan` entity set it to the same value of `power_step` field |
 
 ## Configuration Examples
 The examples below should be adapted to your specific case.
@@ -303,6 +303,31 @@ To turn on a light as an indicator of available solar production:
   activation_service: "light/turn_on"
   deactivation_service: "light/turn_off"
   offpeak_time: "02:00"
+```
+
+### Control for a dimmable Light
+
+To control light brightness
+
+```yaml
+  name: "Eclairage dimmable"
+  entity_id: "light.shelly_dimmer"
+  power_min: 10
+  power_max: 100
+  # power_max / 255
+  power_step: 0.4
+  check_usable_template: "{{ True }}"
+  power_entity_id: "light.shelly_dimmer"
+  # 5 min
+  duration_power_min: 5
+  action_mode: "service_call"
+  activation_service: "light/turn_on/brightness:0"
+  deactivation_service: "light/turn_off"
+  change_power_service: "nlight/turn_on/brightness"
+  # même valeur que power_step
+  convert_power_divide_factor: 0.4
+  offpeak_time: "02:00"
+```
 
 ## Configuring the Algorithm in Advanced Mode
 Advanced configuration allows modifying the algorithm's settings. It is not recommended to change these settings unless you have specific needs. The algorithm uses a **simulated annealing** approach to search for optimal configurations (combinations of on/off states) and evaluates a cost function at each iteration.

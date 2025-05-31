@@ -7,6 +7,9 @@ from homeassistant.helpers.template import Template
 from homeassistant.components.select import SelectEntity
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
+from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
+
 from .const import (
     get_tz,
     name_to_unique_id,
@@ -25,6 +28,12 @@ from .const import (
 ACTION_ACTIVATE = "Activate"
 ACTION_DEACTIVATE = "Deactivate"
 ACTION_CHANGE_POWER = "ChangePower"
+
+# Entity domains that require attribute to change power
+POWERED_ENTITY_DOMAINS_NEED_ATTR = (
+    LIGHT_DOMAIN,
+    FAN_DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,9 +67,13 @@ async def do_service_action(
     action = parties[1]
     parameter = parties[2] if len(parties) == 3 else None
 
+    attributes = "value" # default data key for most entities
+
     if action_type == ACTION_CHANGE_POWER:
         value = round(requested_power / convert_power_divide_factor)
-        service_data = {"value": value}
+        if parameter:
+            attributes = parameter
+        service_data = {attributes: value}
     else:
         if parameter:
             args = parameter.split(":")
@@ -338,15 +351,28 @@ class ManagedDevice:
                 amps,
             )
             return
+        
+        if self._power_entity_id.startswith(POWERED_ENTITY_DOMAINS_NEED_ATTR):
+            service_name = self._change_power_service # retrieve attribute from power service
+            parties = self._change_power_service.split("/")
+            if len(parties) < 2:
+                raise ConfigurationError(
+                    f"Incorrect service declaration for power entity. Service {service_name} should be formatted with: 'domain/action/attribute'"
+                )
+            parameter = parties[2]
+            amps = self._hass.states.get(self._power_entity_id).attributes[parameter]
+        else:
+            amps = amps.state
+
 
         self._current_power = round(
-            float(amps.state) * self._convert_power_divide_factor
+            float(amps) * self._convert_power_divide_factor
         )
         _LOGGER.debug(
             "Set current_power to %s for device %s cause can_change_power and amps is %s",
             self._current_power,
             self._name,
-            amps.state,
+            amps,
         )
 
     def set_enable(self, enable: bool):
