@@ -244,7 +244,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                     requested_power,
                 )
                 should_log = True
-                await device.change_requested_power(requested_power)
+                # first requested_power change and device is not active : activate the device with requested_power
+                if (not is_active):
+                    await device.activate(requested_power)
+                else:
+                    await device.change_requested_power(requested_power)
 
             # Add updated data to the result
             calculated_data[name_to_unique_id(name)] = device
