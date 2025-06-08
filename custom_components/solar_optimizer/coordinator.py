@@ -219,6 +219,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             device = self.get_device_by_name(name)
             if not device:
                 continue
+
+            old_requested_power = device.requested_power
             is_active = device.is_active
             should_force_offpeak = device.should_be_forced_offpeak
             if should_force_offpeak:
@@ -226,10 +228,12 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             if is_active and not state and not should_force_offpeak:
                 _LOGGER.debug("Extinction de %s", name)
                 should_log = True
+                old_requested_power = 0
                 await device.deactivate()
             elif not is_active and (state or should_force_offpeak):
                 _LOGGER.debug("Allumage de %s", name)
                 should_log = True
+                old_requested_power = requested_power
                 await device.activate(requested_power)
 
             # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
@@ -245,6 +249,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 )
                 should_log = True
                 await device.change_requested_power(requested_power)
+
+            device.set_requested_power(old_requested_power)
 
             # Add updated data to the result
             calculated_data[name_to_unique_id(name)] = device

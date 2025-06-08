@@ -1,5 +1,5 @@
 """ Device with power Unit test module"""
-from unittest.mock import patch, PropertyMock
+from unittest.mock import call, patch, PropertyMock, ANY
 from datetime import datetime, timedelta
 
 from homeassistant.setup import async_setup_component
@@ -8,6 +8,7 @@ from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 
 
 from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from custom_components.solar_optimizer.managed_device import ACTION_ACTIVATE, ACTION_DEACTIVATE, ACTION_CHANGE_POWER
 
 async def test_power_device(
     hass: HomeAssistant,
@@ -90,8 +91,6 @@ async def test_power_device(
     assert priority_weight_entity.current_option == PRIORITY_WEIGHT_NULL
     assert priority_weight_entity.options == PRIORITY_WEIGHTS
 
-
-
     # 1. Test the next_date_available and next_date_available_power
     tz = get_tz(hass) # pylint: disable=invalid-name
     now: datetime = datetime.now(tz=tz)
@@ -118,7 +117,8 @@ async def test_power_device(
     # patch("custom_components.solar_optimizer.managed_device.do_service_action", autospec=True) as mock_do_service_action, \
     # patch("custom_components.solar_optimizer.managed_device.ManagedDevice.change_requested_power", autospec=True) as mock_change_requested_power:
     device._set_now(now)
-    with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()):
+    with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         assert device.check_usable() is True
 
@@ -130,7 +130,7 @@ async def test_power_device(
         assert calculated_data["total_power"] == 500
         assert calculated_data["power_device_a"].is_waiting is True
         assert calculated_data["power_device_a"].requested_power == 500
-        assert calculated_data["power_device_a"].current_power == 500
+        assert calculated_data["power_device_a"].current_power == 0
         assert calculated_data["power_device_a"].is_active is False # it was not activated
         assert calculated_data["power_device_a"].is_usable is False # no more usable cause waiting
         assert calculated_data["power_device_a"].is_waiting is True
@@ -148,6 +148,30 @@ async def test_power_device(
         assert fake_device_a.state == STATE_ON
         assert fake_amps_number.state == 50
 
+        # check hass.bus.fire has been called
+        assert mock_fire.call_count == 2
+        mock_fire.assert_has_calls(
+            [
+                call(
+                    event_type=EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
+                    event_data={
+                        'action_type': ACTION_ACTIVATE,
+                        'requested_power': 500,
+                        'current_power': 0,
+                        'entity_id': 'input_boolean.fake_device_a'
+                    }),
+                call(
+                    event_type=EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
+                    event_data={
+                        'action_type': ACTION_CHANGE_POWER,
+                        'requested_power': 500,
+                        'current_power': 0,
+                        'entity_id': 'input_number.fake_amps_number'
+                    })
+            ],
+            any_order=True,
+        )
+
     # 2. one minute later, the device should be still waiting. The power should not change
     now = now + timedelta(minutes=1)
     device._set_now(now)
@@ -159,7 +183,8 @@ async def test_power_device(
 
     # fmt:off
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
-         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True):
+         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         assert device.check_usable() is False
         calculated_data = await coordinator._async_update_data()
@@ -176,13 +201,16 @@ async def test_power_device(
         assert fake_device_a.state == STATE_ON
         assert fake_amps_number.state == 50
 
+        assert mock_fire.call_count == 0
+
     # 3. one minute later, the power can be changed
     now = now + timedelta(minutes=1)
     device._set_now(now)
 
     # fmt:off
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
-         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True):
+         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         # the device is waiting but the power can be changed (usable = True)
         assert device.check_usable() is True
@@ -202,6 +230,22 @@ async def test_power_device(
         assert fake_device_a.state == STATE_ON
         assert fake_amps_number.state == 80
 
+        # check hass.bus.fire has been called
+        assert mock_fire.call_count == 1
+        mock_fire.assert_has_calls(
+            [
+                call(
+                    event_type=EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
+                    event_data={
+                        'action_type': ACTION_CHANGE_POWER,
+                        'requested_power': 800,
+                        'current_power': 500,
+                        'entity_id': 'input_number.fake_amps_number'
+                    })
+            ],
+            any_order=True,
+        )
+
     # 4. one minute later, the device and power are waiting
     now = now + timedelta(minutes=1)
     device._set_now(now)
@@ -213,7 +257,8 @@ async def test_power_device(
 
     # fmt:off
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
-         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True):
+         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         # the device is waiting but the power can be changed (usable = True)
         assert device.check_usable() is False
@@ -233,13 +278,16 @@ async def test_power_device(
         assert fake_device_a.state == STATE_ON
         assert fake_amps_number.state == 80
 
+        assert mock_fire.call_count == 0
+
     # 5. one minute later, the device is waiting the power can change
     now = now + timedelta(minutes=1)
     device._set_now(now)
 
     # fmt:off
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
-         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True):
+         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         # the device is waiting but the power can be changed (usable = True)
         assert device.check_usable() is True
@@ -259,6 +307,22 @@ async def test_power_device(
         assert fake_device_a.state == STATE_ON
         assert fake_amps_number.state == 10
 
+        # check hass.bus.fire has been called
+        assert mock_fire.call_count == 1
+        mock_fire.assert_has_calls(
+            [
+                call(
+                    event_type=EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
+                    event_data={
+                        'action_type': ACTION_CHANGE_POWER,
+                        'requested_power': 100,
+                        'current_power': 800,
+                        'entity_id': 'input_number.fake_amps_number'
+                    })
+            ],
+            any_order=True,
+        )
+
     # 6. one minute later, no changes
     now = now + timedelta(minutes=1)
     device._set_now(now)
@@ -269,7 +333,8 @@ async def test_power_device(
 
     # fmt:off
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
-         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True):
+         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         # the device is waiting but the power can be changed (usable = True)
         assert device.check_usable() is False
@@ -289,13 +354,16 @@ async def test_power_device(
         assert fake_device_a.state == STATE_ON
         assert fake_amps_number.state == 10
 
+        assert mock_fire.call_count == 0
+
     # 7. one minute later, no changes
     now = now + timedelta(minutes=1)
     device._set_now(now)
 
     # fmt:off
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
-         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True):
+         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         # the device is waiting but the power can be changed (usable = True)
         assert device.check_usable() is True
@@ -315,13 +383,16 @@ async def test_power_device(
         assert fake_device_a.state == STATE_ON
         assert fake_amps_number.state == 10
 
+        assert mock_fire.call_count == 0
+
     # 8. 4 minutes later, the device is turned off
     now = now + timedelta(minutes=4)
     device._set_now(now)
 
     # fmt:off
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), \
-         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True):
+         patch("custom_components.solar_optimizer.managed_device.ManagedDevice.is_active", new_callable=PropertyMock, return_value=True), \
+         patch("homeassistant.core.EventBus.fire") as mock_fire:
     # fmt:on
         # the device is waiting but the power can be changed (usable = True)
         assert device.check_usable() is True
@@ -340,3 +411,19 @@ async def test_power_device(
 
         assert fake_device_a.state == STATE_OFF
         assert fake_amps_number.state == 10 # the last value
+
+        # check hass.bus.fire has been called
+        assert mock_fire.call_count == 1
+        mock_fire.assert_has_calls(
+            [
+                call(
+                    event_type=EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
+                    event_data={
+                        'action_type': ACTION_DEACTIVATE,
+                        'requested_power': 0,
+                        'current_power': 100,
+                        'entity_id': 'input_boolean.fake_device_a'
+                    }),
+            ],
+            any_order=True,
+        )
