@@ -341,18 +341,19 @@ class ManagedDevice:
             )
             return
 
-        amps = self._hass.states.get(self._power_entity_id)
-        if not amps or amps.state in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
+        power_entity_state = self._hass.states.get(self._power_entity_id)
+        if not power_entity_state or power_entity_state.state in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
             self._current_power = self._power_min
             _LOGGER.debug(
-                "Set current_power to %s for device %s cause can_change_power but amps is %s",
+                "Set current_power to %s for device %s cause can_change_power but state is %s",
                 self._current_power,
                 self._name,
-                amps,
+                power_entity_state,
             )
             return
         
         if self._power_entity_id.startswith(POWERED_ENTITY_DOMAINS_NEED_ATTR):
+            # TODO : move this part to device initialisation, make new instance variable
             service_name = self._change_power_service # retrieve attribute from power service
             parties = self._change_power_service.split("/")
             if len(parties) < 2:
@@ -360,19 +361,18 @@ class ManagedDevice:
                     f"Incorrect service declaration for power entity. Service {service_name} should be formatted with: 'domain/action/attribute'"
                 )
             parameter = parties[2]
-            amps = self._hass.states.get(self._power_entity_id).attributes[parameter]
+            power_entity_value = power_entity_state.attributes[parameter]
         else:
-            amps = amps.state
-
+            power_entity_value = power_entity_state.state
 
         self._current_power = round(
-            float(amps) * self._convert_power_divide_factor
+            float(power_entity_value) * self._convert_power_divide_factor
         )
         _LOGGER.debug(
             "Set current_power to %s for device %s cause can_change_power and amps is %s",
             self._current_power,
             self._name,
-            amps,
+            power_entity_value,
         )
 
     def set_enable(self, enable: bool):
