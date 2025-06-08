@@ -268,7 +268,7 @@ class SimulatedAnnealingAlgorithm:
     ):
         """Calcul une nouvelle puissance"""
         choices = []
-        power_min_to_use = power_min - power_step if can_switch_off else power_min
+        power_min_to_use = max(0, power_min - power_step) if can_switch_off else power_min
 
         # add all choices from current_power to power_min_to_use descending
         cp = current_power
