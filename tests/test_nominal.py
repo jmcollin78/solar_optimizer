@@ -194,7 +194,7 @@ async def test_empty_start(hass: HomeAssistant, reset_coordinator):
 
 
 # no_parallel is not useful here but it is a good example
-@pytest.mark.no_parallel
+# @pytest.mark.no_parallel
 # In dev env, you should remove the skip decorator
 @pytest.mark.skip(reason="Do not work every time due to the random nature of the test")
 @pytest.mark.parametrize(

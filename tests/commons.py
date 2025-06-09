@@ -14,6 +14,7 @@ from homeassistant.helpers.entity import Entity
 
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
+from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -84,17 +85,24 @@ async def send_state_change(hass, entity_id, old_state, new_state, date, sleep=F
 async def create_test_input_boolean(hass, entity_id, name):
     """ Creation of an input_boolean """
 
-    config = {
-        "input_boolean": {
-            # input_boolean to simulate the windows entity. Only for development environment.
-            # TODO replace with dynamic entity_id
-            "fake_device_a": {
-                "name": name,
-                "icon": "mdi:window-closed-variant"
-            }
-        }
-    }
+    # Remove domain prefix if present in entity_id
+    if "." in entity_id:
+        entity_id = entity_id.split(".", 1)[1]
+
+    config = {"input_boolean": {entity_id: {"name": name, "icon": "mdi:window-closed-variant"}}}
     await async_setup_component(hass, INPUT_BOOLEAN_DOMAIN, config)
+    return search_entity(hass, INPUT_BOOLEAN_DOMAIN + "." + entity_id, INPUT_BOOLEAN_DOMAIN)
+
+
+async def create_test_input_number(hass, entity_id, name):
+    """Creation of an input_number"""
+
+    if "." in entity_id:
+        entity_id = entity_id.split(".", 1)[1]
+
+    config = {"input_number": {entity_id: {"name": name, "min": 0, "max": 9999, "initial": 0, "icon": "mdi:numeric"}}}
+    await async_setup_component(hass, INPUT_NUMBER_DOMAIN, config)
+    return search_entity(hass, INPUT_NUMBER_DOMAIN + "." + entity_id, INPUT_NUMBER_DOMAIN)
 
 
 #

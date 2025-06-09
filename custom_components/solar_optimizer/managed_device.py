@@ -98,7 +98,7 @@ async def do_service_action(
         action_type,
         current_power,
         requested_power,
-        EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
+        EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER if action_type == ACTION_CHANGE_POWER else EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
     )
 
 
@@ -240,8 +240,9 @@ class ManagedDevice:
             self._entity_id,
             requested_power,
         )
-        if requested_power is not None:
-            self._requested_power = requested_power
+
+        if requested_power is None:
+            requested_power = self._requested_power
 
         if self._action_mode == CONF_ACTION_MODE_ACTION:
             method = None
@@ -268,7 +269,7 @@ class ManagedDevice:
                 action_type,
                 method,
                 self._current_power,
-                self._requested_power,
+                requested_power,
                 self._convert_power_divide_factor,
             )
         elif self._action_mode == CONF_ACTION_MODE_EVENT:
@@ -295,7 +296,7 @@ class ManagedDevice:
         """Use this method to deactivate this ManagedDevice"""
         return await self._apply_action(ACTION_DEACTIVATE, 0)
 
-    async def change_requested_power(self, requested_power):
+    async def change_requested_power(self, requested_power, current_power=None):
         """Use this method to change the requested power of this ManagedDevice"""
         return await self._apply_action(ACTION_CHANGE_POWER, requested_power)
 
@@ -385,6 +386,10 @@ class ManagedDevice:
         """Set the time the underlying device was on per day"""
         _LOGGER.info("%s - Set on_time=%s", self.name, on_time_sec)
         self._on_time_sec = on_time_sec
+
+    def set_requested_power(self, requested_power: int):
+        """Set the requested power of the ManagedDevice"""
+        self._requested_power = requested_power
 
     @property
     def is_enabled(self) -> bool:

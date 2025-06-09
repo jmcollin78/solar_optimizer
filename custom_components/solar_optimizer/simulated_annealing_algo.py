@@ -195,7 +195,7 @@ class SimulatedAnnealingAlgorithm:
             temperature *= self._facteur_refroidissement
             if DEBUG:
                 _LOGGER.debug(" !! Temperature %.2f", temperature)
-            if temperature < self._temperature_minimale:
+            if temperature < self._temperature_minimale or meilleure_objectif <= 0:
                 break
 
         return (
@@ -268,7 +268,7 @@ class SimulatedAnnealingAlgorithm:
     ):
         """Calcul une nouvelle puissance"""
         choices = []
-        power_min_to_use = power_min if can_switch_off else power_min + power_step
+        power_min_to_use = max(0, power_min - power_step) if can_switch_off else power_min
 
         # add all choices from current_power to power_min_to_use descending
         cp = current_power
@@ -366,7 +366,7 @@ class SimulatedAnnealingAlgorithm:
             requested_power = self.calculer_new_power(
                 current_power, power_step, power_min, power_max, can_switch_off=True
             )
-            if requested_power <= power_min:
+            if requested_power < power_min:
                 # deactivate the equipment
                 eqt["state"] = False
                 requested_power = 0
