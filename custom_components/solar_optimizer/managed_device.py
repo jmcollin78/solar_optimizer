@@ -190,6 +190,9 @@ class ManagedDevice:
 
         self._min_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("min_on_time_per_day_min") or 0)
 
+        self._min_energy_per_day_kwh = convert_to_template_or_value(hass, device_config.get("min_energy_per_day_kwh") or 0)
+        self._on_time_energy = 0
+
         offpeak_time = device_config.get("offpeak_time", None)
         self._offpeak_time = None
 
@@ -207,6 +210,12 @@ class ManagedDevice:
         # min_on_time_per_day_sec requires an offpeak_time
         if self.min_on_time_per_day_sec > 0 and self._offpeak_time is None:
             msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec requires offpeak_time value"
+            _LOGGER.error("%s - %s", self, msg)
+            raise ConfigurationError(msg)
+
+        # min_energy_per_day_kwh requires an offpeak_time
+        if self._min_energy_per_day_kwh > 0 and self._offpeak_time is None:
+            msg = f"configuration of device ${self.name} is incorrect. min_energy_per_day_kwh requires offpeak_time value"
             _LOGGER.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
 
@@ -361,6 +370,27 @@ class ManagedDevice:
         _LOGGER.info("%s - Set on_time=%s", self.name, on_time_sec)
         self._on_time_sec = on_time_sec
 
+    def set_on_time_energy(self, on_time_energy: float):
+        """Set the time the underlying device was on per day"""
+        _LOGGER.info("%s - Set on_time_energy=%s", self.name, on_time_energy)
+        self._on_time_energy = on_time_energy
+
+    def update_on_time_energy(self, duration_sec: int = 60):
+        """Update the on_time_energy based on current power and duration"""
+        if self.is_active:
+            # Power is in Watts, duration in seconds. Convert to kWh.
+            energy_kwh = (self._current_power * duration_sec) / 3_600_000
+            self._on_time_energy += energy_kwh
+            _LOGGER.debug(
+                "%s - Updated on_time_energy: +%.6f kWh (current_power=%dW, duration=%ds, total=%.6f kWh)",
+                self._name, energy_kwh, self._current_power, duration_sec, self._on_time_energy
+            )
+
+    def reset_on_time_energy(self):
+        """Reset the on_time_energy counter (e.g., at the start of a new day)."""
+        self._on_time_energy = 0
+        _LOGGER.info("%s - on_time_energy reset to 0", self._name)
+                    
     def set_requested_power(self, requested_power: int):
         """Set the requested power of the ManagedDevice"""
         self._requested_power = requested_power
@@ -428,14 +458,20 @@ class ManagedDevice:
             return (
                 (self.now.time() >= self._offpeak_time or self.now.time() < self._coordinator.raz_time)
                 and self._on_time_sec < self.max_on_time_per_day_sec
-                and self._on_time_sec < self.min_on_time_per_day_sec
+                and (
+                    self._on_time_energy < self._min_energy_per_day_kwh
+                    or self._on_time_sec < self.min_on_time_per_day_sec
+                )
             )
         else:
             return (
                 self.now.time() >= self._offpeak_time
                 and self.now.time() < self._coordinator.raz_time
                 and self._on_time_sec < self.max_on_time_per_day_sec
-                and self._on_time_sec < self.min_on_time_per_day_sec
+                and (
+                    self._on_time_energy < self._min_energy_per_day_kwh
+                    or self._on_time_sec < self.min_on_time_per_day_sec
+                )
             )
 
     @property
@@ -537,6 +573,16 @@ class ManagedDevice:
     def min_on_time_per_day_sec(self) -> int:
         """The min_on_time_per_day_sec configured"""
         return get_template_or_value(self._hass, self._min_on_time_per_day_min) * 60
+
+    @property
+    def min_energy_per_day_kwh(self) -> float:
+        """The min_energy_per_day_kwh configured"""
+        return get_template_or_value(self._hass, self._min_energy_per_day_kwh)
+
+    @property
+    def on_time_energy(self) -> float:
+        """The current energy put in device this day"""
+        return self._on_time_energy
 
     @property
     def offpeak_time(self) -> int:

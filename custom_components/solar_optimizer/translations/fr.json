@@ -102,7 +102,8 @@
                     "battery_soc_threshold": "Seuil de charge de la batterie",
                     "max_on_time_per_day_min": "Temps max par jour",
                     "min_on_time_per_day_min": "Temps min par jour",
-                    "offpeak_time": "Heure creuse"
+                    "offpeak_time": "Heure creuse",
+                    "min_energy_per_day_kwh": "Energie minimale par jour"
                 },
                 "data_description": {
                     "name": "Nom de l'équipement",
@@ -124,7 +125,8 @@
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour   activer l'équipement",
                     "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
                     "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
-                    "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
+                    "offpeak_time": "L'heure de début des heures creuses au format HH:MM",
+                    "min_energy_per_day_kwh": "La quantité d'énergie par jour en kWh. Si il n'est pas atteint, l'équipement sera activé à la puissance maximale pendant l'heure creuse."
                 }
             }
         },
