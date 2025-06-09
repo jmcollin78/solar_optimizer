@@ -553,7 +553,7 @@ class TodayEnergySensor(SensorEntity, RestoreEntity):
             if self._old_state and self._last_calculation is not None:
                 _LOGGER.debug("The managed device becomes off - compute energy")
                 self._attr_native_value += self._device.on_time_energy
-            self._last_calculation = None
+            self._last_calculation = now
             need_save = True
 
         # On sauvegarde le nouvel état
