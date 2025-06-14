@@ -422,7 +422,7 @@ class ManagedDevice:
             if self._can_change_power:
                 result = result and now >= self._next_date_available_power
             else:
-                result = result and now >= self._next_date_available_power
+                result = result and now >= self._next_date_available
 
             if not result:
                 _LOGGER.debug("%s is not usable", self._name)
