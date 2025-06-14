@@ -352,7 +352,7 @@ class ManagedDevice:
                 power_entity_state,
             )
             return
-        
+
         if self._power_entity_id.startswith(POWERED_ENTITY_DOMAINS_NEED_ATTR):
             # TODO : move this part to device initialisation, make new instance variable
             service_name = self._change_power_service # retrieve attribute from power service
@@ -418,14 +418,16 @@ class ManagedDevice:
         else:
             context = {}
             now = self.now
-            result = self._check_usable_template.async_render(context) and (
-                now >= self._next_date_available
-                or (self._can_change_power and now >= self._next_date_available_power)
-            )
+            result = self._check_usable_template.async_render(context)
+            if self._can_change_power:
+                result = result and now >= self._next_date_available_power
+            else:
+                result = result and now >= self._next_date_available
+
             if not result:
                 _LOGGER.debug("%s is not usable", self._name)
 
-            if check_battery and result and self._battery_soc is not None and self.battery_soc_threshold is not None:
+            if result and check_battery and self._battery_soc is not None and self.battery_soc_threshold is not None:
                 if self._battery_soc < self.battery_soc_threshold:
                     result = False
                     _LOGGER.debug(
