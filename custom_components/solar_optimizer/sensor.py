@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, time
 from homeassistant.const import (
     UnitOfPower,
     UnitOfTime,
+    UnitOfEnergy,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     STATE_ON,
@@ -85,12 +86,27 @@ async def async_setup_entry(
 
     async_add_entities([entity1], False)
 
+    entity2 = TodayEnergySensor(
+        hass,
+        coordinator,
+        device,
+    )
+
+    async_add_entities([entity2], False)
+
     # Add services
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
         SERVICE_RESET_ON_TIME,
         {},
         "service_reset_on_time",
+    )
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_RESET_ENERGY,
+        {},
+        "service_reset_energy",
     )
 
 
@@ -403,4 +419,239 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             entity_id: solar_optimizer.on_time_today_solar_optimizer_<device name>
         """
         _LOGGER.info("%s - Calling service_reset_on_time", self)
+        await self._on_midnight()
+
+class TodayEnergySensor(SensorEntity, RestoreEntity):
+    """Gives the estimated energy put in device for a day"""
+
+    _entity_component_unrecorded_attributes = (
+        SensorEntity._entity_component_unrecorded_attributes.union(
+            frozenset(
+                {
+                    "last_calculation",
+                    "offpeak_time",
+                    "min_energy_per_day_kwh",
+                    "on_time_energy",
+                    "raz_time",
+                    "should_be_forced_offpeak",
+                }
+            )
+        )
+    )
+ 
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        coordinator: SolarOptimizerCoordinator,
+        device: ManagedDevice,
+    ) -> None:
+        """Initialize the sensor"""
+        self.hass = hass
+        idx = name_to_unique_id(device.name)
+        self._attr_name = "Energy today"
+        self._attr_has_entity_name = True
+        self.entity_id = f"{SENSOR_DOMAIN}.energy_today_solar_optimizer_{idx}"
+        self._attr_unique_id = "solar_optimizer_energy_today_" + idx
+        self._attr_native_value = None
+        self._entity_id = device.entity_id
+        self._device = device
+        self._coordinator = coordinator
+        self._last_calculation = self._device.now
+        self._old_state = None
+
+    async def async_added_to_hass(self) -> None:
+        """The entity have been added to hass, listen to state change of the underlying entity"""
+        await super().async_added_to_hass()
+
+        # Arme l'écoute de la première entité
+        listener_cancel = async_track_state_change_event(
+            self.hass,
+            [self._entity_id],
+            self._on_state_change,
+        )
+        # desarme le timer lors de la destruction de l'entité
+        self.async_on_remove(listener_cancel)
+
+        # Add listener to midnight to reset the counter
+        raz_time: time = self._coordinator.raz_time
+        self.async_on_remove(
+            async_track_time_change(
+                hass=self.hass,
+                action=self._on_midnight,
+                hour=raz_time.hour,
+                minute=raz_time.minute,
+                second=0,
+            )
+        )
+
+        # Add a listener to calculate energy at each minute
+        self.async_on_remove(
+            async_track_time_interval(
+                self.hass,
+                self._on_update_energy_today,
+                interval=timedelta(minutes=1),
+            )
+        )
+
+        # restore the last value or set to 0
+        self._attr_native_value = 0
+        old_state = await self.async_get_last_state()
+        if old_state is not None:
+            if old_state.state is not None and old_state.state != "unknown":
+                self._attr_native_value = round(float(old_state.state))
+                _LOGGER.info(
+                    "%s - read energy from storage is %s",
+                    self,
+                    self._attr_native_value,
+                )
+
+            old_value = old_state.attributes.get("last_calculation")
+            if old_value is not None:
+                self._last_calculation = datetime.fromisoformat(old_value)
+
+        self.update_custom_attributes()
+        self.async_write_ha_state()
+
+    async def async_will_remove_from_hass(self):
+        """Try to force backup of entity"""
+        _LOGGER.info(
+            "%s - force write before remove. energy_today is %s",
+            self,
+            self._attr_native_value,
+        )
+        # Force dump in background
+        await restore_async_get(self.hass).async_dump_states()
+
+    @callback
+    async def _on_state_change(self, event: Event) -> None:
+        """The entity have change its state"""
+        now = self._device.now
+        _LOGGER.info("Call of on_state_change at %s with event %s", now, event)
+
+        if not event.data:
+            return
+
+        new_state: State = event.data.get("new_state")
+        # old_state: State = event.data.get("old_state")
+
+        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            _LOGGER.debug("No available state. Event is ignored")
+            return
+
+        need_save = False
+        # We search for the date of the event
+        new_state = self._device.is_active  # new_state.state == STATE_ON
+        # old_state = old_state is not None and old_state.state == STATE_ON
+        if new_state and not self._old_state:
+            _LOGGER.debug("The managed device becomes on - store the last_calculation and compute energy")
+            interval = (now - self._last_calculation).total_seconds()
+            self._device.update_on_time_energy(interval)
+            self._last_calculation = now
+            need_save = True
+
+        if not new_state:
+            if self._old_state and self._last_calculation is not None:
+                _LOGGER.debug("The managed device becomes off - compute energy")
+                self._attr_native_value += self._device.on_time_energy
+            self._last_calculation = now
+            need_save = True
+
+        # On sauvegarde le nouvel état
+        if need_save:
+            self._old_state = new_state
+            self.update_custom_attributes()
+            self.async_write_ha_state()
+
+    @callback
+    async def _on_midnight(self, _=None) -> None:
+        """Called each day at midnight to reset the counter"""
+        self._attr_native_value = 0
+
+        _LOGGER.info("Call of _on_midnight to reset onTime")
+
+        # reset _last_datetime_on to now if it was active. Here we lose the time on of yesterday but it is too late I can't do better.
+        # Else you will have two point with the same date and not the same value (one with value + duration and one with 0)
+        if self._last_calculation is not None:
+            self._last_calculation = self._device.now
+
+        self._device.reset_on_time_energy()
+        
+        self.update_custom_attributes()
+        self.async_write_ha_state()
+
+    @callback
+    async def _on_update_energy_today(self, _=None) -> None:
+        """Called priodically to update the energy_today sensor"""
+        now = self._device.now
+        _LOGGER.debug("Call of _on_update_energy_today at %s", now)
+
+        if self._last_calculation is not None and self._device.is_active:
+            interval = (now - self._last_calculation).total_seconds()
+            self._attr_native_value += round(interval)
+            self._device.update_on_time_energy(interval)
+            self._last_calculation = now
+            self.update_custom_attributes()
+            self.async_write_ha_state()
+
+    def update_custom_attributes(self):
+        """Add some custom attributes to the entity"""
+        self._attr_extra_state_attributes: dict(str, str) = {
+            "last_calculation": self._last_calculation,
+            "raz_time": self._coordinator.raz_time,
+            "should_be_forced_offpeak": self._device.should_be_forced_offpeak,
+            "offpeak_time": self._device.offpeak_time,
+            "min_energy_per_day_kwh": self._device.min_energy_per_day_kwh,
+            "on_time_energy": self._device.on_time_energy,
+        }
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:timer-play"
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        # Retournez des informations sur le périphérique associé à votre entité
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._device.name)},
+            name="Solar Optimizer-" + self._device.name,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        return SensorDeviceClass.ENERGY
+
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        return SensorStateClass.TOTAL
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return UnitOfEnergy.KILO_WATT_HOUR
+
+    @property
+    def suggested_display_precision(self) -> int | None:
+        """Return the suggested number of decimal digits for display."""
+        return 0
+
+    @property
+    def last_calculation(self) -> datetime | None:
+        """Returns the last_calculation"""
+        return self._last_calculation
+
+    @property
+    def get_attr_extra_state_attributes(self):
+        """Get the extra state attributes for the entity"""
+        return self._attr_extra_state_attributes
+
+    async def service_reset_energy(self):
+        """Called by a service call:
+        service: sensor.reset_energy
+        data:
+        target:
+            entity_id: solar_optimizer.energy_today_solar_optimizer_<device name>
+        """
+        _LOGGER.info("%s - Calling service_reset_energy", self)
         await self._on_midnight()
