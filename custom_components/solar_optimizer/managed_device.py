@@ -323,6 +323,16 @@ class ManagedDevice:
             self._name,
             self._next_date_available_power,
         )
+        """Lors d'un changement de puissance, si _next_date_available ne respect pas 
+        le temps min de puissance, on le remet à jour pour assusrer un temps min à la 
+        nouvelle puissance avant de pouvoir autoriser une coupure"""
+        if self._next_date_available <= self._next_date_available_power:
+            self._next_date_available = self._next_date_available_power
+            _LOGGER.info(
+                "Mise à jour de Next availability date suite au changmement de puissance %s is %s",
+                self._name,
+                self._next_date_available,
+            )
 
     def set_current_power_with_device_state(self):
         """Set the current power according to the real device state"""
