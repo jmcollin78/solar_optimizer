@@ -37,6 +37,7 @@ INTEGRATION_MODEL = "Solar Optimizer"
 DEVICE_MANUFACTURER = "JM. COLLIN"
 
 SERVICE_RESET_ON_TIME = "reset_on_time"
+SERVICE_RESET_ENERGY = "reset_energy"
 
 TIME_REGEX = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
 CONFIG_VERSION = 2
@@ -79,6 +80,7 @@ CONF_BATTERY_SOC_THRESHOLD = "battery_soc_threshold"
 CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
 CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
 CONF_OFFPEAK_TIME = "offpeak_time"
+CONF_MIN_ENERGY_PER_DAY_KWH = "min_energy_per_day_kwh"
 
 PRIORITY_WEIGHT_NULL = "None"
 PRIORITY_WEIGHT_LOW = "Low"
