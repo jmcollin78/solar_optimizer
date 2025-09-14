@@ -108,6 +108,29 @@ These 5 rules allow the algorithm to only order what is really useful at a time 
 ## Device Prioritization
 Priority management is described [here](#priority-management).
 
+## Setting Purchase and Resale Costs
+The behavior of the algorithm is strongly influenced by the values of the sensors **"imported kWh cost"** and **"exported kWh cost"**.
+The algorithm calculates the *"fictitious cost"* of a combination of on/off states and desired power levels for the controlled devices.
+
+If these two values are equal, then the cost of importing 500 W from the grid will be the same as the cost of exporting 500 W to the grid.
+Therefore, SO can either reject the 500 W (under-consumption) or import 500 W (over-consumption), as long as production allows.
+
+The values of the purchase and resale cost sensors should be set as follows:
+
+1. **If they are equal** → SO will accept import and export equally. For SO, it “costs” the same to export 500 W as to import 500 W.
+2. **If purchase cost >> resale cost** → SO will minimize import but may export more (energy lost).
+3. **If resale cost >> purchase cost** → the opposite happens: SO will minimize export and potentially import more (thus increasing the bill).
+
+👉 If you want to avoid any import (i.e., buying from the grid): set the purchase cost **much higher** than the resale cost.
+
+👉 For those with self-consumption contracts without resale: everything rejected is lost. In this case, you may want to minimize rejections, even if it means importing a bit more. For this configuration, set resale cost **much higher** than purchase cost.
+
+On my side, I set the actual purchase costs (which vary depending on the day and time: Tempo contract) and the real resale cost of 13 cts/kWh.
+So, if my purchase cost is low (off-peak blue hours), I can import more.
+If the purchase cost is very high (peak red hours), I won’t import at all. That’s exactly what I want in my case — but that’s specific to me and because I have a resale contract at 13 cts/kWh.
+
+**⚠️ WARNING:** Costs must not be zero!
+
 # Installation
 
 ## Migration Procedure from Version 2.x to 3.x
@@ -196,13 +219,13 @@ This type of device allows for adjusting the power consumption based on solar pr
 
 All the parameters described [here](#configuring-a-simple-device-onoff) apply and must be supplemented with the following:
 
-| Attribute                     | Applicable to         | Meaning                                                      | Example                      | Comment                                                                                                                                                                                                                                                    |
-| ----------------------------- | --------------------- | ------------------------------------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `power_entity_id`             | Variable power device | The `entity_id` of the entity managing power levels          | `number.tesla_charging_amps` | The power adjustment is done by calling the `change_power_service` on this entity. It can be either a `number`, an `input_number`, a `fan` or a `light`. If it is not a `number`, the `change_power_service` field must be adjusted.                                                                                                                       |
-| `power_min`                   | Variable power device | The minimum power in watts for the device                    | 100                          | If the power setting drops below this value, the device will be turned off via the `deactivation_service`. This parameter works with `power_max` to define the range of power adjustment.                                                                  |
-| `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                           | For an electric vehicle, set this to 220 (220V x 1A).<br/>For `light` entity with `brightness` attribute set it to `power_max / 255`<br/>For `fan` entity with `percentage` attribute set it to `power_max / 100`                                                                                                                                                                                                     |
-| `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `number/set_value`<br/>or<br/>`light/turn_on/brightness`    | For `fan` or `light` power entities, you must provide the attribute to set power, typically `brightness` or `percentage`                                                                                                                                                                                                                                                          |
-| `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                           | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220.<br/>For `light` or `fan` entity set it to the same value of `power_step` field |
+| Attribute                     | Applicable to         | Meaning                                                      | Example                                                  | Comment                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | --------------------- | ------------------------------------------------------------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `power_entity_id`             | Variable power device | The `entity_id` of the entity managing power levels          | `number.tesla_charging_amps`                             | The power adjustment is done by calling the `change_power_service` on this entity. It can be either a `number`, an `input_number`, a `fan` or a `light`. If it is not a `number`, the `change_power_service` field must be adjusted.                                                                                                      |
+| `power_min`                   | Variable power device | The minimum power in watts for the device                    | 100                                                      | If the power setting drops below this value, the device will be turned off via the `deactivation_service`. This parameter works with `power_max` to define the range of power adjustment.                                                                                                                                                 |
+| `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                                                       | For an electric vehicle, set this to 220 (220V x 1A).<br/>For `light` entity with `brightness` attribute set it to `power_max / 255`<br/>For `fan` entity with `percentage` attribute set it to `power_max / 100`                                                                                                                         |
+| `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `number/set_value`<br/>or<br/>`light/turn_on/brightness` | For `fan` or `light` power entities, you must provide the attribute to set power, typically `brightness` or `percentage`                                                                                                                                                                                                                  |
+| `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                                                       | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220.<br/>For `light` or `fan` entity set it to the same value of `power_step` field |
 
 ## Configuration Examples
 The examples below should be adapted to your specific case.

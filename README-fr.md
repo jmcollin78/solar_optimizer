@@ -13,6 +13,7 @@
   - [Anti-bagot](#anti-bagot)
   - [Utilisabilité](#utilisabilité)
   - [Priorisation des équipements](#priorisation-des-équipements)
+  - [Réglage des coûts d'achat et de revente](#réglage-des-coûts-dachat-et-de-revente)
 - [Installation](#installation)
   - [Procédure de migration d'une version 2.x vers la 3.x](#procédure-de-migration-dune-version-2x-vers-la-3x)
   - [HACS installation (recommendé)](#hacs-installation-recommendé)
@@ -28,6 +29,7 @@
     - [Commande du preset d'une climatisation](#commande-du-preset-dune-climatisation)
     - [Commande d'un deshumidificateur](#commande-dun-deshumidificateur)
     - [Commande pour une lampe](#commande-pour-une-lampe)
+    - [Commande pour une lampe dimmable](#commande-pour-une-lampe-dimmable)
   - [Configurer l'algorithme en mode avancé](#configurer-lalgorithme-en-mode-avancé)
 - [Entités disponibles](#entités-disponibles)
   - [L'appareil "configuration"](#lappareil-configuration)
@@ -104,6 +106,23 @@ Ces 5 règles permettent à l'algorithme de ne commander que ce qui est réellem
 
 ## Priorisation des équipements
 La gestion de la priorité est décrite [ici](#la-gestion-de-la-priorité).
+
+## Réglage des coûts d'achat et de revente
+Le comportement de l'algorithme est fortement influencé par les valeurs des capteurs "coût du kWh importé" et "coût du kWh exporté". En effet, l'algorithme va calculer le "coût fictif" d'une combinaison d'allumage / extinction / puissance voulue des équipemenets pilotés.
+Si ces 2 valeurs sont égales alors le coût d'un import du réseau de 500 w sera le même que le coût d'un export vers le réseau de 500 w. Donc SO pourra soit rejeter les 500 w (sous-consommation), soit importer 500w (sur-consommation), si la puissance produite le permet.
+
+Les valeurs des sensors de couts de revente et d'achat doivent être réglées comme suit:
+
+1. si elles sont égales, SO acceptera autant d'import que d'export. Ca "coute" la même chose pour lui d'exporter 500 w que d'importer 500 w,
+2. si cout d'achat est très supérieur à cout de revente, SO va minimiser l'achat mais va potentiellement exporter plus (énergie perdue),
+3. si cout de revente >> cout d'achat, c'est le contraire, SO va minimiser la revente et donc potentiellement importer plus (et donc la facture augmente)
+
+👉 Si vous ne voulez aucun import (ie achat) : dans ce cas vous devez mettre un coût d'achat >> cout de revente,
+👉 Pour ceux qui ont des contrats d'auto-consommation sans revente, tout ce qui est rejetté est perdu donc vous pouvez avoir intérêt à minimiser les rejets quitte à acheter un plus plus. Pour cette configuration, le coût de revente >> coût d'achat.
+
+De mon coté j'ai mis les vraies valeurs de cout d'achat (qui varie selon le jour, l'heure : abonnement Tempo) et le vrai cout de revente qui est de 13cts le kWh. Donc si mon cout d'achat devient faible (heure creuse en bleu), je peux importer plus, si le cout d'achat est très fort (heure pleines rouge), je n'aurai pas d'import du tout. C'est bien ce que je veux dans mon cas - mais ce n'est que mon cas et parce-que j'ai un contrat de revente à 13 cts/kWh.
+
+**⚠️ ATTENTION** : les coûts ne doivent pas être nuls !
 
 # Installation
 
@@ -189,13 +208,13 @@ Ce type d'équipement permet moduler la puissance consommée par l'équipement e
 
 Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'applique et douvent être complétés par ceux-ci :
 
-| attribut                      | valable pour                    | signification                                                 | exemple                      | commentaire                                                                                                                                                                                                                                                                                              |
-| ----------------------------- | ------------------------------- | ------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `power_entity_id`             | équipement à puissance variable | l'entity_id de l'entité gérant la puissance                   | `number.tesla_charging_amps` | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité. Elle peut être un `number`, un `input_number`, un `fan` ou une `light`. Si l'entité n'est pas un `number`, le champ `change_power_service` doit être adaptés.                                                                                                                                                      |
-| `power_min`                   | équipement a puissance variable | La puissance minimale en watt de l'équipement                 | 100                          | Lorsque la consigne de puissance passe en dessous de cette valeur, l'équipement sera éteint par l'appel du `deactivation_service`. Ce paramètre fonctionne avec `power_max` pour définir l'interval possible de variation de la puissance                                                                |
-| `power_step`                  | équipement a puissance variable | Le pas de puissance en watt                                   | 10                           | Pour une voiture mettre 230 (230 v x 1 A).<br/>Pour une entité `light` mettre `power_max / 255`<br/>Pour une entité `fan` mettre `power_max / 100`                                                                                                                                                                                                                                                                |
-| `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `number/set_value`<br/>or<br/>`light/turn_on/brightness`         | -                                                                                                                                                                                                                                                                                                        |
-| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                           | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (230 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 230.<br/>Pour une entité `light` ou `fan` mettre la même valeur que dans le champ `power_step` |
+| attribut                      | valable pour                    | signification                                                 | exemple                                                  | commentaire                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------- | ------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `power_entity_id`             | équipement à puissance variable | l'entity_id de l'entité gérant la puissance                   | `number.tesla_charging_amps`                             | Le changement de puissance se fera par un appel du service `change_power_service` sur cette entité. Elle peut être un `number`, un `input_number`, un `fan` ou une `light`. Si l'entité n'est pas un `number`, le champ `change_power_service` doit être adaptés.                                                                                                                                  |
+| `power_min`                   | équipement a puissance variable | La puissance minimale en watt de l'équipement                 | 100                                                      | Lorsque la consigne de puissance passe en dessous de cette valeur, l'équipement sera éteint par l'appel du `deactivation_service`. Ce paramètre fonctionne avec `power_max` pour définir l'interval possible de variation de la puissance                                                                                                                                                          |
+| `power_step`                  | équipement a puissance variable | Le pas de puissance en watt                                   | 10                                                       | Pour une voiture mettre 230 (230 v x 1 A).<br/>Pour une entité `light` mettre `power_max / 255`<br/>Pour une entité `fan` mettre `power_max / 100`                                                                                                                                                                                                                                                 |
+| `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `number/set_value`<br/>or<br/>`light/turn_on/brightness` | -                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                                                       | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (230 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 230.<br/>Pour une entité `light` ou `fan` mettre la même valeur que dans le champ `power_step` |
 
 ## Exemples de configurations
 Les exemples ci-dessus sont à adapter à votre cas.
