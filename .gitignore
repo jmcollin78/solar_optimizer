@@ -162,3 +162,4 @@ cython_debug/
 config/**
 custom_components/versatile_thermostat
 custom_components/hacs
+custom_components/homeconnect_ws
