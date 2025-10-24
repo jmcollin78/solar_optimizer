@@ -54,6 +54,8 @@ central_config_schema = vol.Schema(
         ),
         vol.Optional(CONF_SMOOTH_PRODUCTION, default=True): cv.boolean,
         vol.Optional(CONF_SMOOTHING_WINDOW_MIN, default=DEFAULT_SMOOTHING_WINDOW_MIN): vol.Coerce(int),
+        vol.Optional(CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN, default=DEFAULT_SMOOTHING_CONSUMPTION_WINDOW_MIN): vol.Coerce(int),
+        vol.Optional(CONF_SMOOTHING_BATTERY_WINDOW_MIN, default=DEFAULT_SMOOTHING_BATTERY_WINDOW_MIN): vol.Coerce(int),
         vol.Optional(CONF_BATTERY_RECHARGE_RESERVE_W, default=DEFAULT_BATTERY_RECHARGE_RESERVE_W): vol.Coerce(float),
         vol.Optional(CONF_BATTERY_SOC_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
