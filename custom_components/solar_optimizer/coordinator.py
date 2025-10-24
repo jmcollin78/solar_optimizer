@@ -29,11 +29,11 @@ from .const import (
     name_to_unique_id,
     SOLAR_OPTIMIZER_DOMAIN,
     DEFAULT_RAZ_TIME,
-    DEFAULT_SMOOTHING_WINDOW_MIN,
+    DEFAULT_SMOOTHING_PRODUCTION_WINDOW_MIN,
     DEFAULT_SMOOTHING_CONSUMPTION_WINDOW_MIN,
     DEFAULT_SMOOTHING_BATTERY_WINDOW_MIN,
     DEFAULT_BATTERY_RECHARGE_RESERVE_W,
-    CONF_SMOOTHING_WINDOW_MIN,
+    CONF_SMOOTHING_PRODUCTION_WINDOW_MIN,
     CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN,
     CONF_SMOOTHING_BATTERY_WINDOW_MIN,
     CONF_BATTERY_RECHARGE_RESERVE_W,
@@ -143,7 +143,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             "battery_charge_power_entity_id"
         )
         self._smooth_production = config.data.get("smooth_production") is True
-        self._smoothing_window_min = int(config.data.get(CONF_SMOOTHING_WINDOW_MIN, DEFAULT_SMOOTHING_WINDOW_MIN))
+        self._smoothing_window_min = int(config.data.get(CONF_SMOOTHING_PRODUCTION_WINDOW_MIN, DEFAULT_SMOOTHING_PRODUCTION_WINDOW_MIN))
         self._production_window = deque()
         self._smoothing_consumption_window_min = int(config.data.get(CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN, DEFAULT_SMOOTHING_CONSUMPTION_WINDOW_MIN))
         self._consumption_window = deque()
