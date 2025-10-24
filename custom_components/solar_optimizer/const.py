@@ -19,6 +19,8 @@ DEVICE_MODEL = "Solar Optimizer"
 
 DEFAULT_REFRESH_PERIOD_SEC = 300
 DEFAULT_RAZ_TIME = "05:00"
+DEFAULT_SMOOTHING_WINDOW_MIN = 0
+DEFAULT_BATTERY_RECHARGE_RESERVE_W = 0.0
 
 CONF_ACTION_MODE_ACTION = "action_call"
 CONF_ACTION_MODE_EVENT = "event"
@@ -55,6 +57,8 @@ CONF_SELL_COST_ENTITY_ID = "sell_cost_entity_id"
 CONF_BUY_COST_ENTITY_ID = "buy_cost_entity_id"
 CONF_SELL_TAX_PERCENT_ENTITY_ID = "sell_tax_percent_entity_id"
 CONF_SMOOTH_PRODUCTION = "smooth_production"
+CONF_SMOOTHING_WINDOW_MIN = "smoothing_window_min"
+CONF_BATTERY_RECHARGE_RESERVE_W = "battery_recharge_reserve_w"
 CONF_REFRESH_PERIOD_SEC = "refresh_period_sec"
 CONF_NAME = "name"
 CONF_ENTITY_ID = "entity_id"

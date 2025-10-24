@@ -2,6 +2,7 @@
 
 import logging
 import math
+from collections import deque
 from datetime import datetime, timedelta, time
 from typing import Any
 
@@ -23,7 +24,7 @@ from homeassistant.util.unit_conversion import (
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN, DEFAULT_RAZ_TIME
+from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN, DEFAULT_RAZ_TIME, DEFAULT_SMOOTHING_WINDOW_MIN, DEFAULT_BATTERY_RECHARGE_RESERVE_W, CONF_SMOOTHING_WINDOW_MIN, CONF_BATTERY_RECHARGE_RESERVE_W
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 
@@ -64,9 +65,12 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._buy_cost_entity_id: str = None
         self._sell_tax_percent_entity_id: str = None
         self._smooth_production: bool = True
+        self._smoothing_window_min: int = 0
+        self._production_window: deque = deque()
         self._last_production: float = 0.0
         self._battery_soc_entity_id: str = None
         self._battery_charge_power_entity_id: str = None
+        self._battery_recharge_reserve_w: float = 0.0
         self._raz_time: time = None
 
         self._central_config_done = False
@@ -122,7 +126,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             "battery_charge_power_entity_id"
         )
         self._smooth_production = config.data.get("smooth_production") is True
+        self._smoothing_window_min = int(config.data.get(CONF_SMOOTHING_WINDOW_MIN, DEFAULT_SMOOTHING_WINDOW_MIN))
+        self._production_window = deque()
         self._last_production = 0.0
+        self._battery_recharge_reserve_w = float(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_W, DEFAULT_BATTERY_RECHARGE_RESERVE_W))
 
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
@@ -155,15 +162,44 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             )
             return None
 
-        if not self._smooth_production:
-            calculated_data["power_production"] = power_production
-        else:
-            self._last_production = round(
-                0.5 * self._last_production + 0.5 * power_production
-            )
-            calculated_data["power_production"] = self._last_production
-
+        # Always store raw production in power_production_brut
         calculated_data["power_production_brut"] = power_production
+
+        # Apply sliding-window smoothing if enabled
+        if not self._smooth_production or self._smoothing_window_min <= 0:
+            # No smoothing: use raw production
+            calculated_data["power_production"] = power_production
+            calculated_data["power_production_smoothing_mode"] = "none"
+            calculated_data["power_production_window_count"] = 0
+        else:
+            # Sliding-window smoothing enabled
+            now = datetime.now()
+            
+            # Add current production to window
+            self._production_window.append((now, power_production))
+            
+            # Remove old entries outside the window
+            cutoff_time = now - timedelta(minutes=self._smoothing_window_min)
+            while self._production_window and self._production_window[0][0] < cutoff_time:
+                self._production_window.popleft()
+            
+            # Calculate average of values in window
+            if self._production_window:
+                avg_production = sum(prod for _, prod in self._production_window) / len(self._production_window)
+                calculated_data["power_production"] = round(avg_production)
+            else:
+                calculated_data["power_production"] = power_production
+            
+            calculated_data["power_production_smoothing_mode"] = "sliding_window"
+            calculated_data["power_production_window_count"] = len(self._production_window)
+            
+            _LOGGER.debug(
+                "Sliding-window smoothing: raw=%s, smoothed=%s, window_size=%s, window_minutes=%s",
+                power_production,
+                calculated_data["power_production"],
+                len(self._production_window),
+                self._smoothing_window_min
+            )
 
         calculated_data["power_consumption"] = get_safe_float(
             self.hass, self._power_consumption_entity_id, "W"
@@ -190,6 +226,20 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         )
 
         calculated_data["priority_weight"] = self.priority_weight
+
+        # Apply battery recharge reserve if configured
+        if self._battery_recharge_reserve_w > 0 and calculated_data["battery_soc"] < 100:
+            reserved_watts = min(self._battery_recharge_reserve_w, calculated_data["power_production"])
+            calculated_data["power_production"] = max(0, calculated_data["power_production"] - reserved_watts)
+            calculated_data["power_production_reserved"] = reserved_watts
+            _LOGGER.debug(
+                "Battery reserve applied: reserved=%sW, battery_soc=%s%%, remaining_production=%sW",
+                reserved_watts,
+                calculated_data["battery_soc"],
+                calculated_data["power_production"]
+            )
+        else:
+            calculated_data["power_production_reserved"] = 0
 
         #
         # Call Algorithm Recuit simulé
