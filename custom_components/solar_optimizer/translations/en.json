@@ -27,7 +27,11 @@
                     "smooth_production": "Smooth the solar production",
                     "battery_soc_entity_id": "Battery state of charge",
                     "battery_charge_power_entity_id": "Battery charging power",
-                    "raz_time": "Reset counter time"
+                    "raz_time": "Reset counter time",
+                    "smoothing_production_window_min": "Production smoothing window (min)",
+                    "smoothing_consumption_window_min": "Consumption smoothing window (min)",
+                    "smoothing_battery_window_min": "Battery smoothing window (min)",
+                    "battery_recharge_reserve_w": "Battery recharge reserve (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
@@ -40,7 +44,11 @@
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
                     "battery_soc_entity_id": "The entity id of the battery state of charge in %. If you don't have battery, keep it empty",
                     "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
-                    "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation"
+                    "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation",
+                    "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Set to 0 to disable. Recommended: 3-5 minutes for unstable weather.",
+                    "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Set to 0 to disable. Recommended: 3 minutes if consumption fluctuates with solar changes.",
+                    "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Set to 0 to disable. Recommended: 3 minutes if battery power fluctuates with solar changes.",
+                    "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices."
                 }
             },
             "device": {
@@ -159,7 +167,11 @@
                     "smooth_production": "Smooth the solar production",
                     "battery_soc_entity_id": "Battery state of charge",
                     "battery_charge_power_entity_id": "Battery charging power",
-                    "raz_time": "Reset counter time"
+                    "raz_time": "Reset counter time",
+                    "smoothing_production_window_min": "Production smoothing window (min)",
+                    "smoothing_consumption_window_min": "Consumption smoothing window (min)",
+                    "smoothing_battery_window_min": "Battery smoothing window (min)",
+                    "battery_recharge_reserve_w": "Battery recharge reserve (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
@@ -172,7 +184,11 @@
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
                     "battery_soc_entity_id": "The entity id of the battery state of charge in %. If you don't have battery, keep it empty",
                     "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
-                    "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation"
+                    "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation",
+                    "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Set to 0 to disable. Recommended: 3-5 minutes for unstable weather.",
+                    "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Set to 0 to disable. Recommended: 3 minutes if consumption fluctuates with solar changes.",
+                    "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Set to 0 to disable. Recommended: 3 minutes if battery power fluctuates with solar changes.",
+                    "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices."
                 }
             },
             "device": {
