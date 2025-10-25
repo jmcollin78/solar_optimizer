@@ -167,6 +167,20 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
         else:
             return UnitOfPower.WATT
 
+    @property
+    def extra_state_attributes(self) -> dict[str, any] | None:
+        """Return extra state attributes for power_production sensor."""
+        if self.idx == "power_production" and self.coordinator and self.coordinator.data:
+            attributes = {}
+            # Add battery reserve reduction active flag
+            if "battery_reserve_reduction_active" in self.coordinator.data:
+                attributes["battery_reserve_reduction_active"] = self.coordinator.data["battery_reserve_reduction_active"]
+            # Add reserved watts if available
+            if "power_production_reserved" in self.coordinator.data:
+                attributes["power_production_reserved"] = self.coordinator.data["power_production_reserved"]
+            return attributes if attributes else None
+        return None
+
 
 class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     """Gives the time in minute in which the device was on for a day"""

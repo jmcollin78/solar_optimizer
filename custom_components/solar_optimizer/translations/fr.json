@@ -31,7 +31,8 @@
                     "smoothing_production_window_min": "Fenêtre de lissage production (min)",
                     "smoothing_consumption_window_min": "Fenêtre de lissage consommation (min)",
                     "smoothing_battery_window_min": "Fenêtre de lissage batterie (min)",
-                    "battery_recharge_reserve_w": "Réserve de recharge batterie (W)"
+                    "battery_recharge_reserve_w": "Réserve de recharge batterie (W)",
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve batterie avant le lissage"
                 },
                 "data_description": {
                     "refresh_period_sec": "Période de rafraichissement en secondes. Attention des calculs lourds sont effectués à chaque période. Ne pas rafraichir trop souvent",
@@ -48,7 +49,8 @@
                     "smoothing_production_window_min": "Taille de la fenêtre en minutes pour lisser la production solaire. Définir à 0 pour désactiver. Recommandé : 3-5 minutes par temps instable.",
                     "smoothing_consumption_window_min": "Taille de la fenêtre en minutes pour lisser la consommation électrique. Définir à 0 pour désactiver. Recommandé : 3 minutes si la consommation fluctue avec les changements solaires.",
                     "smoothing_battery_window_min": "Taille de la fenêtre en minutes pour lisser la puissance de charge de la batterie. Définir à 0 pour désactiver. Recommandé : 3 minutes si la puissance de la batterie fluctue avec les changements solaires.",
-                    "battery_recharge_reserve_w": "Réserver ce nombre de watts de la production solaire pour la charge de la batterie lorsque le SOC de la batterie < 100%. Définir à 0 pour désactiver. Cela garantit que la batterie a la priorité sur les appareils."
+                    "battery_recharge_reserve_w": "Réserver ce nombre de watts de la production solaire pour la charge de la batterie lorsque le SOC de la batterie < 100%. Définir à 0 pour désactiver. Cela garantit que la batterie a la priorité sur les appareils.",
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve avant le lissage pour des transitions plus douces. Pertinent uniquement lorsque le lissage est activé."
                 }
             },
             "device": {
@@ -171,7 +173,8 @@
                     "smoothing_production_window_min": "Fenêtre de lissage production (min)",
                     "smoothing_consumption_window_min": "Fenêtre de lissage consommation (min)",
                     "smoothing_battery_window_min": "Fenêtre de lissage batterie (min)",
-                    "battery_recharge_reserve_w": "Réserve de recharge batterie (W)"
+                    "battery_recharge_reserve_w": "Réserve de recharge batterie (W)",
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve batterie avant le lissage"
                 },
                 "data_description": {
                     "refresh_period_sec": "Période de rafraichissement en secondes. Attention des calculs lourds sont effectués à chaque période. Ne pas rafraichir trop souvent",
@@ -188,7 +191,8 @@
                     "smoothing_production_window_min": "Taille de la fenêtre en minutes pour lisser la production solaire. Définir à 0 pour désactiver. Recommandé : 3-5 minutes par temps instable.",
                     "smoothing_consumption_window_min": "Taille de la fenêtre en minutes pour lisser la consommation électrique. Définir à 0 pour désactiver. Recommandé : 3 minutes si la consommation fluctue avec les changements solaires.",
                     "smoothing_battery_window_min": "Taille de la fenêtre en minutes pour lisser la puissance de charge de la batterie. Définir à 0 pour désactiver. Recommandé : 3 minutes si la puissance de la batterie fluctue avec les changements solaires.",
-                    "battery_recharge_reserve_w": "Réserver ce nombre de watts de la production solaire pour la charge de la batterie lorsque le SOC de la batterie < 100%. Définir à 0 pour désactiver. Cela garantit que la batterie a la priorité sur les appareils."
+                    "battery_recharge_reserve_w": "Réserver ce nombre de watts de la production solaire pour la charge de la batterie lorsque le SOC de la batterie < 100%. Définir à 0 pour désactiver. Cela garantit que la batterie a la priorité sur les appareils.",
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve avant le lissage pour des transitions plus douces. Pertinent uniquement lorsque le lissage est activé."
                 }
             },
             "device": {
