@@ -49,7 +49,7 @@
                     "smoothing_production_window_min": "Fenstergröße in Minuten zur Glättung der Solarproduktion. Auf 0 setzen zum Deaktivieren. Empfohlen: 3-5 Minuten bei instabilem Wetter.",
                     "smoothing_consumption_window_min": "Fenstergröße in Minuten zur Glättung des Stromverbrauchs. Auf 0 setzen zum Deaktivieren. Empfohlen: 3 Minuten, wenn der Verbrauch mit Solaränderungen schwankt.",
                     "smoothing_battery_window_min": "Fenstergröße in Minuten zur Glättung der Batterieladeleistung. Auf 0 setzen zum Deaktivieren. Empfohlen: 3 Minuten, wenn die Batterieleistung mit Solaränderungen schwankt.",
-                    "battery_recharge_reserve_w": "Reservieren Sie diese Anzahl von Watt aus der Solarproduktion für das Laden der Batterie, wenn der Batterie-SOC < 100% ist. Auf 0 setzen zum Deaktivieren. Dies stellt sicher, dass die Batterie Vorrang vor Geräten hat."
+                    "battery_recharge_reserve_w": "Reservieren Sie diese Anzahl von Watt aus der Solarproduktion für das Laden der Batterie, wenn der Batterie-SOC < 100% ist. Auf 0 setzen zum Deaktivieren. Dies stellt sicher, dass die Batterie Vorrang vor Geräten hat.",
                     "battery_recharge_reserve_before_smoothing": "Ladestrom Reserve für Batterie vor dem Glätten anwenden, um glattere Übergänge zu ermöglichen wenn die Reserve nicht mehr benötigt wird (Batterie bei 100%). Nur relevant wenn Glättung aktiviert ist."
                 }
             },
