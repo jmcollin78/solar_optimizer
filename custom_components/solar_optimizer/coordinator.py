@@ -33,10 +33,12 @@ from .const import (
     DEFAULT_SMOOTHING_CONSUMPTION_WINDOW_MIN,
     DEFAULT_SMOOTHING_BATTERY_WINDOW_MIN,
     DEFAULT_BATTERY_RECHARGE_RESERVE_W,
+    DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
     CONF_SMOOTHING_PRODUCTION_WINDOW_MIN,
     CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN,
     CONF_SMOOTHING_BATTERY_WINDOW_MIN,
     CONF_BATTERY_RECHARGE_RESERVE_W,
+    CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
 )
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
@@ -88,6 +90,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_soc_entity_id: str = None
         self._battery_charge_power_entity_id: str = None
         self._battery_recharge_reserve_w: float = 0.0
+        self._battery_recharge_reserve_before_smoothing: bool = False
         self._raz_time: time = None
 
         self._central_config_done = False
@@ -151,6 +154,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_window = deque()
         self._last_production = 0.0
         self._battery_recharge_reserve_w = float(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_W, DEFAULT_BATTERY_RECHARGE_RESERVE_W))
+        self._battery_recharge_reserve_before_smoothing = bool(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING))
 
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
@@ -227,9 +231,28 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         # Always store raw production in power_production_brut
         calculated_data["power_production_brut"] = power_production
 
+        # Apply battery recharge reserve before smoothing if configured
+        if self._battery_recharge_reserve_before_smoothing and self._battery_recharge_reserve_w > 0:
+            soc_for_reserve = get_safe_float(self.hass, self._battery_soc_entity_id)
+            battery_soc_for_reserve = soc_for_reserve if soc_for_reserve is not None else 0
+            if battery_soc_for_reserve < 100:
+                reserved_watts = min(self._battery_recharge_reserve_w, power_production)
+                power_production = max(0, power_production - reserved_watts)
+                calculated_data["power_production_reserved"] = reserved_watts
+                _LOGGER.debug(
+                    "Battery reserve applied BEFORE smoothing: reserved=%sW, battery_soc=%s%%, remaining_production=%sW",
+                    reserved_watts,
+                    battery_soc_for_reserve,
+                    power_production
+                )
+            else:
+                calculated_data["power_production_reserved"] = 0
+        else:
+            calculated_data["power_production_reserved"] = 0
+
         # Apply sliding-window smoothing to production if enabled
         if not self._smooth_production or self._smoothing_window_min <= 0:
-            # No smoothing: use raw production
+            # No smoothing: use raw production (possibly with reserve already subtracted)
             calculated_data["power_production"] = power_production
             calculated_data["power_production_smoothing_mode"] = "none"
             calculated_data["power_production_window_count"] = 0
@@ -297,18 +320,19 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         calculated_data["priority_weight"] = self.priority_weight
 
-        # Apply battery recharge reserve if configured
-        if self._battery_recharge_reserve_w > 0 and calculated_data["battery_soc"] < 100:
+        # Apply battery recharge reserve after smoothing if configured (and not already applied before)
+        if not self._battery_recharge_reserve_before_smoothing and self._battery_recharge_reserve_w > 0 and calculated_data["battery_soc"] < 100:
             reserved_watts = min(self._battery_recharge_reserve_w, calculated_data["power_production"])
             calculated_data["power_production"] = max(0, calculated_data["power_production"] - reserved_watts)
             calculated_data["power_production_reserved"] = reserved_watts
             _LOGGER.debug(
-                "Battery reserve applied: reserved=%sW, battery_soc=%s%%, remaining_production=%sW",
+                "Battery reserve applied AFTER smoothing: reserved=%sW, battery_soc=%s%%, remaining_production=%sW",
                 reserved_watts,
                 calculated_data["battery_soc"],
                 calculated_data["power_production"]
             )
-        else:
+        elif not self._battery_recharge_reserve_before_smoothing:
+            # Only set to 0 if we're in "after smoothing" mode and conditions aren't met
             calculated_data["power_production_reserved"] = 0
 
         #
