@@ -31,7 +31,8 @@
                     "smoothing_production_window_min": "Production smoothing window (min)",
                     "smoothing_consumption_window_min": "Consumption smoothing window (min)",
                     "smoothing_battery_window_min": "Battery smoothing window (min)",
-                    "battery_recharge_reserve_w": "Battery recharge reserve (W)"
+                    "battery_recharge_reserve_w": "Battery recharge reserve (W)",
+                    "battery_recharge_reserve_before_smoothing": "Apply battery reserve before smoothing"
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
@@ -48,7 +49,8 @@
                     "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Set to 0 to disable. Recommended: 3-5 minutes for unstable weather.",
                     "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Set to 0 to disable. Recommended: 3 minutes if consumption fluctuates with solar changes.",
                     "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Set to 0 to disable. Recommended: 3 minutes if battery power fluctuates with solar changes.",
-                    "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices."
+                    "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices.",
+                    "battery_recharge_reserve_before_smoothing": "When enabled, battery reserve is subtracted before smoothing is applied, creating smoother transitions. When disabled (default), reserve is subtracted after smoothing. Only relevant when smoothing is enabled."
                 }
             },
             "device": {
@@ -171,7 +173,8 @@
                     "smoothing_production_window_min": "Production smoothing window (min)",
                     "smoothing_consumption_window_min": "Consumption smoothing window (min)",
                     "smoothing_battery_window_min": "Battery smoothing window (min)",
-                    "battery_recharge_reserve_w": "Battery recharge reserve (W)"
+                    "battery_recharge_reserve_w": "Battery recharge reserve (W)",
+                    "battery_recharge_reserve_before_smoothing": "Apply battery reserve before smoothing"
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
@@ -188,7 +191,8 @@
                     "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Set to 0 to disable. Recommended: 3-5 minutes for unstable weather.",
                     "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Set to 0 to disable. Recommended: 3 minutes if consumption fluctuates with solar changes.",
                     "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Set to 0 to disable. Recommended: 3 minutes if battery power fluctuates with solar changes.",
-                    "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices."
+                    "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices.",
+                    "battery_recharge_reserve_before_smoothing": "When enabled, battery reserve is subtracted before smoothing is applied, creating smoother transitions. When disabled (default), reserve is subtracted after smoothing. Only relevant when smoothing is enabled."
                 }
             },
             "device": {
