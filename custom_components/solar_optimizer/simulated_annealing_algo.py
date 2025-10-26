@@ -280,15 +280,13 @@ class SimulatedAnnealingAlgorithm:
                 if solution_turns_off:
                     # Penalty proportional to the power being turned off
                     # Normalized by total production to make it scale-invariant
+                    penalty_value = 0
                     if self._production_solaire > 0:
                         power_fraction = current_power / self._production_solaire
-                        switching_penalty += self._switching_penalty_factor * power_fraction
+                        penalty_value = self._switching_penalty_factor * power_fraction
+                        switching_penalty += penalty_value
 
                     if DEBUG:
-                        penalty_value = (
-                            self._switching_penalty_factor * power_fraction
-                            if self._production_solaire > 0 else 0
-                        )
                         _LOGGER.debug(
                             "Switching penalty for turning off %s (%.2fW): +%.4f",
                             equip["name"],
