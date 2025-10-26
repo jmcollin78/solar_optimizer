@@ -227,18 +227,18 @@ class SimulatedAnnealingAlgorithm:
         # Calculate total consumption (base household + managed devices from solution)
         # household_consumption already has current devices subtracted, so we add solution devices directly
         total_consumption = self._consommation_net + puissance_totale_eqt
-        
+
         # Calculate net consumption (total - production)
         # Positive = import, negative = export
         new_consommation_net = total_consumption - self._production_solaire
-        
+
         new_rejets = 0 if new_consommation_net >= 0 else -new_consommation_net
         new_import = 0 if new_consommation_net < 0 else new_consommation_net
         new_consommation_solaire = min(
             self._production_solaire, total_consumption
         )
         new_consommation_totale = total_consumption
-        
+
         if DEBUG:
             _LOGGER.debug(
                 "Objective: devices in solution use %.3fW. Total consumption=%.3fW, Net consumption=%.3fW. Export=%.3fW. Import=%.3fW. Solar used=%.3fW",
@@ -255,11 +255,14 @@ class SimulatedAnnealingAlgorithm:
         coef_rejets = (cout_revente_impose) / (self._cout_achat + cout_revente_impose)
 
         consumption_coef = coef_import * new_import + coef_rejets * new_rejets
-        
+
         # calculate the priority coef as the sum of the priority of all devices
         # in the solution
         if puissance_totale_eqt > 0:
-            priority_coef = sum((equip["priority"] * equip["requested_power"] / puissance_totale_eqt) for i, equip in enumerate(solution) if equip["state"])
+            priority_coef = sum(
+                (equip["priority"] * equip["requested_power"] / puissance_totale_eqt)
+                for i, equip in enumerate(solution) if equip["state"]
+            )
         else:
             priority_coef = 0
         priority_weight = self._priority_weight
@@ -273,23 +276,31 @@ class SimulatedAnnealingAlgorithm:
                 current_power = equip.get("current_power", 0)
                 is_currently_active = current_power > 0
                 solution_turns_off = not equip["state"] and is_currently_active
-                
+
                 if solution_turns_off:
                     # Penalty proportional to the power being turned off
                     # Normalized by total production to make it scale-invariant
                     if self._production_solaire > 0:
                         power_fraction = current_power / self._production_solaire
                         switching_penalty += self._switching_penalty_factor * power_fraction
-                    
+
                     if DEBUG:
+                        penalty_value = (
+                            self._switching_penalty_factor * power_fraction
+                            if self._production_solaire > 0 else 0
+                        )
                         _LOGGER.debug(
                             "Switching penalty for turning off %s (%.2fW): +%.4f",
                             equip["name"],
                             current_power,
-                            self._switching_penalty_factor * power_fraction if self._production_solaire > 0 else 0
+                            penalty_value
                         )
 
-        ret = consumption_coef * (1.0 - priority_weight) + priority_coef * priority_weight + switching_penalty
+        ret = (
+            consumption_coef * (1.0 - priority_weight)
+            + priority_coef * priority_weight
+            + switching_penalty
+        )
         return ret
 
     def generer_solution_initiale(self, solution):
