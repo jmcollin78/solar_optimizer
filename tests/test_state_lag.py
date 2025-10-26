@@ -105,20 +105,19 @@ async def test_device_switching_with_state_lag(
     
     # With the fix:
     # Device A: requested_power=0, HA state shows ON (1000W)
-    #   -> Should use requested_power=0 (we asked it to turn off)
+    #   -> Should use requested_power=0 (deactivation lag handling)
     # Device B: requested_power=1900, HA state shows OFF (0W)  
-    #   -> Should use requested_power=1900 (we asked it to turn on, state lagging)
+    #   -> Should use requested_power=1900 (activation lag handling)
     
-    assert device_a.current_power == 1000, \
-        "Device A should show 1000W because HA state still shows ON (hasn't updated yet)"
+    assert device_a.current_power == 0, \
+        f"Device A should use requested_power=0W even though HA state shows ON (deactivation lag). Got {device_a.current_power}W"
     
     assert device_b.current_power == 1900, \
-        f"Device B should use requested_power=1900W even though HA state shows OFF. Got {device_b.current_power}W"
+        f"Device B should use requested_power=1900W even though HA state shows OFF (activation lag). Got {device_b.current_power}W"
     
-    # Total distributed power should be 1000 + 1900 = 2900W
-    # But with the fix, we should correctly account for Device B's 1900W even though its state hasn't updated
-    # The actual behavior depends on when we read: if Device A hasn't turned off yet, we get both
-    # This test verifies that at minimum, Device B's power is correctly tracked
+    # Total distributed power should now correctly be 0 + 1900 = 1900W
+    # NOT 1000 + 0 = 1000W (the bug) or 1000 + 1900 = 2900W (old understanding)
+    # This prevents the algorithm from thinking there's more power available than there is
 
 
 async def test_device_power_tracking_with_requested_power(
@@ -168,7 +167,7 @@ async def test_device_power_tracking_with_requested_power(
     assert device.current_power == 2000, \
         "Should use actual state when it matches requested"
     
-    # Test 3: Device OFF in HA, requested_power=0 (we turned it off)
+    # Test 3: Device OFF in HA, requested_power=0 (we turned it off and HA updated)
     # Should use actual state (0)
     await fake_input_bool.async_turn_off()
     await hass.async_block_till_done()
@@ -176,16 +175,24 @@ async def test_device_power_tracking_with_requested_power(
     device.set_requested_power(0)
     device.set_current_power_with_device_state()
     assert device.current_power == 0, \
-        "Should use actual state (0) when requested_power is 0"
+        "Should use actual state (0) when requested_power is 0 and HA updated"
     
     # Test 4: Device ON in HA (old state), but we turned it off (requested_power=0)
-    # Should trust actual state, not force to 0 based on requested_power
+    # This is DEACTIVATION LAG - should use requested_power=0
     await fake_input_bool.async_turn_on()
     await hass.async_block_till_done()
     
     device.set_requested_power(0)  # We asked to turn off
     device.set_current_power_with_device_state()
-    # The device state shows ON, so current_power should be 2000
-    # even though we asked to turn it off - trust the actual measurement
+    # With the fix: should use requested_power=0 (deactivation lag)
+    # This prevents counting the device as still using power when we just turned it off
+    assert device.current_power == 0, \
+        "Should use requested_power=0 when device was turned off but HA still shows ON (deactivation lag)"
+    
+    # Test 5: Device consuming more than requested (both ON)
+    # Should trust actual state (device might be using more power than expected)
+    device.set_requested_power(1000)  # We asked for 1000W
+    # But actual state shows 2000W (device using more than requested)
+    device.set_current_power_with_device_state()
     assert device.current_power == 2000, \
-        "Should trust actual state when it shows higher power than requested"
+        "Should trust actual state when device is consuming more than requested"

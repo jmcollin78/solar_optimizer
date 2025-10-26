@@ -390,20 +390,32 @@ class ManagedDevice:
                     actual_state_power,
                 )
         
-        # Handle potential lag between command and state update:
-        # - If we requested power > 0 (device ON) but HA shows less power (not updated yet),
-        #   use requested_power to avoid underestimating consumption
-        # - If actual power is higher, trust the actual reading (device using more than expected)
-        # - This prevents the bug where newly activated devices appear as 0W due to state lag
-        if self._requested_power > 0 and actual_state_power < self._requested_power:
+        # Handle potential lag between command and state update for BOTH activation and deactivation:
+        # 1. Device just turned OFF: requested=0 but HA still shows ON (actual>0)
+        #    -> Use requested=0 to avoid overestimating consumption
+        # 2. Device just turned ON: requested>0 but HA still shows OFF (actual<requested)
+        #    -> Use requested to avoid underestimating consumption
+        # 3. Device consuming more than requested: actual > requested (both >0)
+        #    -> Trust actual (device might be using more power than expected)
+        if self._requested_power == 0 and actual_state_power > 0:
+            # Deactivation lag: we turned it off but HA still shows it on
+            self._current_power = 0
+            _LOGGER.info(
+                "Device %s: using requested_power=0W (HA state shows %sW, deactivation lag)",
+                self._name,
+                actual_state_power,
+            )
+        elif self._requested_power > 0 and actual_state_power < self._requested_power:
+            # Activation lag: we turned it on but HA hasn't updated yet
             self._current_power = self._requested_power
             _LOGGER.info(
-                "Device %s: using requested_power=%sW (HA state shows %sW, likely state lag)",
+                "Device %s: using requested_power=%sW (HA state shows %sW, activation lag)",
                 self._name,
                 self._current_power,
                 actual_state_power,
             )
         else:
+            # Normal case: trust the actual sensor reading
             self._current_power = actual_state_power
             _LOGGER.debug(
                 "Device %s: using actual state power=%sW (requested was %sW)",
