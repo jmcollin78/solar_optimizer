@@ -31,14 +31,16 @@ from .const import (
     DEFAULT_RAZ_TIME,
     DEFAULT_SMOOTHING_PRODUCTION_WINDOW_MIN,
     DEFAULT_SMOOTHING_CONSUMPTION_WINDOW_MIN,
-    DEFAULT_SMOOTHING_BATTERY_WINDOW_MIN,
+    DEFAULT_SMOOTHING_HOUSEHOLD_WINDOW_MIN,
     DEFAULT_BATTERY_RECHARGE_RESERVE_W,
     DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
+    DEFAULT_MIN_EXPORT_MARGIN_W,
     CONF_SMOOTHING_PRODUCTION_WINDOW_MIN,
     CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN,
-    CONF_SMOOTHING_BATTERY_WINDOW_MIN,
+    CONF_SMOOTHING_HOUSEHOLD_WINDOW_MIN,
     CONF_BATTERY_RECHARGE_RESERVE_W,
     CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
+    CONF_MIN_EXPORT_MARGIN_W,
 )
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
@@ -86,8 +88,6 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._consumption_window: deque = deque()
         self._smoothing_household_window_min: int = 0
         self._household_window: deque = deque()
-        self._smoothing_battery_window_min: int = 0
-        self._battery_window: deque = deque()
         self._last_production: float = 0.0
         self._battery_soc_entity_id: str = None
         self._battery_charge_power_entity_id: str = None
@@ -155,8 +155,6 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._consumption_window = deque()
         self._smoothing_household_window_min = int(config.data.get(CONF_SMOOTHING_HOUSEHOLD_WINDOW_MIN, DEFAULT_SMOOTHING_HOUSEHOLD_WINDOW_MIN))
         self._household_window = deque()
-        self._smoothing_battery_window_min = int(config.data.get(CONF_SMOOTHING_BATTERY_WINDOW_MIN, DEFAULT_SMOOTHING_BATTERY_WINDOW_MIN))
-        self._battery_window = deque()
         self._last_production = 0.0
         self._battery_recharge_reserve_w = float(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_W, DEFAULT_BATTERY_RECHARGE_RESERVE_W))
         self._battery_recharge_reserve_before_smoothing = bool(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING))
@@ -310,23 +308,12 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         soc = get_safe_float(self.hass, self._battery_soc_entity_id)
         calculated_data["battery_soc"] = soc if soc is not None else 0
 
-        # Get raw battery charge power and apply smoothing if configured
+        # Get raw battery charge power (for diagnostics only, no smoothing)
         charge_power_raw = get_safe_float(self.hass, self._battery_charge_power_entity_id)
         calculated_data["battery_charge_power_brut"] = charge_power_raw if charge_power_raw is not None else 0
-        
-        if self._smoothing_battery_window_min > 0 and charge_power_raw is not None:
-            calculated_data["battery_charge_power"] = self._apply_smoothing_window(
-                self._battery_window,
-                self._smoothing_battery_window_min,
-                charge_power_raw,
-                "battery_charge_power"
-            )
-            calculated_data["battery_charge_power_smoothing_mode"] = "sliding_window"
-            calculated_data["battery_charge_power_window_count"] = len(self._battery_window)
-        else:
-            calculated_data["battery_charge_power"] = charge_power_raw if charge_power_raw is not None else 0
-            calculated_data["battery_charge_power_smoothing_mode"] = "none"
-            calculated_data["battery_charge_power_window_count"] = 0
+        calculated_data["battery_charge_power"] = charge_power_raw if charge_power_raw is not None else 0
+        calculated_data["battery_charge_power_smoothing_mode"] = "none"
+        calculated_data["battery_charge_power_window_count"] = 0
 
         calculated_data["priority_weight"] = self.priority_weight
 
@@ -347,8 +334,10 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         raw_consumption = calculated_data["power_consumption"] if calculated_data["power_consumption"] is not None else 0
         
         # Calculate base household consumption (without managed devices)
-        # Ensure it never goes below 0 (can happen temporarily during smoothing)
-        household_consumption_raw = max(0, raw_consumption - total_current_distributed_power)
+        # If this goes negative, it means devices are consuming more than the sensor reading
+        # (can happen due to reporting lag). We track this as a power deficit.
+        household_consumption_with_deficit = raw_consumption - total_current_distributed_power
+        household_consumption_raw = max(0, household_consumption_with_deficit)
         
         # Apply smoothing to household consumption if configured
         # This helps compensate for short-duration devices like fridges, kettles, etc.
@@ -359,6 +348,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 household_consumption_raw,
                 "household_consumption"
             )
+            # After smoothing, ensure it stays non-negative
+            household_consumption = max(0, household_consumption)
             calculated_data["household_consumption_smoothing_mode"] = "sliding_window"
             calculated_data["household_consumption_window_count"] = len(self._household_window)
         else:
@@ -405,10 +396,18 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         # Calculate available excess power for optimization
         # Formula: PV Production (with margin if battery at 100%) - base household consumption
-        # This represents the power available for managed devices
-        available_excess_power = max(0, 
-            effective_production - household_consumption
-        )
+        # If there was a power deficit (devices using more than sensor reading), account for it
+        if household_consumption_with_deficit < 0:
+            # Deficit means we're already over-consuming, so no excess available
+            available_excess_power = 0
+            _LOGGER.debug(
+                "Power deficit detected: devices using %.2fW more than sensor reading. No excess available.",
+                -household_consumption_with_deficit
+            )
+        else:
+            # Normal case: calculate excess from production minus household consumption
+            available_excess_power = max(0, effective_production - household_consumption)
+        
         calculated_data["available_excess_power"] = available_excess_power
         _LOGGER.debug(
             "Available excess power before optimization: %.2fW (effective_production=%.2fW, household_base=%.2fW)",
