@@ -209,20 +209,20 @@ class SimulatedAnnealingAlgorithm:
         
         With household_consumption (positive W) representing base household load (excluding managed devices)
         and solar_production:
-        - Total consumption = household_consumption + devices
+        - Total consumption = household_consumption + devices (from solution)
         - Net consumption = total_consumption - solar_production
         - If net > 0: importing from grid
         - If net < 0: exporting to grid
+        
+        Note: household_consumption already excludes currently active managed devices,
+        so we add the full device power from the solution, not the difference.
         """
 
         puissance_totale_eqt = self.consommation_equipements(solution)
-        diff_puissance_totale_eqt = (
-            puissance_totale_eqt - self._puissance_totale_eqt_initiale
-        )
 
-        # Calculate total consumption (base household + managed devices)
-        # household_consumption is the base load excluding managed devices
-        total_consumption = self._consommation_net + diff_puissance_totale_eqt
+        # Calculate total consumption (base household + managed devices from solution)
+        # household_consumption already has current devices subtracted, so we add solution devices directly
+        total_consumption = self._consommation_net + puissance_totale_eqt
         
         # Calculate net consumption (total - production)
         # Positive = import, negative = export
@@ -237,8 +237,8 @@ class SimulatedAnnealingAlgorithm:
         
         if DEBUG:
             _LOGGER.debug(
-                "Objective: this solution adds %.3fW to initial consumption. Total consumption=%.3fW, Net consumption=%.3fW. Export=%.3fW. Import=%.3fW. Solar used=%.3fW",
-                diff_puissance_totale_eqt,
+                "Objective: devices in solution use %.3fW. Total consumption=%.3fW, Net consumption=%.3fW. Export=%.3fW. Import=%.3fW. Solar used=%.3fW",
+                puissance_totale_eqt,
                 total_consumption,
                 new_consommation_net,
                 new_rejets,
@@ -263,8 +263,11 @@ class SimulatedAnnealingAlgorithm:
         return ret
 
     def generer_solution_initiale(self, solution):
-        """Generate the initial solution (which is the solution given in argument) and calculate the total initial power"""
-        self._puissance_totale_eqt_initiale = self.consommation_equipements(solution)
+        """Generate the initial solution (which is the solution given in argument)
+        
+        Note: We no longer track initial power since household_consumption
+        already excludes currently active devices.
+        """
         return copy.deepcopy(solution)
 
     def consommation_equipements(self, solution):
