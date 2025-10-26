@@ -219,9 +219,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         calculated_data = {}
 
-        # Add a device state attributes
+        # Update device current power from actual state and requested power
+        # This accounts for potential lag between sending device commands and
+        # Home Assistant state updates. See set_current_power_with_device_state()
+        # for details on how it handles state lag.
         for _, device in enumerate(self._devices):
-            # Initialize current power depending or reality
             device.set_current_power_with_device_state()
 
         # Add a power_consumption and power_production
