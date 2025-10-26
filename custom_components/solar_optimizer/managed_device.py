@@ -335,56 +335,82 @@ class ManagedDevice:
             )
 
     def set_current_power_with_device_state(self):
-        """Set the current power according to the real device state"""
+        """Set the current power according to the real device state
+        
+        This method accounts for potential lag between sending commands to devices
+        and Home Assistant state updates. When there's a discrepancy between the
+        requested power and actual device state, it uses requested_power to ensure
+        accurate power tracking during state transitions.
+        """
+        # First, read the actual power from the device state
+        actual_state_power = 0
+        
         if not self.is_active:
-            self._current_power = 0
+            actual_state_power = 0
             _LOGGER.debug(
-                "Set current_power to 0 for device %s cause not active", self._name
+                "Device %s is not active according to HA state", self._name
             )
-            return
-
-        if not self._can_change_power:
-            self._current_power = self.power_max
+        elif not self._can_change_power:
+            actual_state_power = self.power_max
             _LOGGER.debug(
-                "Set current_power to %s for device %s cause active and not can_change_power",
-                self._current_power,
+                "Device %s is active, using power_max=%sW",
                 self._name,
+                actual_state_power,
             )
-            return
-
-        power_entity_state = self._hass.states.get(self._power_entity_id)
-        if not power_entity_state or power_entity_state.state in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
-            self._current_power = self._power_min
-            _LOGGER.debug(
-                "Set current_power to %s for device %s cause can_change_power but state is %s",
-                self._current_power,
-                self._name,
-                power_entity_state,
-            )
-            return
-
-        if self._power_entity_id.startswith(POWERED_ENTITY_DOMAINS_NEED_ATTR):
-            # TODO : move this part to device initialisation, make new instance variable
-            service_name = self._change_power_service # retrieve attribute from power service
-            parties = self._change_power_service.split("/")
-            if len(parties) < 2:
-                raise ConfigurationError(
-                    f"Incorrect service declaration for power entity. Service {service_name} should be formatted with: 'domain/action/attribute'"
-                )
-            parameter = parties[2]
-            power_entity_value = power_entity_state.attributes[parameter]
         else:
-            power_entity_value = power_entity_state.state
+            # Device can change power - read from power entity
+            power_entity_state = self._hass.states.get(self._power_entity_id)
+            if not power_entity_state or power_entity_state.state in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
+                actual_state_power = self._power_min
+                _LOGGER.debug(
+                    "Device %s power entity unavailable, using power_min=%sW",
+                    self._name,
+                    actual_state_power,
+                )
+            else:
+                if self._power_entity_id.startswith(POWERED_ENTITY_DOMAINS_NEED_ATTR):
+                    # TODO : move this part to device initialisation, make new instance variable
+                    service_name = self._change_power_service # retrieve attribute from power service
+                    parties = self._change_power_service.split("/")
+                    if len(parties) < 2:
+                        raise ConfigurationError(
+                            f"Incorrect service declaration for power entity. Service {service_name} should be formatted with: 'domain/action/attribute'"
+                        )
+                    parameter = parties[2]
+                    power_entity_value = power_entity_state.attributes[parameter]
+                else:
+                    power_entity_value = power_entity_state.state
 
-        self._current_power = round(
-            float(power_entity_value) * self._convert_power_divide_factor
-        )
-        _LOGGER.debug(
-            "Set current_power to %s for device %s cause can_change_power and amps is %s",
-            self._current_power,
-            self._name,
-            power_entity_value,
-        )
+                actual_state_power = round(
+                    float(power_entity_value) * self._convert_power_divide_factor
+                )
+                _LOGGER.debug(
+                    "Device %s power entity shows %sW",
+                    self._name,
+                    actual_state_power,
+                )
+        
+        # Handle potential lag between command and state update:
+        # - If we requested power > 0 (device ON) but HA shows less power (not updated yet),
+        #   use requested_power to avoid underestimating consumption
+        # - If actual power is higher, trust the actual reading (device using more than expected)
+        # - This prevents the bug where newly activated devices appear as 0W due to state lag
+        if self._requested_power > 0 and actual_state_power < self._requested_power:
+            self._current_power = self._requested_power
+            _LOGGER.info(
+                "Device %s: using requested_power=%sW (HA state shows %sW, likely state lag)",
+                self._name,
+                self._current_power,
+                actual_state_power,
+            )
+        else:
+            self._current_power = actual_state_power
+            _LOGGER.debug(
+                "Device %s: using actual state power=%sW (requested was %sW)",
+                self._name,
+                self._current_power,
+                self._requested_power,
+            )
 
     def set_enable(self, enable: bool):
         """Enable or disable the ManagedDevice for Solar Optimizer"""
