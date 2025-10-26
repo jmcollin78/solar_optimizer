@@ -83,7 +83,7 @@ class SimulatedAnnealingAlgorithm:
             or sell_tax_percent is None
         ):
             _LOGGER.info(
-                "Not all informations are available for Simulated Annealign algorithm to work. Calculation is abandoned"
+                "Not all information is available for Simulated Annealing algorithm to work. Calculation is abandoned"
             )
             return [], -1, -1
 
@@ -235,7 +235,7 @@ class SimulatedAnnealingAlgorithm:
         
         if DEBUG:
             _LOGGER.debug(
-                "Objectif : cette solution ajoute %.3fW a la consommation initial. Total consumption=%.3fW, Net consumption=%.3fW. Nouveaux rejets=%.3fW (export). New import=%.3fW. Solar used=%.3fW",
+                "Objective: this solution adds %.3fW to initial consumption. Total consumption=%.3fW, Net consumption=%.3fW. Export=%.3fW. Import=%.3fW. Solar used=%.3fW",
                 diff_puissance_totale_eqt,
                 total_consumption,
                 new_consommation_net,
