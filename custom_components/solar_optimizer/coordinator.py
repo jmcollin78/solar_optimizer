@@ -84,6 +84,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._production_window: deque = deque()
         self._smoothing_consumption_window_min: int = 0
         self._consumption_window: deque = deque()
+        self._smoothing_household_window_min: int = 0
+        self._household_window: deque = deque()
         self._smoothing_battery_window_min: int = 0
         self._battery_window: deque = deque()
         self._last_production: float = 0.0
@@ -91,6 +93,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_charge_power_entity_id: str = None
         self._battery_recharge_reserve_w: float = 0.0
         self._battery_recharge_reserve_before_smoothing: bool = False
+        self._min_export_margin_w: float = 0.0
         self._raz_time: time = None
 
         self._central_config_done = False
@@ -150,11 +153,14 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._production_window = deque()
         self._smoothing_consumption_window_min = int(config.data.get(CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN, DEFAULT_SMOOTHING_CONSUMPTION_WINDOW_MIN))
         self._consumption_window = deque()
+        self._smoothing_household_window_min = int(config.data.get(CONF_SMOOTHING_HOUSEHOLD_WINDOW_MIN, DEFAULT_SMOOTHING_HOUSEHOLD_WINDOW_MIN))
+        self._household_window = deque()
         self._smoothing_battery_window_min = int(config.data.get(CONF_SMOOTHING_BATTERY_WINDOW_MIN, DEFAULT_SMOOTHING_BATTERY_WINDOW_MIN))
         self._battery_window = deque()
         self._last_production = 0.0
         self._battery_recharge_reserve_w = float(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_W, DEFAULT_BATTERY_RECHARGE_RESERVE_W))
         self._battery_recharge_reserve_before_smoothing = bool(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING))
+        self._min_export_margin_w = float(config.data.get(CONF_MIN_EXPORT_MARGIN_W, DEFAULT_MIN_EXPORT_MARGIN_W))
 
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
@@ -340,12 +346,28 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         # We subtract currently active managed devices to get the base household consumption
         raw_consumption = calculated_data["power_consumption"] if calculated_data["power_consumption"] is not None else 0
         
-        # Ensure household_consumption is positive and accounts for managed devices
-        # Formula: base_household = total_consumption - currently_distributed_devices
+        # Calculate base household consumption (without managed devices)
         # Ensure it never goes below 0 (can happen temporarily during smoothing)
-        household_consumption = max(0, raw_consumption - total_current_distributed_power)
+        household_consumption_raw = max(0, raw_consumption - total_current_distributed_power)
+        
+        # Apply smoothing to household consumption if configured
+        # This helps compensate for short-duration devices like fridges, kettles, etc.
+        if self._smoothing_household_window_min > 0:
+            household_consumption = self._apply_smoothing_window(
+                self._household_window,
+                self._smoothing_household_window_min,
+                household_consumption_raw,
+                "household_consumption"
+            )
+            calculated_data["household_consumption_smoothing_mode"] = "sliding_window"
+            calculated_data["household_consumption_window_count"] = len(self._household_window)
+        else:
+            household_consumption = household_consumption_raw
+            calculated_data["household_consumption_smoothing_mode"] = "none"
+            calculated_data["household_consumption_window_count"] = 0
         
         calculated_data["household_consumption"] = household_consumption
+        calculated_data["household_consumption_brut"] = household_consumption_raw
         calculated_data["total_current_distributed_power"] = total_current_distributed_power
 
         # Apply battery recharge reserve after smoothing if configured (and not already applied before)
@@ -365,17 +387,33 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             calculated_data["power_production_reserved"] = 0
             calculated_data["battery_reserve_reduction_active"] = False
 
+        # Apply minimum export margin when battery is at 100%
+        # This keeps a small buffer to prevent importing/battery discharge
+        effective_production = calculated_data["power_production"]
+        if calculated_data["battery_soc"] >= 100 and self._min_export_margin_w > 0:
+            effective_production = max(0, calculated_data["power_production"] - self._min_export_margin_w)
+            calculated_data["min_export_margin_active"] = True
+            calculated_data["min_export_margin_reduction"] = self._min_export_margin_w
+            _LOGGER.debug(
+                "Min export margin applied at 100%% SOC: margin=%sW, effective_production=%sW",
+                self._min_export_margin_w,
+                effective_production
+            )
+        else:
+            calculated_data["min_export_margin_active"] = False
+            calculated_data["min_export_margin_reduction"] = 0
+
         # Calculate available excess power for optimization
-        # Formula: PV Production - (Household consumption - total currently distributed power) - Battery reserve
+        # Formula: PV Production (with margin if battery at 100%) - base household consumption
         # This represents the power available for managed devices
         available_excess_power = max(0, 
-            calculated_data["power_production"] - household_consumption
+            effective_production - household_consumption
         )
         calculated_data["available_excess_power"] = available_excess_power
         _LOGGER.debug(
-            "Available excess power before optimization: %.2fW (production=%.2fW, household_base=%.2fW)",
+            "Available excess power before optimization: %.2fW (effective_production=%.2fW, household_base=%.2fW)",
             available_excess_power,
-            calculated_data["power_production"],
+            effective_production,
             household_consumption
         )
 
@@ -385,7 +423,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         best_solution, best_objective, total_power = self._algo.recuit_simule(
             self._devices,
             household_consumption,
-            calculated_data["power_production"],
+            effective_production,  # Use effective production (with min export margin if battery at 100%)
             calculated_data["sell_cost"],
             calculated_data["buy_cost"],
             calculated_data["sell_tax_percent"],

@@ -32,7 +32,9 @@
                     "smoothing_consumption_window_min": "Consumption smoothing window (min)",
                     "smoothing_battery_window_min": "Battery smoothing window (min)",
                     "battery_recharge_reserve_w": "Battery recharge reserve (W)",
-                    "battery_recharge_reserve_before_smoothing": "Apply battery reserve before smoothing"
+                    "battery_recharge_reserve_before_smoothing": "Apply battery reserve before smoothing",
+                    "smoothing_household_window_min": "Household smoothing window (min)",
+                    "min_export_margin_w": "Minimum export margin at 100% SOC (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
@@ -50,7 +52,9 @@
                     "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Default: 0 (disabled). Set to 0 to disable smoothing.",
                     "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Default: 0 (disabled). Set to 0 to disable smoothing.",
                     "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices.",
-                    "battery_recharge_reserve_before_smoothing": "Apply reserve before smoothing for smoother transitions. Only relevant when smoothing is enabled."
+                    "battery_recharge_reserve_before_smoothing": "Apply reserve before smoothing for smoother transitions. Only relevant when smoothing is enabled.",
+                    "smoothing_household_window_min": "Window size in minutes for smoothing base household consumption (excluding managed devices). Default: 0 (disabled). Recommended: 3-5 minutes to compensate for short spikes from fridges, kettles, etc.",
+                    "min_export_margin_w": "Reserve this many watts from optimization when battery is at 100% SOC. Positive values keep battery topped up by always exporting a small amount. Negative values allow slight import. Default: 0 (disabled)."
                 }
             },
             "device": {
@@ -174,7 +178,9 @@
                     "smoothing_consumption_window_min": "Consumption smoothing window (min)",
                     "smoothing_battery_window_min": "Battery smoothing window (min)",
                     "battery_recharge_reserve_w": "Battery recharge reserve (W)",
-                    "battery_recharge_reserve_before_smoothing": "Apply battery reserve before smoothing"
+                    "battery_recharge_reserve_before_smoothing": "Apply battery reserve before smoothing",
+                    "smoothing_household_window_min": "Household smoothing window (min)",
+                    "min_export_margin_w": "Minimum export margin at 100% SOC (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
@@ -192,7 +198,9 @@
                     "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Default: 0 (disabled). Set to 0 to disable smoothing.",
                     "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Default: 0 (disabled). Set to 0 to disable smoothing.",
                     "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices.",
-                    "battery_recharge_reserve_before_smoothing": "Apply reserve before smoothing for smoother transitions. Only relevant when smoothing is enabled."
+                    "battery_recharge_reserve_before_smoothing": "Apply reserve before smoothing for smoother transitions. Only relevant when smoothing is enabled.",
+                    "smoothing_household_window_min": "Window size in minutes for smoothing base household consumption (excluding managed devices). Default: 0 (disabled). Recommended: 3-5 minutes to compensate for short spikes from fridges, kettles, etc.",
+                    "min_export_margin_w": "Reserve this many watts from optimization when battery is at 100% SOC. Positive values keep battery topped up by always exporting a small amount. Negative values allow slight import. Default: 0 (disabled)."
                 }
             },
             "device": {

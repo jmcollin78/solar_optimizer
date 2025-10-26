@@ -32,7 +32,9 @@
                     "smoothing_consumption_window_min": "Fenêtre de lissage consommation (min)",
                     "smoothing_battery_window_min": "Fenêtre de lissage batterie (min)",
                     "battery_recharge_reserve_w": "Réserve de recharge batterie (W)",
-                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve batterie avant le lissage"
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve batterie avant le lissage",
+                    "smoothing_household_window_min": "Fenêtre de lissage consommation base (min)",
+                    "min_export_margin_w": "Marge d'export minimum à 100% SOC (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Période de rafraichissement en secondes. Attention des calculs lourds sont effectués à chaque période. Ne pas rafraichir trop souvent",
@@ -50,7 +52,9 @@
                     "smoothing_consumption_window_min": "Taille de la fenêtre en minutes pour lisser la consommation électrique. Par défaut : 0 (désactivé). Définir à 0 pour désactiver le lissage.",
                     "smoothing_battery_window_min": "Taille de la fenêtre en minutes pour lisser la puissance de charge de la batterie. Par défaut : 0 (désactivé). Définir à 0 pour désactiver le lissage.",
                     "battery_recharge_reserve_w": "Réserver ce nombre de watts de la production solaire pour la charge de la batterie lorsque le SOC de la batterie < 100%. Définir à 0 pour désactiver. Cela garantit que la batterie a la priorité sur les appareils.",
-                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve avant le lissage pour des transitions plus douces. Pertinent uniquement lorsque le lissage est activé."
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve avant le lissage pour des transitions plus douces. Pertinent uniquement lorsque le lissage est activé.",
+                    "smoothing_household_window_min": "Taille de la fenêtre en minutes pour lisser la consommation de base de la maison (hors appareils gérés). Par défaut : 0 (désactivé). Recommandé : 3-5 minutes pour compenser les pics courts des réfrigérateurs, bouilloires, etc.",
+                    "min_export_margin_w": "Réserver ce nombre de watts de l'optimisation lorsque la batterie est à 100% SOC. Valeurs positives maintiennent la batterie chargée en exportant toujours un peu. Valeurs négatives autorisent un léger import. Par défaut : 0 (désactivé)."
                 }
             },
             "device": {
@@ -174,7 +178,9 @@
                     "smoothing_consumption_window_min": "Fenêtre de lissage consommation (min)",
                     "smoothing_battery_window_min": "Fenêtre de lissage batterie (min)",
                     "battery_recharge_reserve_w": "Réserve de recharge batterie (W)",
-                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve batterie avant le lissage"
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve batterie avant le lissage",
+                    "smoothing_household_window_min": "Fenêtre de lissage consommation base (min)",
+                    "min_export_margin_w": "Marge d'export minimum à 100% SOC (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Période de rafraichissement en secondes. Attention des calculs lourds sont effectués à chaque période. Ne pas rafraichir trop souvent",
@@ -192,7 +198,9 @@
                     "smoothing_consumption_window_min": "Taille de la fenêtre en minutes pour lisser la consommation électrique. Par défaut : 0 (désactivé). Définir à 0 pour désactiver le lissage.",
                     "smoothing_battery_window_min": "Taille de la fenêtre en minutes pour lisser la puissance de charge de la batterie. Par défaut : 0 (désactivé). Définir à 0 pour désactiver le lissage.",
                     "battery_recharge_reserve_w": "Réserver ce nombre de watts de la production solaire pour la charge de la batterie lorsque le SOC de la batterie < 100%. Définir à 0 pour désactiver. Cela garantit que la batterie a la priorité sur les appareils.",
-                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve avant le lissage pour des transitions plus douces. Pertinent uniquement lorsque le lissage est activé."
+                    "battery_recharge_reserve_before_smoothing": "Appliquer la réserve avant le lissage pour des transitions plus douces. Pertinent uniquement lorsque le lissage est activé.",
+                    "smoothing_household_window_min": "Taille de la fenêtre en minutes pour lisser la consommation de base de la maison (hors appareils gérés). Par défaut : 0 (désactivé). Recommandé : 3-5 minutes pour compenser les pics courts des réfrigérateurs, bouilloires, etc.",
+                    "min_export_margin_w": "Réserver ce nombre de watts de l'optimisation lorsque la batterie est à 100% SOC. Valeurs positives maintiennent la batterie chargée en exportant toujours un peu. Valeurs négatives autorisent un léger import. Par défaut : 0 (désactivé)."
                 }
             },
             "device": {

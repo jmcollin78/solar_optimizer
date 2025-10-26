@@ -32,7 +32,9 @@
                     "smoothing_consumption_window_min": "Verbrauchs-Glättungsfenster (Min)",
                     "smoothing_battery_window_min": "Batterie-Glättungsfenster (Min)",
                     "battery_recharge_reserve_w": "Batterie-Ladereserve (W)",
-                    "battery_recharge_reserve_before_smoothing": "Batterie Reserve vor Glättung anwenden"
+                    "battery_recharge_reserve_before_smoothing": "Batterie Reserve vor Glättung anwenden",
+                    "smoothing_household_window_min": "Haushalts-Glättungsfenster (min)",
+                    "min_export_margin_w": "Mindest-Exportmarge bei 100% SOC (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Auch ohne neue Daten mindestens in dieser Periode in Sekunden aktualisieren. Warnung: Schwere Berechnungen werden in jeder Periode durchgeführt, achten Sie auf die CPU-Last. Nicht zu oft aktualisieren",
@@ -50,7 +52,9 @@
                     "smoothing_consumption_window_min": "Fenstergröße in Minuten zur Glättung des Stromverbrauchs. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
                     "smoothing_battery_window_min": "Fenstergröße in Minuten zur Glättung der Batterieladeleistung. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
                     "battery_recharge_reserve_w": "Reservieren Sie diese Anzahl von Watt aus der Solarproduktion für das Laden der Batterie, wenn der Batterie-SOC < 100% ist. Auf 0 setzen zum Deaktivieren. Dies stellt sicher, dass die Batterie Vorrang vor Geräten hat.",
-                    "battery_recharge_reserve_before_smoothing": "Ladestrom Reserve für Batterie vor dem Glätten anwenden, um glattere Übergänge zu ermöglichen wenn die Reserve nicht mehr benötigt wird (Batterie bei 100%). Nur relevant wenn Glättung aktiviert ist."
+                    "battery_recharge_reserve_before_smoothing": "Ladestrom Reserve für Batterie vor dem Glätten anwenden, um glattere Übergänge zu ermöglichen wenn die Reserve nicht mehr benötigt wird (Batterie bei 100%). Nur relevant wenn Glättung aktiviert ist.",
+                    "smoothing_household_window_min": "Fenstergröße in Minuten zur Glättung des Basis-Haushaltsverbrauchs (ohne verwaltete Geräte). Standard: 0 (deaktiviert). Empfohlen: 3-5 Minuten zum Ausgleich kurzer Spitzen von Kühlschränken, Wasserkochern usw.",
+                    "min_export_margin_w": "Reservieren Sie diese Anzahl von Watt von der Optimierung, wenn die Batterie bei 100% SOC ist. Positive Werte halten die Batterie voll, indem immer etwas exportiert wird. Negative Werte erlauben geringen Import. Standard: 0 (deaktiviert)."
                 }
             },
             "device": {
@@ -174,7 +178,9 @@
                     "smoothing_consumption_window_min": "Verbrauchs-Glättungsfenster (Min)",
                     "smoothing_battery_window_min": "Batterie-Glättungsfenster (Min)",
                     "battery_recharge_reserve_w": "Batterie-Ladereserve (W)",
-                    "battery_recharge_reserve_before_smoothing": "Batterie Reserve vor Glättung anwenden"
+                    "battery_recharge_reserve_before_smoothing": "Batterie Reserve vor Glättung anwenden",
+                    "smoothing_household_window_min": "Haushalts-Glättungsfenster (min)",
+                    "min_export_margin_w": "Mindest-Exportmarge bei 100% SOC (W)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Auch ohne neue Daten mindestens in dieser Periode in Sekunden aktualisieren. Warnung: Schwere Berechnungen werden in jeder Periode durchgeführt, achten Sie auf die CPU-Last. Nicht zu oft aktualisieren",
@@ -192,7 +198,9 @@
                     "smoothing_consumption_window_min": "Fenstergröße in Minuten zur Glättung des Stromverbrauchs. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
                     "smoothing_battery_window_min": "Fenstergröße in Minuten zur Glättung der Batterieladeleistung. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
                     "battery_recharge_reserve_w": "Reservieren Sie diese Anzahl von Watt aus der Solarproduktion für das Laden der Batterie, wenn der Batterie-SOC < 100% ist. Auf 0 setzen zum Deaktivieren. Dies stellt sicher, dass die Batterie Vorrang vor Geräten hat.",
-                    "battery_recharge_reserve_before_smoothing": "Ladestrom Reserve für Batterie vor dem Glätten anwenden, um glattere Übergänge zu ermöglichen wenn die Reserve nicht mehr benötigt wird (Batterie bei 100%). Nur relevant wenn Glättung aktiviert ist."
+                    "battery_recharge_reserve_before_smoothing": "Ladestrom Reserve für Batterie vor dem Glätten anwenden, um glattere Übergänge zu ermöglichen wenn die Reserve nicht mehr benötigt wird (Batterie bei 100%). Nur relevant wenn Glättung aktiviert ist.",
+                    "smoothing_household_window_min": "Fenstergröße in Minuten zur Glättung des Basis-Haushaltsverbrauchs (ohne verwaltete Geräte). Standard: 0 (deaktiviert). Empfohlen: 3-5 Minuten zum Ausgleich kurzer Spitzen von Kühlschränken, Wasserkochern usw.",
+                    "min_export_margin_w": "Reservieren Sie diese Anzahl von Watt von der Optimierung, wenn die Batterie bei 100% SOC ist. Positive Werte halten die Batterie voll, indem immer etwas exportiert wird. Negative Werte erlauben geringen Import. Standard: 0 (deaktiviert)."
                 }
             },
             "device": {
