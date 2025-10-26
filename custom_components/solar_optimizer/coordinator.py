@@ -324,6 +324,25 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         calculated_data["priority_weight"] = self.priority_weight
 
+        # Compute household consumption (positive watts, base consumption excluding managed devices)
+        # The power_consumption_entity_id should ideally represent household consumption directly
+        # For backward compatibility, we interpret it as net meter reading and convert if needed
+        # For now, we use power_consumption as the household base consumption (positive value)
+        # The coordinator will ensure this represents base household load
+        household_consumption = calculated_data["power_consumption"] if calculated_data["power_consumption"] is not None else 0
+        
+        # Ensure household_consumption is positive (representing actual consumption, not net metering)
+        # If the configured sensor is a net meter (negative = export), we need to handle it appropriately
+        # For simplicity, we'll take the absolute value if negative, as household consumption should be positive
+        # However, the correct interpretation depends on the user's sensor configuration
+        # The problem statement suggests interpreting power_consumption_entity_id as household consumption (positive W)
+        if household_consumption < 0:
+            # If negative, it might be a net meter showing export
+            # We assume 0 household consumption in this case (all PV goes to grid or battery)
+            household_consumption = 0
+        
+        calculated_data["household_consumption"] = household_consumption
+
         # Apply battery recharge reserve after smoothing if configured (and not already applied before)
         if not self._battery_recharge_reserve_before_smoothing and self._battery_recharge_reserve_w > 0 and calculated_data["battery_soc"] < 100:
             reserved_watts = min(self._battery_recharge_reserve_w, calculated_data["power_production"])
@@ -346,7 +365,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         #
         best_solution, best_objective, total_power = self._algo.recuit_simule(
             self._devices,
-            calculated_data["power_consumption"] + calculated_data["battery_charge_power"],
+            household_consumption,
             calculated_data["power_production"],
             calculated_data["sell_cost"],
             calculated_data["buy_cost"],

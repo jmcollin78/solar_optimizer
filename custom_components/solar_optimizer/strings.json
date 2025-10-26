@@ -36,7 +36,7 @@
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
-                    "power_consumption_entity_id": "The entity_id of the net power consumption sensor. Net power should be negative if power is exported to grid.",
+                    "power_consumption_entity_id": "The entity_id of the household power consumption sensor (positive watts). This should represent base household consumption. If using a net-metering sensor, consider creating a template sensor that provides positive household consumption values.",
                     "power_production_entity_id": "The entity_id of the solar power production sensor.",
                     "subscribe_to_events": "Subscribe to events to recalculate with new data, as soon as they are avalaible. Keep an eye on the CPU load.",
                     "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
@@ -44,11 +44,11 @@
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
                     "battery_soc_entity_id": "The entity id of the battery state of charge in %. If you don't have battery, keep it empty",
-                    "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
+                    "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. Optional - used for diagnostics only. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
                     "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation",
-                    "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Set to 0 to disable. Recommended: 3-5 minutes for unstable weather.",
-                    "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Set to 0 to disable. Recommended: 3 minutes if consumption fluctuates with solar changes.",
-                    "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Set to 0 to disable. Recommended: 3 minutes if battery power fluctuates with solar changes.",
+                    "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Default: 15 minutes. Set to 0 to disable. Recommended: 10-20 minutes for unstable weather.",
+                    "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Default: 0 (disabled). Set to 0 to disable smoothing.",
+                    "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Default: 0 (disabled). Set to 0 to disable smoothing.",
                     "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices.",
                     "battery_recharge_reserve_before_smoothing": "Apply reserve before smoothing for smoother transitions. Only relevant when smoothing is enabled."
                 }
@@ -178,7 +178,7 @@
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
-                    "power_consumption_entity_id": "the entity_id of the net power consumption sensor. Net power should be negative if power is exported to grid.",
+                    "power_consumption_entity_id": "The entity_id of the household power consumption sensor (positive watts). This should represent base household consumption. If using a net-metering sensor, consider creating a template sensor that provides positive household consumption values.",
                     "power_production_entity_id": "the entity_id of the solar power production sensor.",
                     "subscribe_to_events": "Subscribe to events to recalculate with new data, as soon as they are avalaible. Keep an eye on the CPU load.",
                     "sell_cost_entity_id": "The entity_id which holds the current energy sell price.",
@@ -186,11 +186,11 @@
                     "sell_tax_percent_entity_id": "The energy resell tax percent (0 to 100)",
                     "smooth_production": "If checked, the solar production will be smoothed to avoid hard variation",
                     "battery_soc_entity_id": "The entity id of the battery state of charge in %. If you don't have battery, keep it empty",
-                    "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
+                    "battery_charge_power_entity_id": "The entity id of the battery power net charging rate in watt. Optional - used for diagnostics only. It should be negative if battery is charging and positive if battery is discharging. Keep it empty if no solar battery is used.",
                     "raz_time": "Time to reset active time counters. Should be before first exposure to sunlight but not too early to allow enough time for night activation",
-                    "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Set to 0 to disable. Recommended: 3-5 minutes for unstable weather.",
-                    "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Set to 0 to disable. Recommended: 3 minutes if consumption fluctuates with solar changes.",
-                    "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Set to 0 to disable. Recommended: 3 minutes if battery power fluctuates with solar changes.",
+                    "smoothing_production_window_min": "Window size in minutes for smoothing solar production. Default: 15 minutes. Set to 0 to disable. Recommended: 10-20 minutes for unstable weather.",
+                    "smoothing_consumption_window_min": "Window size in minutes for smoothing power consumption. Default: 0 (disabled). Set to 0 to disable smoothing.",
+                    "smoothing_battery_window_min": "Window size in minutes for smoothing battery charge power. Default: 0 (disabled). Set to 0 to disable smoothing.",
                     "battery_recharge_reserve_w": "Reserve this many watts from solar production for battery charging when battery SOC < 100%. Set to 0 to disable. This ensures battery gets priority over devices.",
                     "battery_recharge_reserve_before_smoothing": "Apply reserve before smoothing for smoother transitions. Only relevant when smoothing is enabled."
                 }

@@ -36,7 +36,7 @@
                 },
                 "data_description": {
                     "refresh_period_sec": "Auch ohne neue Daten mindestens in dieser Periode in Sekunden aktualisieren. Warnung: Schwere Berechnungen werden in jeder Periode durchgeführt, achten Sie auf die CPU-Last. Nicht zu oft aktualisieren",
-                    "power_consumption_entity_id": "Die entity_id des Netto-Stromverbrauchs-Sensors. Die Nettoleistung sollte negativ sein, wenn Strom ins Netz eingespeist wird.",
+                    "power_consumption_entity_id": "Die entity_id des Haushaltsstromverbrauchs-Sensors (in positiven Watt). Dies sollte den Basisverbrauch des Haushalts darstellen. Wenn Sie einen Netzmesssensor verwenden, erwägen Sie die Erstellung eines Template-Sensors, der positive Verbrauchswerte liefert.",
                     "power_production_entity_id": "Die entity_id des Solar-Stromproduktions-Sensors.",
                     "subscribe_to_events": "Ereignisse abonnieren, um bei neuen Daten neu zu berechnen, sobald sie verfügbar sind. Achten Sie auf die CPU-Last.",
                     "sell_cost_entity_id": "Die entity_id, die den aktuellen Energieverkaufspreis enthält.",
@@ -44,11 +44,11 @@
                     "sell_tax_percent_entity_id": "Die Energieverkaufssteuer in Prozent (0 bis 100)",
                     "smooth_production": "Wenn aktiviert, wird die Solarproduktion geglättet, um harte Schwankungen zu vermeiden",
                     "battery_soc_entity_id": "Die entity_id des Batterieladezustands in %. Wenn Sie keine Batterie haben, lassen Sie dies leer",
-                    "battery_charge_power_entity_id": "Die entity_id der Netto-Batterieladeleistung in Watt. Sie sollte negativ sein, wenn die Batterie lädt, und positiv, wenn die Batterie entlädt. Leer lassen, wenn keine Solarbatterie verwendet wird.",
+                    "battery_charge_power_entity_id": "Die entity_id der Netto-Batterieladeleistung in Watt. Optional - nur für Diagnosen verwendet. Sie sollte negativ sein, wenn die Batterie lädt, und positiv, wenn die Batterie entlädt. Leer lassen, wenn keine Solarbatterie verwendet wird.",
                     "raz_time": "Zeit zum Zurücksetzen der Aktivzeitzähler. Sollte vor der ersten Sonneneinstrahlung liegen, aber nicht zu früh, um genügend Zeit für die nächtliche Aktivierung zu ermöglichen",
-                    "smoothing_production_window_min": "Fenstergröße in Minuten zur Glättung der Solarproduktion. Auf 0 setzen zum Deaktivieren. Empfohlen: 3-5 Minuten bei instabilem Wetter.",
-                    "smoothing_consumption_window_min": "Fenstergröße in Minuten zur Glättung des Stromverbrauchs. Auf 0 setzen zum Deaktivieren. Empfohlen: 3 Minuten, wenn der Verbrauch mit Solaränderungen schwankt.",
-                    "smoothing_battery_window_min": "Fenstergröße in Minuten zur Glättung der Batterieladeleistung. Auf 0 setzen zum Deaktivieren. Empfohlen: 3 Minuten, wenn die Batterieleistung mit Solaränderungen schwankt.",
+                    "smoothing_production_window_min": "Fenstergröße in Minuten zur Glättung der Solarproduktion. Standard: 15 Minuten. Auf 0 setzen zum Deaktivieren. Empfohlen: 10-20 Minuten bei instabilem Wetter.",
+                    "smoothing_consumption_window_min": "Fenstergröße in Minuten zur Glättung des Stromverbrauchs. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
+                    "smoothing_battery_window_min": "Fenstergröße in Minuten zur Glättung der Batterieladeleistung. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
                     "battery_recharge_reserve_w": "Reservieren Sie diese Anzahl von Watt aus der Solarproduktion für das Laden der Batterie, wenn der Batterie-SOC < 100% ist. Auf 0 setzen zum Deaktivieren. Dies stellt sicher, dass die Batterie Vorrang vor Geräten hat.",
                     "battery_recharge_reserve_before_smoothing": "Ladestrom Reserve für Batterie vor dem Glätten anwenden, um glattere Übergänge zu ermöglichen wenn die Reserve nicht mehr benötigt wird (Batterie bei 100%). Nur relevant wenn Glättung aktiviert ist."
                 }
@@ -178,7 +178,7 @@
                 },
                 "data_description": {
                     "refresh_period_sec": "Auch ohne neue Daten mindestens in dieser Periode in Sekunden aktualisieren. Warnung: Schwere Berechnungen werden in jeder Periode durchgeführt, achten Sie auf die CPU-Last. Nicht zu oft aktualisieren",
-                    "power_consumption_entity_id": "Die entity_id des Netto-Stromverbrauchs-Sensors. Die Nettoleistung sollte negativ sein, wenn Strom ins Netz eingespeist wird.",
+                    "power_consumption_entity_id": "Die entity_id des Haushaltsstromverbrauchs-Sensors (in positiven Watt). Dies sollte den Basisverbrauch des Haushalts darstellen. Wenn Sie einen Netzmesssensor verwenden, erwägen Sie die Erstellung eines Template-Sensors, der positive Verbrauchswerte liefert.",
                     "power_production_entity_id": "Die entity_id des Solar-Stromproduktions-Sensors.",
                     "subscribe_to_events": "Ereignisse abonnieren, um bei neuen Daten neu zu berechnen, sobald sie verfügbar sind. Achten Sie auf die CPU-Last.",
                     "sell_cost_entity_id": "Die entity_id, die den aktuellen Energieverkaufspreis enthält.",
@@ -186,11 +186,11 @@
                     "sell_tax_percent_entity_id": "Die Energieverkaufssteuer in Prozent (0 bis 100)",
                     "smooth_production": "Wenn aktiviert, wird die Solarproduktion geglättet, um harte Schwankungen zu vermeiden",
                     "battery_soc_entity_id": "Die entity_id des Batterieladezustands in %. Wenn Sie keine Batterie haben, lassen Sie dies leer",
-                    "battery_charge_power_entity_id": "Die entity_id der Netto-Batterieladeleistung in Watt. Sie sollte negativ sein, wenn die Batterie lädt, und positiv, wenn die Batterie entlädt. Leer lassen, wenn keine Solarbatterie verwendet wird.",
+                    "battery_charge_power_entity_id": "Die entity_id der Netto-Batterieladeleistung in Watt. Optional - nur für Diagnosen verwendet. Sie sollte negativ sein, wenn die Batterie lädt, und positiv, wenn die Batterie entlädt. Leer lassen, wenn keine Solarbatterie verwendet wird.",
                     "raz_time": "Zeit zum Zurücksetzen der Aktivzeitzähler. Sollte vor der ersten Sonneneinstrahlung liegen, aber nicht zu früh, um genügend Zeit für die nächtliche Aktivierung zu ermöglichen",
-                    "smoothing_production_window_min": "Fenstergröße in Minuten zur Glättung der Solarproduktion. Auf 0 setzen zum Deaktivieren. Empfohlen: 3-5 Minuten bei instabilem Wetter.",
-                    "smoothing_consumption_window_min": "Fenstergröße in Minuten zur Glättung des Stromverbrauchs. Auf 0 setzen zum Deaktivieren. Empfohlen: 3 Minuten, wenn der Verbrauch mit Solaränderungen schwankt.",
-                    "smoothing_battery_window_min": "Fenstergröße in Minuten zur Glättung der Batterieladeleistung. Auf 0 setzen zum Deaktivieren. Empfohlen: 3 Minuten, wenn die Batterieleistung mit Solaränderungen schwankt.",
+                    "smoothing_production_window_min": "Fenstergröße in Minuten zur Glättung der Solarproduktion. Standard: 15 Minuten. Auf 0 setzen zum Deaktivieren. Empfohlen: 10-20 Minuten bei instabilem Wetter.",
+                    "smoothing_consumption_window_min": "Fenstergröße in Minuten zur Glättung des Stromverbrauchs. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
+                    "smoothing_battery_window_min": "Fenstergröße in Minuten zur Glättung der Batterieladeleistung. Standard: 0 (deaktiviert). Auf 0 setzen zum Deaktivieren der Glättung.",
                     "battery_recharge_reserve_w": "Reservieren Sie diese Anzahl von Watt aus der Solarproduktion für das Laden der Batterie, wenn der Batterie-SOC < 100% ist. Auf 0 setzen zum Deaktivieren. Dies stellt sicher, dass die Batterie Vorrang vor Geräten hat.",
                     "battery_recharge_reserve_before_smoothing": "Ladestrom Reserve für Batterie vor dem Glätten anwenden, um glattere Übergänge zu ermöglichen wenn die Reserve nicht mehr benötigt wird (Batterie bei 100%). Nur relevant wenn Glättung aktiviert ist."
                 }

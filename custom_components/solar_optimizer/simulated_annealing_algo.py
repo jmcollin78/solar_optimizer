@@ -50,7 +50,7 @@ class SimulatedAnnealingAlgorithm:
     def recuit_simule(
         self,
         devices: list[ManagedDevice],
-        power_consumption: float,
+        household_consumption: float,
         solar_power_production: float,
         sell_cost: float,
         buy_cost: float,
@@ -61,8 +61,8 @@ class SimulatedAnnealingAlgorithm:
         """The entrypoint of the algorithm:
         You should give:
          - devices: a list of ManagedDevices. devices that are is_usable false are not taken into account
-         - power_consumption: the current power consumption. Can be negeative if power is given back to grid.
-         - solar_power_production: the solar production power
+         - household_consumption: the base household power consumption in watts (positive value, excluding managed devices)
+         - solar_power_production: the solar production power (already smoothed and with battery reserve applied if configured)
          - sell_cost: the sell cost of energy
          - buy_cost: the buy cost of energy
          - sell_tax_percent: a sell taxe applied to sell energy (a percentage)
@@ -76,7 +76,7 @@ class SimulatedAnnealingAlgorithm:
         """
         if (
             len(devices) <= 0  # pylint: disable=too-many-boolean-expressions
-            or power_consumption is None
+            or household_consumption is None
             or solar_power_production is None
             or sell_cost is None
             or buy_cost is None
@@ -88,8 +88,8 @@ class SimulatedAnnealingAlgorithm:
             return [], -1, -1
 
         _LOGGER.debug(
-            "Calling recuit_simule with power_consumption=%.2f, solar_power_production=%.2f sell_cost=%.2f, buy_cost=%.2f, tax=%.2f%% devices=%s",
-            power_consumption,
+            "Calling recuit_simule with household_consumption=%.2f, solar_power_production=%.2f sell_cost=%.2f, buy_cost=%.2f, tax=%.2f%% devices=%s",
+            household_consumption,
             solar_power_production,
             sell_cost,
             buy_cost,
@@ -99,7 +99,7 @@ class SimulatedAnnealingAlgorithm:
         self._cout_achat = buy_cost
         self._cout_revente = sell_cost
         self._taxe_revente = sell_tax_percent
-        self._consommation_net = power_consumption
+        self._consommation_net = household_consumption
         self._production_solaire = solar_power_production
         self._priority_weight = priority_weight / 100.0  # to get percentage
 
