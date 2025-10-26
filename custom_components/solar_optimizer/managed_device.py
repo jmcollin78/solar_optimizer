@@ -372,18 +372,37 @@ class ManagedDevice:
                     # TODO : move this part to device initialisation, make new instance variable
                     service_name = self._change_power_service # retrieve attribute from power service
                     parties = self._change_power_service.split("/")
-                    if len(parties) < 2:
+                    if len(parties) < 3:
                         raise ConfigurationError(
-                            f"Incorrect service declaration for power entity. Service {service_name} should be formatted with: 'domain/action/attribute'"
+                            f"Incorrect service declaration for power entity. Service {service_name} should be formatted with: 'domain/action/attribute' (3 parts separated by /)"
                         )
                     parameter = parties[2]
-                    power_entity_value = power_entity_state.attributes[parameter]
+                    power_entity_value = power_entity_state.attributes.get(parameter)
                 else:
                     power_entity_value = power_entity_state.state
 
-                actual_state_power = round(
-                    float(power_entity_value) * self._convert_power_divide_factor
-                )
+                # Safely convert power value to float with error handling
+                try:
+                    if power_entity_value is None or power_entity_value == "":
+                        _LOGGER.warning(
+                            "Device %s power entity has no value, using power_min=%sW",
+                            self._name,
+                            self._power_min,
+                        )
+                        actual_state_power = self._power_min
+                    else:
+                        actual_state_power = round(
+                            float(power_entity_value) * self._convert_power_divide_factor
+                        )
+                except (ValueError, TypeError) as e:
+                    _LOGGER.warning(
+                        "Device %s power entity has invalid value '%s' (%s), using power_min=%sW",
+                        self._name,
+                        power_entity_value,
+                        e,
+                        self._power_min,
+                    )
+                    actual_state_power = self._power_min
                 _LOGGER.debug(
                     "Device %s power entity shows %sW",
                     self._name,
@@ -400,7 +419,7 @@ class ManagedDevice:
         if self._requested_power == 0 and actual_state_power > 0:
             # Deactivation lag: we turned it off but HA still shows it on
             self._current_power = 0
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Device %s: using requested_power=0W (HA state shows %sW, deactivation lag)",
                 self._name,
                 actual_state_power,
@@ -408,7 +427,7 @@ class ManagedDevice:
         elif self._requested_power > 0 and actual_state_power < self._requested_power:
             # Activation lag: we turned it on but HA hasn't updated yet
             self._current_power = self._requested_power
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Device %s: using requested_power=%sW (HA state shows %sW, activation lag)",
                 self._name,
                 self._current_power,
