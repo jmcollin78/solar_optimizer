@@ -205,10 +205,13 @@ class SimulatedAnnealingAlgorithm:
         )
 
     def calculer_objectif(self, solution) -> float:
-        """Calcul de l'objectif : minimiser le surplus de production solaire
-        rejets = 0 if consommation_net >=0 else -consommation_net
-        consommation_solaire = min(production_solaire, production_solaire - rejets)
-        consommation_totale = consommation_net + consommation_solaire
+        """Calculate the objective: minimize grid import and maximize solar usage
+        
+        With household_consumption (positive W) and solar_production:
+        - Total consumption = household_consumption + devices
+        - Net consumption = total_consumption - solar_production
+        - If net > 0: importing from grid
+        - If net < 0: exporting to grid
         """
 
         puissance_totale_eqt = self.consommation_equipements(solution)
@@ -216,22 +219,29 @@ class SimulatedAnnealingAlgorithm:
             puissance_totale_eqt - self._puissance_totale_eqt_initiale
         )
 
-        new_consommation_net = self._consommation_net + diff_puissance_totale_eqt
+        # Calculate total consumption (household + devices)
+        total_consumption = self._consommation_net + diff_puissance_totale_eqt
+        
+        # Calculate net consumption (total - production)
+        # Positive = import, negative = export
+        new_consommation_net = total_consumption - self._production_solaire
+        
         new_rejets = 0 if new_consommation_net >= 0 else -new_consommation_net
         new_import = 0 if new_consommation_net < 0 else new_consommation_net
         new_consommation_solaire = min(
-            self._production_solaire, self._production_solaire - new_rejets
+            self._production_solaire, total_consumption
         )
-        new_consommation_totale = (
-            new_consommation_net + new_rejets
-        ) + new_consommation_solaire
+        new_consommation_totale = total_consumption
+        
         if DEBUG:
             _LOGGER.debug(
-                "Objectif : cette solution ajoute %.3fW a la consommation initial. Nouvelle consommation nette=%.3fW. Nouveaux rejets=%.3fW. Nouvelle conso totale=%.3fW",
+                "Objectif : cette solution ajoute %.3fW a la consommation initial. Total consumption=%.3fW, Net consumption=%.3fW. Nouveaux rejets=%.3fW (export). New import=%.3fW. Solar used=%.3fW",
                 diff_puissance_totale_eqt,
+                total_consumption,
                 new_consommation_net,
                 new_rejets,
-                new_consommation_totale,
+                new_import,
+                new_consommation_solaire,
             )
 
         cout_revente_impose = self._cout_revente * (1.0 - self._taxe_revente / 100.0)
