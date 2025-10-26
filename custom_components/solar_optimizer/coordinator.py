@@ -105,14 +105,15 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         min_temp = 0.05
         cooling_factor = 0.95
         max_iteration_number = 1000
-        switching_penalty_factor = 0.5  # Default: moderate penalty for device switching
+        switching_penalty_factor = DEFAULT_SWITCHING_PENALTY_FACTOR  # Will be updated from config entry
 
         if config and (algo_config := config.get("algorithm")):
             init_temp = float(algo_config.get("initial_temp", 1000))
             min_temp = float(algo_config.get("min_temp", 0.05))
             cooling_factor = float(algo_config.get("cooling_factor", 0.95))
             max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
-            switching_penalty_factor = float(algo_config.get("switching_penalty_factor", 0.5))
+            # Note: switching_penalty_factor from algorithm config is deprecated
+            # It's now configured via the UI in the central config
 
         self._algo = SimulatedAnnealingAlgorithm(
             init_temp, min_temp, cooling_factor, max_iteration_number, switching_penalty_factor
@@ -161,6 +162,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_recharge_reserve_w = float(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_W, DEFAULT_BATTERY_RECHARGE_RESERVE_W))
         self._battery_recharge_reserve_before_smoothing = bool(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING))
         self._min_export_margin_w = float(config.data.get(CONF_MIN_EXPORT_MARGIN_W, DEFAULT_MIN_EXPORT_MARGIN_W))
+        
+        # Update switching penalty factor from config entry
+        switching_penalty_factor = float(config.data.get(CONF_SWITCHING_PENALTY_FACTOR, DEFAULT_SWITCHING_PENALTY_FACTOR))
+        self._algo._switching_penalty_factor = switching_penalty_factor
+        _LOGGER.info("Switching penalty factor set to: %.2f", switching_penalty_factor)
 
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"

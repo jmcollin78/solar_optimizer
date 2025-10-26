@@ -269,6 +269,8 @@ class SimulatedAnnealingAlgorithm:
 
         # Calculate switching penalty: penalize turning OFF devices that are currently active
         # This encourages device stability and prevents frequent switching for marginal gains
+        # Note: For variable power devices, changing power (up or down) is NOT penalized.
+        # Only turning the device completely OFF incurs a penalty.
         switching_penalty = 0
         if self._switching_penalty_factor > 0:
             for equip in solution:
@@ -276,7 +278,8 @@ class SimulatedAnnealingAlgorithm:
                 current_power = equip.get("current_power", 0)
                 is_currently_active = current_power > 0
                 solution_turns_off = not equip["state"] and is_currently_active
-
+                
+                # Only penalize turning OFF, not power changes for variable power devices
                 if solution_turns_off:
                     # Penalty proportional to the power being turned off
                     # Normalized by total production to make it scale-invariant
