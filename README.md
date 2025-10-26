@@ -118,8 +118,6 @@ The switching penalty can be configured in the UI when setting up or reconfiguri
   - 0.5 = Default (good balance between stability and optimization)
   - 1.0 = Strong penalty (maximum stability, minimal switching)
 
-For backward compatibility, the parameter can still be configured via `solar_optimizer.yaml` (deprecated). See [Configuring the Algorithm in Advanced Mode](#configuring-the-algorithm-in-advanced-mode) for details.
-
 ## Usability
 Each configured device is associated with a switch-type entity named `enable` that authorizes the algorithm to use the device. If I want to force the heating of the hot water tank, I put its switch to off. The algorithm will therefore not look at it, the water heater switches back to manual, not managed by Solar Optimizer.
 
@@ -409,7 +407,7 @@ Explanation of Parameters
 	•	`cooling_factor`: The temperature is multiplied by 0.95 at each iteration, ensuring a slow and progressive decrease. A lower value makes the algorithm converge faster but may reduce solution quality.	A higher value (strictly less than 1) increases computation time but improves the solution quality.
 	•	`max_iteration_number`: The maximum number of iterations. Reducing this number can shorten computation time but may degrade solution quality if no stable solution is found.
 
-**Note:** The `switching_penalty_factor` parameter has been moved to the UI configuration (Common Parameters page) as of this version. Configuring it in `solar_optimizer.yaml` is now deprecated but still supported for backward compatibility.
+**Note:** The `switching_penalty_factor` parameter is now configured via the UI (Common Parameters page) and is no longer supported in `solar_optimizer.yaml`.
 
 The default values are suited for setups with around 20 devices (which results in many possible configurations). If you have fewer than 5 devices and no variable power devices, you can try these alternative parameters (not tested):
 

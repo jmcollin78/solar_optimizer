@@ -35,12 +35,14 @@ from .const import (
     DEFAULT_BATTERY_RECHARGE_RESERVE_W,
     DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
     DEFAULT_MIN_EXPORT_MARGIN_W,
+    DEFAULT_SWITCHING_PENALTY_FACTOR,
     CONF_SMOOTHING_PRODUCTION_WINDOW_MIN,
     CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN,
     CONF_SMOOTHING_HOUSEHOLD_WINDOW_MIN,
     CONF_BATTERY_RECHARGE_RESERVE_W,
     CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
     CONF_MIN_EXPORT_MARGIN_W,
+    CONF_SWITCHING_PENALTY_FACTOR,
 )
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
@@ -112,8 +114,6 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             min_temp = float(algo_config.get("min_temp", 0.05))
             cooling_factor = float(algo_config.get("cooling_factor", 0.95))
             max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
-            # Note: switching_penalty_factor from algorithm config is deprecated
-            # It's now configured via the UI in the central config
 
         self._algo = SimulatedAnnealingAlgorithm(
             init_temp, min_temp, cooling_factor, max_iteration_number, switching_penalty_factor
