@@ -59,7 +59,9 @@ central_config_schema = vol.Schema(
         vol.Optional(CONF_BATTERY_RECHARGE_RESERVE_W, default=DEFAULT_BATTERY_RECHARGE_RESERVE_W): vol.Coerce(float),
         vol.Optional(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, default=DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING): cv.boolean,
         vol.Optional(CONF_MIN_EXPORT_MARGIN_W, default=DEFAULT_MIN_EXPORT_MARGIN_W): vol.Coerce(float),
-        vol.Optional(CONF_SWITCHING_PENALTY_FACTOR, default=DEFAULT_SWITCHING_PENALTY_FACTOR): vol.Coerce(float),
+        vol.Optional(CONF_SWITCHING_PENALTY_FACTOR, default=DEFAULT_SWITCHING_PENALTY_FACTOR): selector.NumberSelector(
+            selector.NumberSelectorConfig(min=0.0, max=5.0, step=0.1, mode=selector.NumberSelectorMode.BOX)
+        ),
         vol.Optional(CONF_BATTERY_SOC_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
