@@ -105,15 +105,17 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         min_temp = 0.05
         cooling_factor = 0.95
         max_iteration_number = 1000
+        switching_penalty_factor = 0.5  # Default: moderate penalty for device switching
 
         if config and (algo_config := config.get("algorithm")):
             init_temp = float(algo_config.get("initial_temp", 1000))
             min_temp = float(algo_config.get("min_temp", 0.05))
             cooling_factor = float(algo_config.get("cooling_factor", 0.95))
             max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
+            switching_penalty_factor = float(algo_config.get("switching_penalty_factor", 0.5))
 
         self._algo = SimulatedAnnealingAlgorithm(
-            init_temp, min_temp, cooling_factor, max_iteration_number
+            init_temp, min_temp, cooling_factor, max_iteration_number, switching_penalty_factor
         )
         self.config = config
 

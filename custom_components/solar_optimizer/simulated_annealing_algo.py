@@ -19,6 +19,7 @@ class SimulatedAnnealingAlgorithm:
     _temperature_minimale: float = 0.1
     _facteur_refroidissement: float = 0.95
     _nombre_iterations: float = 1000
+    _switching_penalty_factor: float = 0.5  # Penalty for switching off active devices
     _equipements: list[ManagedDevice]
     _puissance_totale_eqt_initiale: float
     _cout_achat: float = 15  # centimes
@@ -33,18 +34,21 @@ class SimulatedAnnealingAlgorithm:
         min_temp: float,
         cooling_factor: float,
         max_iteration_number: int,
+        switching_penalty_factor: float = 0.5,
     ):
         """Initialize the algorithm with values"""
         self._temperature_initiale = initial_temp
         self._temperature_minimale = min_temp
         self._facteur_refroidissement = cooling_factor
         self._nombre_iterations = max_iteration_number
+        self._switching_penalty_factor = switching_penalty_factor
         _LOGGER.info(
-            "Initializing the SimulatedAnnealingAlgorithm with initial_temp=%.2f min_temp=%.2f cooling_factor=%.2f max_iterations_number=%d",
+            "Initializing the SimulatedAnnealingAlgorithm with initial_temp=%.2f min_temp=%.2f cooling_factor=%.2f max_iterations_number=%d switching_penalty_factor=%.2f",
             self._temperature_initiale,
             self._temperature_minimale,
             self._facteur_refroidissement,
             self._nombre_iterations,
+            self._switching_penalty_factor,
         )
 
     def recuit_simule(
@@ -251,6 +255,7 @@ class SimulatedAnnealingAlgorithm:
         coef_rejets = (cout_revente_impose) / (self._cout_achat + cout_revente_impose)
 
         consumption_coef = coef_import * new_import + coef_rejets * new_rejets
+        
         # calculate the priority coef as the sum of the priority of all devices
         # in the solution
         if puissance_totale_eqt > 0:
@@ -259,7 +264,32 @@ class SimulatedAnnealingAlgorithm:
             priority_coef = 0
         priority_weight = self._priority_weight
 
-        ret = consumption_coef * (1.0 - priority_weight) + priority_coef * priority_weight
+        # Calculate switching penalty: penalize turning OFF devices that are currently active
+        # This encourages device stability and prevents frequent switching for marginal gains
+        switching_penalty = 0
+        if self._switching_penalty_factor > 0:
+            for equip in solution:
+                # If device is currently active but solution turns it off, apply penalty
+                current_power = equip.get("current_power", 0)
+                is_currently_active = current_power > 0
+                solution_turns_off = not equip["state"] and is_currently_active
+                
+                if solution_turns_off:
+                    # Penalty proportional to the power being turned off
+                    # Normalized by total production to make it scale-invariant
+                    if self._production_solaire > 0:
+                        power_fraction = current_power / self._production_solaire
+                        switching_penalty += self._switching_penalty_factor * power_fraction
+                    
+                    if DEBUG:
+                        _LOGGER.debug(
+                            "Switching penalty for turning off %s (%.2fW): +%.4f",
+                            equip["name"],
+                            current_power,
+                            self._switching_penalty_factor * power_fraction if self._production_solaire > 0 else 0
+                        )
+
+        ret = consumption_coef * (1.0 - priority_weight) + priority_coef * priority_weight + switching_penalty
         return ret
 
     def generer_solution_initiale(self, solution):

@@ -97,6 +97,17 @@ The algorithm used is a simulated annealing type algorithm, a description of whi
 To avoid the effects of flickering from one cycle to another, a minimum activation delay can be configured by equipment: `duration_min`. For example: a water heater must be activated for at least one hour for the ignition to be useful, charging an electric car must last at least two hours, ...
 Similarly, a minimum stop duration can be specified in the `duration_stop_min` parameter.
 
+### Device Switching Stability
+In addition to the minimum duration constraints, the algorithm includes a **switching penalty** mechanism to prevent excessive device switching. This addresses scenarios where available power increases slightly (e.g., by 200W), which might otherwise cause the algorithm to immediately switch from one device to another, even if the improvement is marginal.
+
+The switching penalty discourages turning off currently active devices unless there is a significant benefit. This results in:
+- **Reduced relay wear**: Devices stay on longer, reducing mechanical stress on relays
+- **Better minimum on-time compliance**: Devices are more likely to reach their `duration_min` before being turned off
+- **Incremental device addition**: As power increases, new devices are added rather than swapping existing ones
+- **Dynamic behavior**: The penalty automatically adjusts based on the power difference - small improvements incur higher penalties, while significant improvements can still trigger switches
+
+The switching penalty can be configured via the `switching_penalty_factor` parameter in the advanced algorithm configuration (default: 0.5). See [Configuring the Algorithm in Advanced Mode](#configuring-the-algorithm-in-advanced-mode) for details.
+
 ## Usability
 Each configured device is associated with a switch-type entity named `enable` that authorizes the algorithm to use the device. If I want to force the heating of the hot water tank, I put its switch to off. The algorithm will therefore not look at it, the water heater switches back to manual, not managed by Solar Optimizer.
 
@@ -378,6 +389,7 @@ To use the advanced configuration, follow these steps:
     min_temp: 0.1
     cooling_factor: 0.95
     max_iteration_number: 1000
+    switching_penalty_factor: 0.5
   ```
 
 Explanation of Parameters
@@ -385,6 +397,7 @@ Explanation of Parameters
 	•	`min_temp`: The minimum temperature. At the final stage of the optimization, only variations of 0.1 will be accepted. This parameter should not be modified.
 	•	`cooling_factor`: The temperature is multiplied by 0.95 at each iteration, ensuring a slow and progressive decrease. A lower value makes the algorithm converge faster but may reduce solution quality.	A higher value (strictly less than 1) increases computation time but improves the solution quality.
 	•	`max_iteration_number`: The maximum number of iterations. Reducing this number can shorten computation time but may degrade solution quality if no stable solution is found.
+	•	`switching_penalty_factor`: **NEW** Controls device switching stability (default: 0.5). This penalty discourages the algorithm from turning off currently active devices for marginal power improvements, reducing relay wear and ensuring devices stay on long enough to reach their minimum on-time. Higher values (e.g., 1.0) increase stability but may reduce optimization efficiency. Lower values (e.g., 0.1) allow more frequent switching for better power matching. Set to 0 to disable the switching penalty entirely (not recommended).
 
 The default values are suited for setups with around 20 devices (which results in many possible configurations). If you have fewer than 5 devices and no variable power devices, you can try these alternative parameters (not tested):
 
@@ -394,6 +407,7 @@ The default values are suited for setups with around 20 devices (which results i
     min_temp: 0.1
     cooling_factor: 0.90
     max_iteration_number: 300
+    switching_penalty_factor: 0.5
   ```
 
 # Available Entities
