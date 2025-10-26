@@ -207,7 +207,8 @@ class SimulatedAnnealingAlgorithm:
     def calculer_objectif(self, solution) -> float:
         """Calculate the objective: minimize grid import and maximize solar usage
         
-        With household_consumption (positive W) and solar_production:
+        With household_consumption (positive W) representing base household load (excluding managed devices)
+        and solar_production:
         - Total consumption = household_consumption + devices
         - Net consumption = total_consumption - solar_production
         - If net > 0: importing from grid
@@ -219,7 +220,8 @@ class SimulatedAnnealingAlgorithm:
             puissance_totale_eqt - self._puissance_totale_eqt_initiale
         )
 
-        # Calculate total consumption (household + devices)
+        # Calculate total consumption (base household + managed devices)
+        # household_consumption is the base load excluding managed devices
         total_consumption = self._consommation_net + diff_puissance_totale_eqt
         
         # Calculate net consumption (total - production)

@@ -324,24 +324,29 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         calculated_data["priority_weight"] = self.priority_weight
 
-        # Compute household consumption (positive watts, base consumption excluding managed devices)
-        # The power_consumption_entity_id should ideally represent household consumption directly
-        # For backward compatibility, we interpret it as net meter reading and convert if needed
-        # For now, we use power_consumption as the household base consumption (positive value)
-        # The coordinator will ensure this represents base household load
-        household_consumption = calculated_data["power_consumption"] if calculated_data["power_consumption"] is not None else 0
+        # Calculate total power currently distributed to managed devices
+        # The household consumption sensor includes all devices, so we need to subtract
+        # the power of currently active managed devices to get base household consumption
+        total_current_distributed_power = sum(
+            device.current_power for device in self._devices if device.current_power > 0
+        )
+        _LOGGER.debug(
+            "Total currently distributed power to managed devices: %.2fW",
+            total_current_distributed_power
+        )
         
-        # Ensure household_consumption is positive (representing actual consumption, not net metering)
-        # If the configured sensor is a net meter (negative = export), we need to handle it appropriately
-        # For simplicity, we'll take the absolute value if negative, as household consumption should be positive
-        # However, the correct interpretation depends on the user's sensor configuration
-        # The problem statement suggests interpreting power_consumption_entity_id as household consumption (positive W)
-        if household_consumption < 0:
-            # If negative, it might be a net meter showing export
-            # We assume 0 household consumption in this case (all PV goes to grid or battery)
-            household_consumption = 0
+        # Compute base household consumption (excluding managed devices)
+        # The power_consumption_entity_id includes ALL consumption (household + managed devices)
+        # We subtract currently active managed devices to get the base household consumption
+        raw_consumption = calculated_data["power_consumption"] if calculated_data["power_consumption"] is not None else 0
+        
+        # Ensure household_consumption is positive and accounts for managed devices
+        # Formula: base_household = total_consumption - currently_distributed_devices
+        # Ensure it never goes below 0 (can happen temporarily during smoothing)
+        household_consumption = max(0, raw_consumption - total_current_distributed_power)
         
         calculated_data["household_consumption"] = household_consumption
+        calculated_data["total_current_distributed_power"] = total_current_distributed_power
 
         # Apply battery recharge reserve after smoothing if configured (and not already applied before)
         if not self._battery_recharge_reserve_before_smoothing and self._battery_recharge_reserve_w > 0 and calculated_data["battery_soc"] < 100:
@@ -359,6 +364,20 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             # Only set to 0 if we're in "after smoothing" mode and conditions aren't met
             calculated_data["power_production_reserved"] = 0
             calculated_data["battery_reserve_reduction_active"] = False
+
+        # Calculate available excess power for optimization
+        # Formula: PV Production - (Household consumption - total currently distributed power) - Battery reserve
+        # This represents the power available for managed devices
+        available_excess_power = max(0, 
+            calculated_data["power_production"] - household_consumption
+        )
+        calculated_data["available_excess_power"] = available_excess_power
+        _LOGGER.debug(
+            "Available excess power before optimization: %.2fW (production=%.2fW, household_base=%.2fW)",
+            available_excess_power,
+            calculated_data["power_production"],
+            household_consumption
+        )
 
         #
         # Call Algorithm Recuit simulé
