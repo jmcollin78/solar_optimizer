@@ -52,6 +52,11 @@
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.6.0** :
+>   - **Calcul de puissance simplifié** : L'algorithme attend maintenant la consommation de base de la maison (en watts positifs), offrant une optimisation plus précise
+>   - **Configuration mise à jour** : `power_consumption_entity_id` doit maintenant représenter la consommation de la maison, pas la mesure nette. Voir [Créer des capteurs template pour votre installation](#créer-des-capteurs-template-pour-votre-installation) pour le guide de migration
+>   - **Amélioration de la gestion de la batterie** : Le capteur de puissance de charge de la batterie est maintenant optionnel (utilisé uniquement pour les diagnostics). La réserve et le SOC de la batterie sont gérés plus efficacement
+>   - **Lissage par défaut mis à jour** : Le lissage de production PV est maintenant par défaut à 15 minutes pour une meilleure stabilité. Lissage de la consommation et de la batterie désactivé par défaut
 > * **release 3.5.0** :
 >   - ajout d'une gestion de la priorité. Cf. [la gestion de la priorité](#la-gestion-de-la-priorité)
 > * **release 3.2.0** :

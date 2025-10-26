@@ -63,8 +63,11 @@ async def async_setup_entry(
         entity2 = SolarOptimizerSensorEntity(coordinator, hass, "total_power")
         entity3 = SolarOptimizerSensorEntity(coordinator, hass, "power_production")
         entity4 = SolarOptimizerSensorEntity(coordinator, hass, "power_production_brut")
+        entity5 = SolarOptimizerSensorEntity(coordinator, hass, "household_consumption")
+        entity6 = SolarOptimizerSensorEntity(coordinator, hass, "available_excess_power")
+        entity7 = SolarOptimizerSensorEntity(coordinator, hass, "total_current_distributed_power")
 
-        async_add_entities([entity1, entity2, entity3, entity4], False)
+        async_add_entities([entity1, entity2, entity3, entity4, entity5, entity6, entity7], False)
 
         await coordinator.configure(entry)
         return
@@ -139,6 +142,12 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
             return "mdi:flash"
         elif self.idx == "battery_soc":
             return "mdi:battery"
+        elif self.idx == "household_consumption":
+            return "mdi:home-lightning-bolt"
+        elif self.idx == "available_excess_power":
+            return "mdi:solar-power-variant-outline"
+        elif self.idx == "total_current_distributed_power":
+            return "mdi:transmission-tower-export"
         else:
             return "mdi:solar-power-variant"
 

@@ -50,7 +50,7 @@ class SimulatedAnnealingAlgorithm:
     def recuit_simule(
         self,
         devices: list[ManagedDevice],
-        power_consumption: float,
+        household_consumption: float,
         solar_power_production: float,
         sell_cost: float,
         buy_cost: float,
@@ -61,8 +61,8 @@ class SimulatedAnnealingAlgorithm:
         """The entrypoint of the algorithm:
         You should give:
          - devices: a list of ManagedDevices. devices that are is_usable false are not taken into account
-         - power_consumption: the current power consumption. Can be negeative if power is given back to grid.
-         - solar_power_production: the solar production power
+         - household_consumption: the base household power consumption in watts (positive value, excluding managed devices)
+         - solar_power_production: the solar production power (already smoothed and with battery reserve applied if configured)
          - sell_cost: the sell cost of energy
          - buy_cost: the buy cost of energy
          - sell_tax_percent: a sell taxe applied to sell energy (a percentage)
@@ -76,20 +76,20 @@ class SimulatedAnnealingAlgorithm:
         """
         if (
             len(devices) <= 0  # pylint: disable=too-many-boolean-expressions
-            or power_consumption is None
+            or household_consumption is None
             or solar_power_production is None
             or sell_cost is None
             or buy_cost is None
             or sell_tax_percent is None
         ):
             _LOGGER.info(
-                "Not all informations are available for Simulated Annealign algorithm to work. Calculation is abandoned"
+                "Not all information is available for Simulated Annealing algorithm to work. Calculation is abandoned"
             )
             return [], -1, -1
 
         _LOGGER.debug(
-            "Calling recuit_simule with power_consumption=%.2f, solar_power_production=%.2f sell_cost=%.2f, buy_cost=%.2f, tax=%.2f%% devices=%s",
-            power_consumption,
+            "Calling recuit_simule with household_consumption=%.2f, solar_power_production=%.2f sell_cost=%.2f, buy_cost=%.2f, tax=%.2f%% devices=%s",
+            household_consumption,
             solar_power_production,
             sell_cost,
             buy_cost,
@@ -99,7 +99,7 @@ class SimulatedAnnealingAlgorithm:
         self._cout_achat = buy_cost
         self._cout_revente = sell_cost
         self._taxe_revente = sell_tax_percent
-        self._consommation_net = power_consumption
+        self._consommation_net = household_consumption
         self._production_solaire = solar_power_production
         self._priority_weight = priority_weight / 100.0  # to get percentage
 
@@ -205,33 +205,45 @@ class SimulatedAnnealingAlgorithm:
         )
 
     def calculer_objectif(self, solution) -> float:
-        """Calcul de l'objectif : minimiser le surplus de production solaire
-        rejets = 0 if consommation_net >=0 else -consommation_net
-        consommation_solaire = min(production_solaire, production_solaire - rejets)
-        consommation_totale = consommation_net + consommation_solaire
+        """Calculate the objective: minimize grid import and maximize solar usage
+        
+        With household_consumption (positive W) representing base household load (excluding managed devices)
+        and solar_production:
+        - Total consumption = household_consumption + devices (from solution)
+        - Net consumption = total_consumption - solar_production
+        - If net > 0: importing from grid
+        - If net < 0: exporting to grid
+        
+        Note: household_consumption already excludes currently active managed devices,
+        so we add the full device power from the solution, not the difference.
         """
 
         puissance_totale_eqt = self.consommation_equipements(solution)
-        diff_puissance_totale_eqt = (
-            puissance_totale_eqt - self._puissance_totale_eqt_initiale
-        )
 
-        new_consommation_net = self._consommation_net + diff_puissance_totale_eqt
+        # Calculate total consumption (base household + managed devices from solution)
+        # household_consumption already has current devices subtracted, so we add solution devices directly
+        total_consumption = self._consommation_net + puissance_totale_eqt
+        
+        # Calculate net consumption (total - production)
+        # Positive = import, negative = export
+        new_consommation_net = total_consumption - self._production_solaire
+        
         new_rejets = 0 if new_consommation_net >= 0 else -new_consommation_net
         new_import = 0 if new_consommation_net < 0 else new_consommation_net
         new_consommation_solaire = min(
-            self._production_solaire, self._production_solaire - new_rejets
+            self._production_solaire, total_consumption
         )
-        new_consommation_totale = (
-            new_consommation_net + new_rejets
-        ) + new_consommation_solaire
+        new_consommation_totale = total_consumption
+        
         if DEBUG:
             _LOGGER.debug(
-                "Objectif : cette solution ajoute %.3fW a la consommation initial. Nouvelle consommation nette=%.3fW. Nouveaux rejets=%.3fW. Nouvelle conso totale=%.3fW",
-                diff_puissance_totale_eqt,
+                "Objective: devices in solution use %.3fW. Total consumption=%.3fW, Net consumption=%.3fW. Export=%.3fW. Import=%.3fW. Solar used=%.3fW",
+                puissance_totale_eqt,
+                total_consumption,
                 new_consommation_net,
                 new_rejets,
-                new_consommation_totale,
+                new_import,
+                new_consommation_solaire,
             )
 
         cout_revente_impose = self._cout_revente * (1.0 - self._taxe_revente / 100.0)
@@ -251,8 +263,11 @@ class SimulatedAnnealingAlgorithm:
         return ret
 
     def generer_solution_initiale(self, solution):
-        """Generate the initial solution (which is the solution given in argument) and calculate the total initial power"""
-        self._puissance_totale_eqt_initiale = self.consommation_equipements(solution)
+        """Generate the initial solution (which is the solution given in argument)
+        
+        Note: We no longer track initial power since household_consumption
+        already excludes currently active devices.
+        """
         return copy.deepcopy(solution)
 
     def consommation_equipements(self, solution):
