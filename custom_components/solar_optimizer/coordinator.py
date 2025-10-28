@@ -35,12 +35,14 @@ from .const import (
     DEFAULT_BATTERY_RECHARGE_RESERVE_W,
     DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
     DEFAULT_MIN_EXPORT_MARGIN_W,
+    DEFAULT_SWITCHING_PENALTY_FACTOR,
     CONF_SMOOTHING_PRODUCTION_WINDOW_MIN,
     CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN,
     CONF_SMOOTHING_HOUSEHOLD_WINDOW_MIN,
     CONF_BATTERY_RECHARGE_RESERVE_W,
     CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING,
     CONF_MIN_EXPORT_MARGIN_W,
+    CONF_SWITCHING_PENALTY_FACTOR,
 )
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
@@ -105,6 +107,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         min_temp = 0.05
         cooling_factor = 0.95
         max_iteration_number = 1000
+        switching_penalty_factor = DEFAULT_SWITCHING_PENALTY_FACTOR  # Will be updated from config entry
 
         if config and (algo_config := config.get("algorithm")):
             init_temp = float(algo_config.get("initial_temp", 1000))
@@ -113,7 +116,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
 
         self._algo = SimulatedAnnealingAlgorithm(
-            init_temp, min_temp, cooling_factor, max_iteration_number
+            init_temp, min_temp, cooling_factor, max_iteration_number, switching_penalty_factor
         )
         self.config = config
 
@@ -159,6 +162,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_recharge_reserve_w = float(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_W, DEFAULT_BATTERY_RECHARGE_RESERVE_W))
         self._battery_recharge_reserve_before_smoothing = bool(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING))
         self._min_export_margin_w = float(config.data.get(CONF_MIN_EXPORT_MARGIN_W, DEFAULT_MIN_EXPORT_MARGIN_W))
+        
+        # Update switching penalty factor from config entry
+        switching_penalty_factor = float(config.data.get(CONF_SWITCHING_PENALTY_FACTOR, DEFAULT_SWITCHING_PENALTY_FACTOR))
+        self._algo._switching_penalty_factor = switching_penalty_factor
+        _LOGGER.info("Switching penalty factor set to: %.2f", switching_penalty_factor)
 
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
