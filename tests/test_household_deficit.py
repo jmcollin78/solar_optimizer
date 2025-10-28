@@ -1,4 +1,4 @@
-""" Test household consumption deficit handling """
+"""Test household consumption deficit handling"""
 
 from unittest.mock import patch
 import pytest
@@ -64,7 +64,7 @@ async def test_household_deficit_does_not_zero_excess(
     expected_household_base,
 ):
     """Test that household deficit (negative base_household_raw) does not force available_excess_power to 0"""
-    
+
     # Create central config
     entry_central = MockConfigEntry(
         domain=DOMAIN,
@@ -86,10 +86,10 @@ async def test_household_deficit_does_not_zero_excess(
             CONF_RAZ_TIME: "05:00",
         },
     )
-    
+
     entry_central.add_to_hass(hass)
     await hass.config_entries.async_setup(entry_central.entry_id)
-    
+
     # Create device A if needed
     if device_a_power > 0:
         entry_a = MockConfigEntry(
@@ -109,12 +109,12 @@ async def test_household_deficit_does_not_zero_excess(
                 CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
             },
         )
-        
+
         device_a = await create_managed_device(hass, entry_a, "equipement_a")
         assert device_a is not None
         # Simulate device A is currently active
         device_a.current_power = device_a_power
-    
+
     # Create device B if needed
     if device_b_power > 0:
         entry_b = MockConfigEntry(
@@ -134,53 +134,47 @@ async def test_household_deficit_does_not_zero_excess(
                 CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
             },
         )
-        
+
         device_b = await create_managed_device(hass, entry_b, "equipement_b")
         assert device_b is not None
         # Simulate device B is currently active
         device_b.current_power = device_b_power
-    
+
     coordinator = SolarOptimizerCoordinator.get_coordinator()
     assert coordinator is not None
-    
+
     # Set up mock states
     side_effects = SideEffects(
         {
-            "sensor.fake_power_consumption": State(
-                "sensor.fake_power_consumption", consumption_power
-            ),
-            "sensor.fake_power_production": State(
-                "sensor.fake_power_production", production_power
-            ),
-            "sensor.fake_battery_charge_power": State(
-                "sensor.fake_battery_charge_power", 0
-            ),
+            "sensor.fake_power_consumption": State("sensor.fake_power_consumption", consumption_power),
+            "sensor.fake_power_production": State("sensor.fake_power_production", production_power),
+            "sensor.fake_battery_charge_power": State("sensor.fake_battery_charge_power", 0),
             "input_number.fake_sell_cost": State("input_number.fake_sell_cost", 1),
             "input_number.fake_buy_cost": State("input_number.fake_buy_cost", 1),
-            "input_number.fake_sell_tax_percent": State(
-                "input_number.fake_sell_tax_percent", 0
-            ),
+            "input_number.fake_sell_tax_percent": State("input_number.fake_sell_tax_percent", 0),
             "sensor.fake_battery_soc": State("sensor.fake_battery_soc", 50),
         },
         State("unknown.entity_id", "unknown"),
     )
-    
+
     # Run the update
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()):
         calculated_data = await coordinator._async_update_data()
-    
+
     # Verify the results
     assert calculated_data is not None
     assert calculated_data["power_production"] == production_power
     assert calculated_data["power_consumption"] == consumption_power
-    
+
     # Check household base consumption (clamped to >= 0)
-    assert calculated_data["household_consumption"] == expected_household_base, \
-        f"Expected household_consumption={expected_household_base}, got {calculated_data['household_consumption']}"
-    
+    assert (
+        calculated_data["household_consumption"] == expected_household_base
+    ), f"Expected household_consumption={expected_household_base}, got {calculated_data['household_consumption']}"
+
     # Check available excess power - this should NOT be 0 when production is high
-    assert calculated_data["available_excess_power"] == expected_excess_power, \
-        f"Expected available_excess_power={expected_excess_power}, got {calculated_data['available_excess_power']}"
+    assert (
+        calculated_data["available_excess_power"] == expected_excess_power
+    ), f"Expected available_excess_power={expected_excess_power}, got {calculated_data['available_excess_power']}"
 
 
 @pytest.mark.parametrize(
@@ -217,7 +211,7 @@ async def test_household_deficit_with_smoothing_and_margins(
     expected_excess,
 ):
     """Test that deficit handling works correctly with smoothing and min export margin"""
-    
+
     # Create central config with smoothing and margin
     entry_central = MockConfigEntry(
         domain=DOMAIN,
@@ -240,10 +234,10 @@ async def test_household_deficit_with_smoothing_and_margins(
             CONF_RAZ_TIME: "05:00",
         },
     )
-    
+
     entry_central.add_to_hass(hass)
     await hass.config_entries.async_setup(entry_central.entry_id)
-    
+
     # Create a device
     if device_power > 0:
         entry_a = MockConfigEntry(
@@ -263,47 +257,37 @@ async def test_household_deficit_with_smoothing_and_margins(
                 CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
             },
         )
-        
+
         device_a = await create_managed_device(hass, entry_a, "equipement_a")
         assert device_a is not None
         device_a.current_power = device_power
-    
+
     coordinator = SolarOptimizerCoordinator.get_coordinator()
     assert coordinator is not None
-    
+
     # Set up mock states
     side_effects = SideEffects(
         {
-            "sensor.fake_power_consumption": State(
-                "sensor.fake_power_consumption", consumption_power
-            ),
-            "sensor.fake_power_production": State(
-                "sensor.fake_power_production", production_power
-            ),
-            "sensor.fake_battery_charge_power": State(
-                "sensor.fake_battery_charge_power", 0
-            ),
+            "sensor.fake_power_consumption": State("sensor.fake_power_consumption", consumption_power),
+            "sensor.fake_power_production": State("sensor.fake_power_production", production_power),
+            "sensor.fake_battery_charge_power": State("sensor.fake_battery_charge_power", 0),
             "input_number.fake_sell_cost": State("input_number.fake_sell_cost", 1),
             "input_number.fake_buy_cost": State("input_number.fake_buy_cost", 1),
-            "input_number.fake_sell_tax_percent": State(
-                "input_number.fake_sell_tax_percent", 0
-            ),
+            "input_number.fake_sell_tax_percent": State("input_number.fake_sell_tax_percent", 0),
             "sensor.fake_battery_soc": State("sensor.fake_battery_soc", battery_soc),
         },
         State("unknown.entity_id", "unknown"),
     )
-    
+
     # Run the update
     with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()):
         calculated_data = await coordinator._async_update_data()
-    
+
     # Verify the results
     assert calculated_data is not None
-    
+
     # Check that excess power is computed correctly despite deficit
-    assert calculated_data["available_excess_power"] == expected_excess, \
-        f"Expected available_excess_power={expected_excess}, got {calculated_data['available_excess_power']}"
-    
+    assert calculated_data["available_excess_power"] == expected_excess, f"Expected available_excess_power={expected_excess}, got {calculated_data['available_excess_power']}"
+
     # Verify household consumption is clamped to >= 0
-    assert calculated_data["household_consumption"] >= 0, \
-        f"household_consumption should be >= 0, got {calculated_data['household_consumption']}"
+    assert calculated_data["household_consumption"] >= 0, f"household_consumption should be >= 0, got {calculated_data['household_consumption']}"
