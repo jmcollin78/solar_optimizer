@@ -343,9 +343,19 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         
         # Calculate base household consumption (without managed devices)
         # If this goes negative, it means devices are consuming more than the sensor reading
-        # (can happen due to reporting lag). We track this as a power deficit.
-        household_consumption_with_deficit = raw_consumption - total_current_distributed_power
-        household_consumption_raw = max(0, household_consumption_with_deficit)
+        # (can happen due to reporting lag). We clamp this to zero by design.
+        # A negative raw intermediate value only indicates transient report lag, not a true deficit.
+        base_household_raw = raw_consumption - total_current_distributed_power
+        
+        # Log when a deficit is observed (for diagnostics), but do not treat it as a blocker
+        if base_household_raw < 0:
+            _LOGGER.debug(
+                "Household deficit observed (likely sensor/reporting lag): %.2fW. Clamping base to 0.",
+                abs(base_household_raw)
+            )
+        
+        # Clamp base household consumption to non-negative
+        household_consumption_raw = max(0, base_household_raw)
         
         # Apply smoothing to household consumption if configured
         # This helps compensate for short-duration devices like fridges, kettles, etc.
@@ -356,7 +366,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 household_consumption_raw,
                 "household_consumption"
             )
-            # After smoothing, ensure it stays non-negative
+            # After smoothing, ensure it stays non-negative (by design)
             household_consumption = max(0, household_consumption)
             calculated_data["household_consumption_smoothing_mode"] = "sliding_window"
             calculated_data["household_consumption_window_count"] = len(self._household_window)
@@ -404,17 +414,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         # Calculate available excess power for optimization
         # Formula: PV Production (with margin if battery at 100%) - base household consumption
-        # If there was a power deficit (devices using more than sensor reading), account for it
-        if household_consumption_with_deficit < 0:
-            # Deficit means we're already over-consuming, so no excess available
-            available_excess_power = 0
-            _LOGGER.debug(
-                "Power deficit detected: devices using %.2fW more than sensor reading. No excess available.",
-                -household_consumption_with_deficit
-            )
-        else:
-            # Normal case: calculate excess from production minus household consumption
-            available_excess_power = max(0, effective_production - household_consumption)
+        # The base household consumption is already clamped to >= 0, so we compute excess correctly
+        # even when there was a transient reporting deficit
+        available_excess_power = max(0, effective_production - household_consumption)
         
         calculated_data["available_excess_power"] = available_excess_power
         _LOGGER.debug(
