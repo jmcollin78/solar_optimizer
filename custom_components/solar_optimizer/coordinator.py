@@ -1,4 +1,4 @@
-""" The data coordinator class """
+"""The data coordinator class"""
 
 import logging
 import math
@@ -17,10 +17,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from homeassistant.util.unit_conversion import (
-    BaseUnitConverter,
-    PowerConverter
-)
+from homeassistant.util.unit_conversion import BaseUnitConverter, PowerConverter
 
 from homeassistant.config_entries import ConfigEntry
 
@@ -58,11 +55,8 @@ def get_safe_float(hass, entity_id: str, unit: str = None):
 
     float_val = float(state.state)
 
-    if (unit is not None) and ('device_class' in state.attributes) and (state.attributes["device_class"] == "power"):
-        float_val = PowerConverter.convert(float_val,
-            state.attributes["unit_of_measurement"],
-            unit
-        )
+    if (unit is not None) and ("device_class" in state.attributes) and (state.attributes["device_class"] == "power"):
+        float_val = PowerConverter.convert(float_val, state.attributes["unit_of_measurement"], unit)
 
     return None if math.isinf(float_val) or not math.isfinite(float_val) else float_val
 
@@ -115,22 +109,16 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             cooling_factor = float(algo_config.get("cooling_factor", 0.95))
             max_iteration_number = int(algo_config.get("max_iteration_number", 1000))
 
-        self._algo = SimulatedAnnealingAlgorithm(
-            init_temp, min_temp, cooling_factor, max_iteration_number, switching_penalty_factor
-        )
+        self._algo = SimulatedAnnealingAlgorithm(init_temp, min_temp, cooling_factor, max_iteration_number, switching_penalty_factor)
         self.config = config
 
     async def configure(self, config: ConfigEntry) -> None:
         """Configure the coordinator from configEntry of the integration"""
-        refresh_period_sec = (
-            config.data.get("refresh_period_sec") or DEFAULT_REFRESH_PERIOD_SEC
-        )
+        refresh_period_sec = config.data.get("refresh_period_sec") or DEFAULT_REFRESH_PERIOD_SEC
         self.update_interval = timedelta(seconds=refresh_period_sec)
         self._schedule_refresh()
 
-        self._power_consumption_entity_id = config.data.get(
-            "power_consumption_entity_id"
-        )
+        self._power_consumption_entity_id = config.data.get("power_consumption_entity_id")
         self._power_production_entity_id = config.data.get("power_production_entity_id")
         self._subscribe_to_events = config.data.get("subscribe_to_events")
 
@@ -139,18 +127,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             self._unsub_events = None
 
         if self._subscribe_to_events:
-            self._unsub_events = async_track_state_change_event(
-                self.hass,
-                [self._power_consumption_entity_id, self._power_production_entity_id],
-                self._async_on_change)
+            self._unsub_events = async_track_state_change_event(self.hass, [self._power_consumption_entity_id, self._power_production_entity_id], self._async_on_change)
 
         self._sell_cost_entity_id = config.data.get("sell_cost_entity_id")
         self._buy_cost_entity_id = config.data.get("buy_cost_entity_id")
         self._sell_tax_percent_entity_id = config.data.get("sell_tax_percent_entity_id")
         self._battery_soc_entity_id = config.data.get("battery_soc_entity_id")
-        self._battery_charge_power_entity_id = config.data.get(
-            "battery_charge_power_entity_id"
-        )
+        self._battery_charge_power_entity_id = config.data.get("battery_charge_power_entity_id")
         self._smooth_production = config.data.get("smooth_production") is True
         self._smoothing_window_min = int(config.data.get(CONF_SMOOTHING_PRODUCTION_WINDOW_MIN, DEFAULT_SMOOTHING_PRODUCTION_WINDOW_MIN))
         self._production_window = deque()
@@ -162,15 +145,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_recharge_reserve_w = float(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_W, DEFAULT_BATTERY_RECHARGE_RESERVE_W))
         self._battery_recharge_reserve_before_smoothing = bool(config.data.get(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING))
         self._min_export_margin_w = float(config.data.get(CONF_MIN_EXPORT_MARGIN_W, DEFAULT_MIN_EXPORT_MARGIN_W))
-        
+
         # Update switching penalty factor from config entry
         switching_penalty_factor = float(config.data.get(CONF_SWITCHING_PENALTY_FACTOR, DEFAULT_SWITCHING_PENALTY_FACTOR))
         self._algo._switching_penalty_factor = switching_penalty_factor
         _LOGGER.info("Switching penalty factor set to: %.2f", switching_penalty_factor)
 
-        self._raz_time = datetime.strptime(
-            config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
-        ).time()
+        self._raz_time = datetime.strptime(config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M").time()
         self._central_config_done = True
 
     async def on_ha_started(self, _) -> None:
@@ -179,41 +160,34 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
     def _apply_smoothing_window(self, window: deque, window_minutes: int, raw_value: float, field_name: str) -> float:
         """Apply sliding-window smoothing to a value.
-        
+
         Args:
             window: deque containing (timestamp, value) tuples
             window_minutes: window size in minutes
             raw_value: current raw value
             field_name: name of field for logging
-            
+
         Returns:
             Smoothed value (rounded to integer)
         """
         if window_minutes <= 0:
             return raw_value
-            
+
         now = datetime.now()
-        
+
         # Add current value to window
         window.append((now, raw_value))
-        
+
         # Remove old entries outside the window
         cutoff_time = now - timedelta(minutes=window_minutes)
         while window and window[0][0] < cutoff_time:
             window.popleft()
-        
+
         # Calculate average of values in window
         if window:
             avg_value = sum(val for _, val in window) / len(window)
             smoothed = round(avg_value)
-            _LOGGER.debug(
-                "Smoothing %s: raw=%s, smoothed=%s, window_size=%s, window_minutes=%s",
-                field_name,
-                raw_value,
-                smoothed,
-                len(window),
-                window_minutes
-            )
+            _LOGGER.debug("Smoothing %s: raw=%s, smoothed=%s, window_size=%s, window_minutes=%s", field_name, raw_value, smoothed, len(window), window_minutes)
             return smoothed
         else:
             return raw_value
@@ -235,9 +209,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         # Add a power_consumption and power_production
         power_production = get_safe_float(self.hass, self._power_production_entity_id, "W")
         if power_production is None:
-            _LOGGER.warning(
-                "Power production is not valued. Solar Optimizer will be disabled"
-            )
+            _LOGGER.warning("Power production is not valued. Solar Optimizer will be disabled")
             return None
 
         # Always store raw production in power_production_brut
@@ -254,16 +226,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 calculated_data["power_production_reserved"] = reserved_watts
                 battery_reserve_reduction_active = True
                 _LOGGER.debug(
-                    "Battery reserve applied BEFORE smoothing: reserved=%sW, battery_soc=%s%%, remaining_production=%sW",
-                    reserved_watts,
-                    battery_soc_for_reserve,
-                    power_production
+                    "Battery reserve applied BEFORE smoothing: reserved=%sW, battery_soc=%s%%, remaining_production=%sW", reserved_watts, battery_soc_for_reserve, power_production
                 )
             else:
                 calculated_data["power_production_reserved"] = 0
         else:
             calculated_data["power_production_reserved"] = 0
-        
+
         calculated_data["battery_reserve_reduction_active"] = battery_reserve_reduction_active
 
         # Apply sliding-window smoothing to production if enabled
@@ -274,25 +243,17 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             calculated_data["power_production_window_count"] = 0
         else:
             # Sliding-window smoothing enabled
-            calculated_data["power_production"] = self._apply_smoothing_window(
-                self._production_window,
-                self._smoothing_window_min,
-                power_production,
-                "power_production"
-            )
+            calculated_data["power_production"] = self._apply_smoothing_window(self._production_window, self._smoothing_window_min, power_production, "power_production")
             calculated_data["power_production_smoothing_mode"] = "sliding_window"
             calculated_data["power_production_window_count"] = len(self._production_window)
 
         # Get raw consumption and apply smoothing if configured
         power_consumption_raw = get_safe_float(self.hass, self._power_consumption_entity_id, "W")
         calculated_data["power_consumption_brut"] = power_consumption_raw
-        
+
         if self._smoothing_consumption_window_min > 0 and power_consumption_raw is not None:
             calculated_data["power_consumption"] = self._apply_smoothing_window(
-                self._consumption_window,
-                self._smoothing_consumption_window_min,
-                power_consumption_raw,
-                "power_consumption"
+                self._consumption_window, self._smoothing_consumption_window_min, power_consumption_raw, "power_consumption"
             )
             calculated_data["power_consumption_smoothing_mode"] = "sliding_window"
             calculated_data["power_consumption_window_count"] = len(self._consumption_window)
@@ -301,17 +262,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             calculated_data["power_consumption_smoothing_mode"] = "none"
             calculated_data["power_consumption_window_count"] = 0
 
-        calculated_data["sell_cost"] = get_safe_float(
-            self.hass, self._sell_cost_entity_id
-        )
+        calculated_data["sell_cost"] = get_safe_float(self.hass, self._sell_cost_entity_id)
 
-        calculated_data["buy_cost"] = get_safe_float(
-            self.hass, self._buy_cost_entity_id
-        )
+        calculated_data["buy_cost"] = get_safe_float(self.hass, self._buy_cost_entity_id)
 
-        calculated_data["sell_tax_percent"] = get_safe_float(
-            self.hass, self._sell_tax_percent_entity_id
-        )
+        calculated_data["sell_tax_percent"] = get_safe_float(self.hass, self._sell_tax_percent_entity_id)
 
         soc = get_safe_float(self.hass, self._battery_soc_entity_id)
         calculated_data["battery_soc"] = soc if soc is not None else 0
@@ -328,35 +283,32 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         # Calculate total power currently distributed to managed devices
         # The household consumption sensor includes all devices, so we need to subtract
         # the power of currently active managed devices to get base household consumption
-        total_current_distributed_power = sum(
-            device.current_power for device in self._devices if device.current_power > 0
-        )
-        _LOGGER.debug(
-            "Total currently distributed power to managed devices: %.2fW",
-            total_current_distributed_power
-        )
-        
+        total_current_distributed_power = sum(device.current_power for device in self._devices if device.current_power > 0)
+        _LOGGER.debug("Total currently distributed power to managed devices: %.2fW", total_current_distributed_power)
+
         # Compute base household consumption (excluding managed devices)
         # The power_consumption_entity_id includes ALL consumption (household + managed devices)
         # We subtract currently active managed devices to get the base household consumption
         raw_consumption = calculated_data["power_consumption"] if calculated_data["power_consumption"] is not None else 0
-        
+
         # Calculate base household consumption (without managed devices)
         # If this goes negative, it means devices are consuming more than the sensor reading
-        # (can happen due to reporting lag). We track this as a power deficit.
-        household_consumption_with_deficit = raw_consumption - total_current_distributed_power
-        household_consumption_raw = max(0, household_consumption_with_deficit)
-        
+        # (can happen due to reporting lag). We clamp this to zero by design.
+        # A negative raw intermediate value only indicates transient report lag, not a true deficit.
+        base_household_raw = raw_consumption - total_current_distributed_power
+
+        # Log when a deficit is observed (for diagnostics), but do not treat it as a blocker
+        if base_household_raw < 0:
+            _LOGGER.debug("Household deficit observed (likely sensor/reporting lag): %.2fW. Clamping base to 0.", abs(base_household_raw))
+
+        # Clamp base household consumption to non-negative
+        household_consumption_raw = max(0, base_household_raw)
+
         # Apply smoothing to household consumption if configured
         # This helps compensate for short-duration devices like fridges, kettles, etc.
         if self._smoothing_household_window_min > 0:
-            household_consumption = self._apply_smoothing_window(
-                self._household_window,
-                self._smoothing_household_window_min,
-                household_consumption_raw,
-                "household_consumption"
-            )
-            # After smoothing, ensure it stays non-negative
+            household_consumption = self._apply_smoothing_window(self._household_window, self._smoothing_household_window_min, household_consumption_raw, "household_consumption")
+            # After smoothing, ensure it stays non-negative (by design)
             household_consumption = max(0, household_consumption)
             calculated_data["household_consumption_smoothing_mode"] = "sliding_window"
             calculated_data["household_consumption_window_count"] = len(self._household_window)
@@ -364,7 +316,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             household_consumption = household_consumption_raw
             calculated_data["household_consumption_smoothing_mode"] = "none"
             calculated_data["household_consumption_window_count"] = 0
-        
+
         calculated_data["household_consumption"] = household_consumption
         calculated_data["household_consumption_brut"] = household_consumption_raw
         calculated_data["total_current_distributed_power"] = total_current_distributed_power
@@ -379,7 +331,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 "Battery reserve applied AFTER smoothing: reserved=%sW, battery_soc=%s%%, remaining_production=%sW",
                 reserved_watts,
                 calculated_data["battery_soc"],
-                calculated_data["power_production"]
+                calculated_data["power_production"],
             )
         elif not self._battery_recharge_reserve_before_smoothing:
             # Only set to 0 if we're in "after smoothing" mode and conditions aren't met
@@ -393,35 +345,23 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             effective_production = max(0, calculated_data["power_production"] - self._min_export_margin_w)
             calculated_data["min_export_margin_active"] = True
             calculated_data["min_export_margin_reduction"] = self._min_export_margin_w
-            _LOGGER.debug(
-                "Min export margin applied at 100%% SOC: margin=%sW, effective_production=%sW",
-                self._min_export_margin_w,
-                effective_production
-            )
+            _LOGGER.debug("Min export margin applied at 100%% SOC: margin=%sW, effective_production=%sW", self._min_export_margin_w, effective_production)
         else:
             calculated_data["min_export_margin_active"] = False
             calculated_data["min_export_margin_reduction"] = 0
 
         # Calculate available excess power for optimization
         # Formula: PV Production (with margin if battery at 100%) - base household consumption
-        # If there was a power deficit (devices using more than sensor reading), account for it
-        if household_consumption_with_deficit < 0:
-            # Deficit means we're already over-consuming, so no excess available
-            available_excess_power = 0
-            _LOGGER.debug(
-                "Power deficit detected: devices using %.2fW more than sensor reading. No excess available.",
-                -household_consumption_with_deficit
-            )
-        else:
-            # Normal case: calculate excess from production minus household consumption
-            available_excess_power = max(0, effective_production - household_consumption)
-        
+        # The base household consumption is already clamped to >= 0, so we compute excess correctly
+        # even when there was a transient reporting deficit
+        available_excess_power = max(0, effective_production - household_consumption)
+
         calculated_data["available_excess_power"] = available_excess_power
         _LOGGER.debug(
             "Available excess power before optimization: %.2fW (effective_production=%.2fW, household_base=%.2fW)",
             available_excess_power,
             effective_production,
-            household_consumption
+            household_consumption,
         )
 
         #
@@ -470,11 +410,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 await device.activate(requested_power)
 
             # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
-            if (
-                state
-                and device.can_change_power
-                and (device.current_power != requested_power or not is_active)
-            ):
+            if state and device.can_change_power and (device.current_power != requested_power or not is_active):
                 _LOGGER.debug(
                     "Change power of %s to %s",
                     equipement["name"],
@@ -498,30 +434,18 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     @classmethod
     def get_coordinator(cls) -> Any:
         """Get the coordinator from the hass.data"""
-        if (
-            not hasattr(SolarOptimizerCoordinator, "hass")
-            or SolarOptimizerCoordinator.hass is None
-            or SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN] is None
-        ):
+        if not hasattr(SolarOptimizerCoordinator, "hass") or SolarOptimizerCoordinator.hass is None or SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN] is None:
             return None
 
-        return SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN][
-            "coordinator"
-        ]
+        return SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN]["coordinator"]
 
     @classmethod
     def reset(cls) -> Any:
         """Reset the coordinator from the hass.data"""
-        if (
-            not hasattr(SolarOptimizerCoordinator, "hass")
-            or SolarOptimizerCoordinator.hass is None
-            or SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN] is None
-        ):
+        if not hasattr(SolarOptimizerCoordinator, "hass") or SolarOptimizerCoordinator.hass is None or SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN] is None:
             return
 
-        SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN][
-            "coordinator"
-        ] = None
+        SolarOptimizerCoordinator.hass.data[SOLAR_OPTIMIZER_DOMAIN]["coordinator"] = None
 
     @property
     def is_central_config_done(self) -> bool:
