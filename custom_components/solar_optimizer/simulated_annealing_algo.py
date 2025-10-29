@@ -230,14 +230,17 @@ class SimulatedAnnealingAlgorithm:
         self._production_solaire = solar_power_production
         self._priority_weight = priority_weight / 100.0  # to get percentage
 
-        # Auto-calculate switching penalty if enabled
+        # Always calculate suggested penalty for monitoring/tuning purposes
+        suggested_penalty = self._calculate_optimal_switching_penalty(
+            devices,
+            solar_power_production,
+            household_consumption
+        )
+        
+        # Apply auto-calculated penalty if enabled
         if self._auto_switching_penalty:
             original_penalty = self._switching_penalty_factor
-            self._switching_penalty_factor = self._calculate_optimal_switching_penalty(
-                devices,
-                solar_power_production,
-                household_consumption
-            )
+            self._switching_penalty_factor = suggested_penalty
             if abs(original_penalty - self._switching_penalty_factor) > 0.05:
                 _LOGGER.info(
                     "Switching penalty adjusted from %.2f to %.2f (auto-mode)",
