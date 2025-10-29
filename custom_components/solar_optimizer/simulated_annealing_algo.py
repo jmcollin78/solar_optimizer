@@ -35,21 +35,133 @@ class SimulatedAnnealingAlgorithm:
         cooling_factor: float,
         max_iteration_number: int,
         switching_penalty_factor: float = 0.5,
+        auto_switching_penalty: bool = False,
+        clamp_price_step: float = 0.0,
     ):
-        """Initialize the algorithm with values"""
+        """Initialize the algorithm with values
+        
+        Args:
+            initial_temp: Initial temperature for simulated annealing
+            min_temp: Minimum temperature before stopping
+            cooling_factor: Factor to reduce temperature each iteration
+            max_iteration_number: Maximum number of iterations
+            switching_penalty_factor: Penalty for switching off active devices (0-1)
+            auto_switching_penalty: If True, automatically calculate optimal penalty
+            clamp_price_step: If > 0, clamp prices to this step (e.g., 0.05 for 5 cents)
+        """
         self._temperature_initiale = initial_temp
         self._temperature_minimale = min_temp
         self._facteur_refroidissement = cooling_factor
         self._nombre_iterations = max_iteration_number
         self._switching_penalty_factor = switching_penalty_factor
+        self._auto_switching_penalty = auto_switching_penalty
+        self._clamp_price_step = clamp_price_step
         _LOGGER.info(
-            "Initializing the SimulatedAnnealingAlgorithm with initial_temp=%.2f min_temp=%.2f cooling_factor=%.2f max_iterations_number=%d switching_penalty_factor=%.2f",
+            "Initializing the SimulatedAnnealingAlgorithm with initial_temp=%.2f min_temp=%.2f cooling_factor=%.2f max_iterations_number=%d switching_penalty_factor=%.2f auto_penalty=%s clamp_price_step=%.2f",
             self._temperature_initiale,
             self._temperature_minimale,
             self._facteur_refroidissement,
             self._nombre_iterations,
             self._switching_penalty_factor,
+            self._auto_switching_penalty,
+            self._clamp_price_step,
         )
+
+    def _clamp_price(self, price: float) -> float:
+        """Clamp price to configured step to reduce volatility
+        
+        Args:
+            price: The raw price value
+            
+        Returns:
+            Clamped price if clamp_price_step > 0, otherwise original price
+        """
+        if self._clamp_price_step <= 0:
+            return price
+        
+        # Round to nearest step (e.g., 0.05 for 5-cent increments)
+        clamped = round(price / self._clamp_price_step) * self._clamp_price_step
+        
+        if abs(clamped - price) > 0.001:  # Log only if there's a change
+            _LOGGER.debug(
+                "Clamped price from %.4f to %.4f (step=%.2f)",
+                price,
+                clamped,
+                self._clamp_price_step
+            )
+        
+        return clamped
+
+    def _calculate_optimal_switching_penalty(
+        self,
+        devices: list[ManagedDevice],
+        solar_production: float,
+        household_consumption: float,
+    ) -> float:
+        """Calculate optimal switching penalty based on current conditions
+        
+        The penalty should be:
+        - Higher when there's abundant solar power (avoid unnecessary switching)
+        - Lower when power is scarce (allow more flexibility)
+        - Scaled by the number and size of active devices
+        - Balanced to prevent excessive switching costs
+        
+        Args:
+            devices: List of managed devices
+            solar_production: Current solar production in watts
+            household_consumption: Base household consumption in watts
+            
+        Returns:
+            Suggested switching penalty factor (0.0-1.0)
+        """
+        if solar_production <= 0:
+            # No solar power, minimal penalty to allow aggressive optimization
+            return 0.1
+        
+        # Count active devices and total active power capacity
+        active_count = sum(1 for d in devices if d.is_active and d.is_enabled)
+        total_active_capacity = sum(
+            d.power_max for d in devices if d.is_active and d.is_enabled
+        )
+        
+        if active_count == 0:
+            # No active devices, use moderate penalty
+            return 0.3
+        
+        # Calculate excess power ratio (how much headroom we have)
+        available_power = solar_production - household_consumption
+        if available_power <= 0:
+            # Deficit scenario: lower penalty to allow optimization
+            return 0.2
+        
+        # Calculate capacity utilization
+        capacity_ratio = min(1.0, total_active_capacity / solar_production) if solar_production > 0 else 0
+        
+        # Calculate stability factor based on number of devices
+        # More devices = higher penalty to avoid cascade switching
+        device_factor = min(1.0, active_count / 5.0)  # Normalize to 5 devices
+        
+        # Calculate abundance factor (how much excess power we have)
+        abundance_ratio = min(1.0, available_power / solar_production) if solar_production > 0 else 0
+        
+        # Combine factors:
+        # - High abundance + many devices = high penalty (keep things stable)
+        # - Low abundance + few devices = low penalty (optimize aggressively)
+        penalty = 0.2 + (0.6 * abundance_ratio * device_factor)
+        
+        # Clamp to reasonable range
+        penalty = max(0.1, min(0.9, penalty))
+        
+        _LOGGER.info(
+            "Auto-calculated switching penalty: %.2f (active_devices=%d, capacity=%.0fW, production=%.0fW, available=%.0fW)",
+            penalty,
+            active_count,
+            total_active_capacity,
+            solar_production,
+            available_power
+        )
+        
+        return penalty
 
     def recuit_simule(
         self,
@@ -100,12 +212,29 @@ class SimulatedAnnealingAlgorithm:
             sell_tax_percent,
             devices,
         )
-        self._cout_achat = buy_cost
-        self._cout_revente = sell_cost
+        
+        # Apply price clamping if configured
+        self._cout_achat = self._clamp_price(buy_cost)
+        self._cout_revente = self._clamp_price(sell_cost)
         self._taxe_revente = sell_tax_percent
         self._consommation_net = household_consumption
         self._production_solaire = solar_power_production
         self._priority_weight = priority_weight / 100.0  # to get percentage
+
+        # Auto-calculate switching penalty if enabled
+        if self._auto_switching_penalty:
+            original_penalty = self._switching_penalty_factor
+            self._switching_penalty_factor = self._calculate_optimal_switching_penalty(
+                devices,
+                solar_power_production,
+                household_consumption
+            )
+            if abs(original_penalty - self._switching_penalty_factor) > 0.05:
+                _LOGGER.info(
+                    "Switching penalty adjusted from %.2f to %.2f (auto-mode)",
+                    original_penalty,
+                    self._switching_penalty_factor
+                )
 
         # fix #131 - costs cannot be negative or 0
         if self._cout_achat <= 0 or self._cout_revente <= 0:
