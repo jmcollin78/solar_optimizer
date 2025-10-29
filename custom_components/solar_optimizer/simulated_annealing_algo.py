@@ -413,19 +413,21 @@ class SimulatedAnnealingAlgorithm:
         priority_weight = self._priority_weight
 
         # Calculate switching penalty: penalize turning OFF devices that were initially active
+        # AND reward turning ON devices when there's abundant excess power
         # This encourages device stability and prevents frequent switching for marginal gains
         # Note: We use 'was_active' (initial state) rather than current_power to determine
         # if a device was running, which correctly handles standby/0W devices.
         # For variable power devices, changing power (up or down) is NOT penalized.
-        # Only turning the device completely OFF incurs a penalty.
+        # Only turning the device completely OFF/ON incurs a penalty/reward.
         switching_penalty = 0
         if self._switching_penalty_factor > 0:
             for equip in solution:
                 # If device was initially active but solution turns it off, apply penalty
                 was_active = equip.get("was_active", False)
                 solution_turns_off = not equip["state"] and was_active
+                solution_turns_on = equip["state"] and not was_active
                 
-                # Only penalize turning OFF, not power changes for variable power devices
+                # Penalize turning OFF active devices
                 if solution_turns_off:
                     # Penalty proportional to the device's power capacity
                     # Use power_max as the reference since the device was active
@@ -446,6 +448,41 @@ class SimulatedAnnealingAlgorithm:
                             equip.get("power_max", 0),
                             penalty_value
                         )
+                
+                # Reward turning ON devices when there's excess power available
+                # This encourages using available solar power rather than exporting it
+                elif solution_turns_on:
+                    # Calculate if solution would have excess power after turning on this device
+                    devices_power = self.consommation_equipements(solution)
+                    total_consumption = self._consommation_net + devices_power
+                    net_consumption = total_consumption - self._production_solaire
+                    
+                    # If we'd still be exporting power (negative net), reward turning on
+                    if net_consumption < 0:  # Still exporting after device is on
+                        # Reward is smaller than penalty to prefer stability
+                        # But encourages using available solar power
+                        power_max = equip.get("power_max", 0)
+                        export_after_on = -net_consumption
+                        
+                        # Only reward if device power is smaller than the excess
+                        # This prevents turning on devices that would cause import
+                        if power_max <= export_after_on:
+                            if self._production_solaire > 0:
+                                # Reward is 50% of the penalty factor to encourage use of excess
+                                reward_factor = self._switching_penalty_factor * 0.5
+                                power_fraction = power_max / self._production_solaire
+                                reward_value = reward_factor * power_fraction
+                                switching_penalty -= reward_value  # Negative = reward
+                                
+                                if DEBUG:
+                                    _LOGGER.debug(
+                                        "Switching reward for turning on %s with excess power (was_active=%s, power_max=%.2fW, excess=%.2fW): -%.4f",
+                                        equip["name"],
+                                        was_active,
+                                        power_max,
+                                        export_after_on,
+                                        reward_value
+                                    )
 
         ret = (
             consumption_coef * (1.0 - priority_weight)
