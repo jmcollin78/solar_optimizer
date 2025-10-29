@@ -35,7 +35,9 @@
                     "battery_recharge_reserve_before_smoothing": "Apply battery reserve before smoothing",
                     "smoothing_household_window_min": "Household smoothing window (min)",
                     "min_export_margin_w": "Minimum export margin at 100% SOC (W)",
-                    "switching_penalty_factor": "Device switching penalty factor"
+                    "switching_penalty_factor": "Device switching penalty factor",
+                    "auto_switching_penalty": "Auto-calculate switching penalty",
+                    "clamp_price_step": "Price clamping step (cents)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Even with no new data, refresh at least in with this period in seconds. Warning heavy calculations are done at each period, so keep an eye on the CPU load. Don't refresh to often",
@@ -56,9 +58,10 @@
                     "battery_recharge_reserve_before_smoothing": "Apply reserve before smoothing for smoother transitions. Only relevant when smoothing is enabled.",
                     "smoothing_household_window_min": "Window size in minutes for smoothing base household consumption (excluding managed devices). Default: 0 (disabled). Recommended: 3-5 minutes to compensate for short spikes from fridges, kettles, etc.",
                     "min_export_margin_w": "Reserve this many watts from optimization when battery is at 100% SOC. Positive values keep battery topped up by always exporting a small amount. Negative values allow slight import. Default: 0 (disabled).",
-                    "switching_penalty_factor": "Penalty factor for switching off active devices (0=disabled, 0.5=default, 1.0=strong). Higher values reduce device switching for marginal power improvements, extending relay life and ensuring minimum on-times. Variable power devices can still change power freely; only complete shutoffs are penalized. Default: 0.5"
-                }
-            },
+                    "switching_penalty_factor": "Penalty factor for switching off active devices (0=disabled, 0.5=default, 1.0=strong). Higher values reduce device switching for marginal power improvements, extending relay life and ensuring minimum on-times. Variable power devices can still change power freely; only complete shutoffs are penalized. Default: 0.5",
+                    "auto_switching_penalty": "Automatically calculate optimal switching penalty based on current conditions (production, consumption, active devices). When enabled, the penalty is dynamically adjusted: higher with abundant solar power to maintain stability, lower when power is scarce for aggressive optimization. Check the suggested_penalty sensor to see calculated values.",
+                    "clamp_price_step": "Round energy prices to nearest step to reduce volatility (e.g., 0.05 for 5-cent steps). Set to 0 to disable. Helps prevent frequent device switching caused by small 15-minute price fluctuations. Recommended: 0.05 for dynamic pricing."
+                }            },
             "device": {
                 "title": "Device parameters",
                 "description": "Give the device parameters",

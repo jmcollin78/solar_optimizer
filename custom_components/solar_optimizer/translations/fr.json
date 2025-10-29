@@ -35,7 +35,9 @@
                     "battery_recharge_reserve_before_smoothing": "Appliquer la réserve batterie avant le lissage",
                     "smoothing_household_window_min": "Fenêtre de lissage consommation base (min)",
                     "min_export_margin_w": "Marge d'export minimum à 100% SOC (W)",
-                    "switching_penalty_factor": "Facteur de pénalité de commutation des appareils"
+                    "switching_penalty_factor": "Facteur de pénalité de commutation des appareils",
+                    "auto_switching_penalty": "Calcul automatique de la pénalité de commutation",
+                    "clamp_price_step": "Pas d'arrondi des prix (centimes)"
                 },
                 "data_description": {
                     "refresh_period_sec": "Période de rafraichissement en secondes. Attention des calculs lourds sont effectués à chaque période. Ne pas rafraichir trop souvent",
@@ -56,7 +58,9 @@
                     "battery_recharge_reserve_before_smoothing": "Appliquer la réserve avant le lissage pour des transitions plus douces. Pertinent uniquement lorsque le lissage est activé.",
                     "smoothing_household_window_min": "Taille de la fenêtre en minutes pour lisser la consommation de base de la maison (hors appareils gérés). Par défaut : 0 (désactivé). Recommandé : 3-5 minutes pour compenser les pics courts des réfrigérateurs, bouilloires, etc.",
                     "min_export_margin_w": "Réserver ce nombre de watts de l'optimisation lorsque la batterie est à 100% SOC. Valeurs positives maintiennent la batterie chargée en exportant toujours un peu. Valeurs négatives autorisent un léger import. Par défaut : 0 (désactivé).",
-                    "switching_penalty_factor": "Facteur de pénalité pour l'arrêt des appareils actifs (0=désactivé, 0.5=par défaut, 1.0=fort). Des valeurs plus élevées réduisent la commutation des appareils pour des améliorations marginales de puissance, prolongeant la durée de vie des relais et assurant les temps minimum de fonctionnement. Les appareils à puissance variable peuvent toujours modifier leur puissance librement ; seuls les arrêts complets sont pénalisés. Par défaut : 0.5"
+                    "switching_penalty_factor": "Facteur de pénalité pour l'arrêt des appareils actifs (0=désactivé, 0.5=par défaut, 1.0=fort). Des valeurs plus élevées réduisent la commutation des appareils pour des améliorations marginales de puissance, prolongeant la durée de vie des relais et assurant les temps minimum de fonctionnement. Les appareils à puissance variable peuvent toujours modifier leur puissance librement ; seuls les arrêts complets sont pénalisés. Par défaut : 0.5",
+                    "auto_switching_penalty": "Calculer automatiquement la pénalité de commutation optimale en fonction des conditions actuelles (production, consommation, appareils actifs). Lorsqu'activé, la pénalité est ajustée dynamiquement : plus élevée avec une puissance solaire abondante pour maintenir la stabilité, plus faible lorsque la puissance est rare pour une optimisation agressive. Consultez le capteur suggested_penalty pour voir les valeurs calculées.",
+                    "clamp_price_step": "Arrondir les prix de l'énergie au pas le plus proche pour réduire la volatilité (par ex. 0,05 pour un pas de 5 centimes). Définir à 0 pour désactiver. Aide à prévenir les commutations fréquentes causées par de petites fluctuations de prix de 15 minutes. Recommandé : 0,05 pour les tarifs dynamiques."
                 }
             },
             "device": {
