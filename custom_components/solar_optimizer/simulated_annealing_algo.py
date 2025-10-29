@@ -20,6 +20,7 @@ class SimulatedAnnealingAlgorithm:
     _facteur_refroidissement: float = 0.95
     _nombre_iterations: float = 1000
     _switching_penalty_factor: float = 0.5  # Penalty for switching off active devices
+    _last_suggested_penalty: float = None  # Last calculated suggested penalty
     _equipements: list[ManagedDevice]
     _puissance_totale_eqt_initiale: float
     _cout_achat: float = 15  # centimes
@@ -152,6 +153,9 @@ class SimulatedAnnealingAlgorithm:
         # Clamp to reasonable range
         penalty = max(0.1, min(0.9, penalty))
         
+        # Store for later retrieval
+        self._last_suggested_penalty = penalty
+        
         _LOGGER.info(
             "Auto-calculated switching penalty: %.2f (active_devices=%d, capacity=%.0fW, production=%.0fW, available=%.0fW)",
             penalty,
@@ -162,6 +166,11 @@ class SimulatedAnnealingAlgorithm:
         )
         
         return penalty
+
+    @property
+    def suggested_penalty(self) -> float | None:
+        """Get the last calculated suggested switching penalty"""
+        return self._last_suggested_penalty
 
     def recuit_simule(
         self,

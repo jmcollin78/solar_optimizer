@@ -66,8 +66,9 @@ async def async_setup_entry(
         entity5 = SolarOptimizerSensorEntity(coordinator, hass, "household_consumption")
         entity6 = SolarOptimizerSensorEntity(coordinator, hass, "available_excess_power")
         entity7 = SolarOptimizerSensorEntity(coordinator, hass, "total_current_distributed_power")
+        entity8 = SolarOptimizerSensorEntity(coordinator, hass, "suggested_penalty")
 
-        async_add_entities([entity1, entity2, entity3, entity4, entity5, entity6, entity7], False)
+        async_add_entities([entity1, entity2, entity3, entity4, entity5, entity6, entity7, entity8], False)
 
         await coordinator.configure(entry)
         return
@@ -148,6 +149,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
             return "mdi:solar-power-variant-outline"
         elif self.idx == "total_current_distributed_power":
             return "mdi:transmission-tower-export"
+        elif self.idx == "suggested_penalty":
+            return "mdi:scale-balance"
         else:
             return "mdi:solar-power-variant"
 
@@ -157,12 +160,16 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
             return SensorDeviceClass.MONETARY
         elif self.idx == "battery_soc":
             return SensorDeviceClass.BATTERY
+        elif self.idx == "suggested_penalty":
+            return None  # Dimensionless value (0-1)
         else:
             return SensorDeviceClass.POWER
 
     @property
     def state_class(self) -> SensorStateClass | None:
-        if self.device_class == SensorDeviceClass.POWER:
+        if self.idx == "suggested_penalty":
+            return SensorStateClass.MEASUREMENT
+        elif self.device_class == SensorDeviceClass.POWER:
             return SensorStateClass.MEASUREMENT
         else:
             return SensorStateClass.TOTAL
@@ -173,6 +180,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
             return "€"
         elif self.idx == "battery_soc":
             return "%"
+        elif self.idx == "suggested_penalty":
+            return None  # Dimensionless value
         else:
             return UnitOfPower.WATT
 
