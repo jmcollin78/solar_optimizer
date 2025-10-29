@@ -468,19 +468,44 @@ class SimulatedAnnealingAlgorithm:
                         # This prevents turning on devices that would cause import
                         if power_max <= export_after_on:
                             if self._production_solaire > 0:
-                                # Reward is 50% of the penalty factor to encourage use of excess
+                                # Base reward is 50% of the penalty factor to encourage use of excess
                                 reward_factor = self._switching_penalty_factor * 0.5
                                 power_fraction = power_max / self._production_solaire
                                 reward_value = reward_factor * power_fraction
+                                
+                                # Additional reward boost for low-priority devices when there's abundant excess
+                                # This counteracts the priority penalty that keeps them off
+                                device_priority = equip.get("priority", 4)
+                                excess_ratio = export_after_on / self._production_solaire
+                                
+                                # If priority > 8 (low priority) and excess > 20%, boost the reward
+                                if device_priority > 8 and excess_ratio > 0.2:
+                                    # Boost reward for low-priority devices with abundant excess
+                                    # The boost scales with both priority level and excess amount
+                                    priority_boost = (device_priority - 8) / 16.0  # 0 to 0.5 for priority 8-16
+                                    excess_boost = min(excess_ratio, 0.8)  # Cap at 80% excess
+                                    boost_factor = priority_boost * excess_boost * self._priority_weight
+                                    reward_value += boost_factor
+                                    
+                                    if DEBUG:
+                                        _LOGGER.debug(
+                                            "Low-priority boost for %s: priority=%d, excess_ratio=%.2f, boost=%.4f",
+                                            equip["name"],
+                                            device_priority,
+                                            excess_ratio,
+                                            boost_factor
+                                        )
+                                
                                 switching_penalty -= reward_value  # Negative = reward
                                 
                                 if DEBUG:
                                     _LOGGER.debug(
-                                        "Switching reward for turning on %s with excess power (was_active=%s, power_max=%.2fW, excess=%.2fW): -%.4f",
+                                        "Switching reward for turning on %s with excess power (was_active=%s, power_max=%.2fW, excess=%.2fW, priority=%d): -%.4f",
                                         equip["name"],
                                         was_active,
                                         power_max,
                                         export_after_on,
+                                        device_priority,
                                         reward_value
                                     )
 
