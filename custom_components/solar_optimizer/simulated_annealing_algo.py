@@ -125,11 +125,14 @@ class SimulatedAnnealingAlgorithm:
             device.set_battery_soc(battery_soc)
             usable = device.is_usable
             waiting = device.is_waiting
+            # Track initial activity state for switching penalty calculation
+            was_active = device.is_active
             # Force deactivation if active, not usable and not waiting
+            # Note: We no longer force off based solely on current_power <= 0
+            # This allows devices in standby or with telemetry lag to remain active
             force_state = (
                 False
-                if device.is_active
-                and ((not usable and not waiting) or device.current_power <= 0)
+                if device.is_active and (not usable and not waiting)
                 else device.is_active
             )
             self._equipements.append(
@@ -146,6 +149,7 @@ class SimulatedAnnealingAlgorithm:
                     "is_waiting": waiting,
                     "can_change_power": device.can_change_power,
                     "priority": device.priority,
+                    "was_active": was_active,  # Track initial activity for switching penalty
                 }
             )
         if DEBUG:
@@ -267,33 +271,38 @@ class SimulatedAnnealingAlgorithm:
             priority_coef = 0
         priority_weight = self._priority_weight
 
-        # Calculate switching penalty: penalize turning OFF devices that are currently active
+        # Calculate switching penalty: penalize turning OFF devices that were initially active
         # This encourages device stability and prevents frequent switching for marginal gains
-        # Note: For variable power devices, changing power (up or down) is NOT penalized.
+        # Note: We use 'was_active' (initial state) rather than current_power to determine
+        # if a device was running, which correctly handles standby/0W devices.
+        # For variable power devices, changing power (up or down) is NOT penalized.
         # Only turning the device completely OFF incurs a penalty.
         switching_penalty = 0
         if self._switching_penalty_factor > 0:
             for equip in solution:
-                # If device is currently active but solution turns it off, apply penalty
-                current_power = equip.get("current_power", 0)
-                is_currently_active = current_power > 0
-                solution_turns_off = not equip["state"] and is_currently_active
+                # If device was initially active but solution turns it off, apply penalty
+                was_active = equip.get("was_active", False)
+                solution_turns_off = not equip["state"] and was_active
                 
                 # Only penalize turning OFF, not power changes for variable power devices
                 if solution_turns_off:
-                    # Penalty proportional to the power being turned off
+                    # Penalty proportional to the device's power capacity
+                    # Use power_max as the reference since the device was active
                     # Normalized by total production to make it scale-invariant
                     penalty_value = 0
                     if self._production_solaire > 0:
-                        power_fraction = current_power / self._production_solaire
+                        # Scale penalty by device size relative to production
+                        power_max = equip.get("power_max", 0)
+                        power_fraction = power_max / self._production_solaire
                         penalty_value = self._switching_penalty_factor * power_fraction
                         switching_penalty += penalty_value
 
                     if DEBUG:
                         _LOGGER.debug(
-                            "Switching penalty for turning off %s (%.2fW): +%.4f",
+                            "Switching penalty for turning off %s (was_active=%s, power_max=%.2fW): +%.4f",
                             equip["name"],
-                            current_power,
+                            was_active,
+                            equip.get("power_max", 0),
                             penalty_value
                         )
 
