@@ -150,6 +150,16 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         switching_penalty_factor = float(config.data.get(CONF_SWITCHING_PENALTY_FACTOR, DEFAULT_SWITCHING_PENALTY_FACTOR))
         self._algo._switching_penalty_factor = switching_penalty_factor
         _LOGGER.info("Switching penalty factor set to: %.2f", switching_penalty_factor)
+        
+        # Update auto switching penalty and price clamping settings
+        auto_switching_penalty = bool(config.data.get(CONF_AUTO_SWITCHING_PENALTY, DEFAULT_AUTO_SWITCHING_PENALTY))
+        clamp_price_step = float(config.data.get(CONF_CLAMP_PRICE_STEP, DEFAULT_CLAMP_PRICE_STEP))
+        self._algo._auto_switching_penalty = auto_switching_penalty
+        self._algo._clamp_price_step = clamp_price_step
+        _LOGGER.info("Auto switching penalty: %s, Price clamp step: %.2f", auto_switching_penalty, clamp_price_step)
+        
+        # Initialize suggested penalty tracking
+        self._suggested_penalty = None
 
         self._raz_time = datetime.strptime(config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M").time()
         self._central_config_done = True
@@ -377,10 +387,14 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             calculated_data["battery_soc"],
             calculated_data["priority_weight"],
         )
+        
+        # Update suggested penalty from algorithm (if auto-calculation was done)
+        self._suggested_penalty = self._algo.suggested_penalty
 
         calculated_data["best_solution"] = best_solution
         calculated_data["best_objective"] = best_objective
         calculated_data["total_power"] = total_power
+        calculated_data["suggested_penalty"] = self._suggested_penalty
 
         # Uses the result to turn on or off or change power
         should_log = False
@@ -486,6 +500,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
     def raz_time(self) -> time:
         """Get the raz time with default to DEFAULT_RAZ_TIME"""
         return self._raz_time
+
+    @property
+    def suggested_switching_penalty(self) -> float | None:
+        """Get the last calculated suggested switching penalty"""
+        return self._suggested_penalty
 
     def add_device(self, device: ManagedDevice):
         """Add a new device to the list of managed device"""

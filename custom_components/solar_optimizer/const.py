@@ -26,6 +26,8 @@ DEFAULT_BATTERY_RECHARGE_RESERVE_W = 0.0
 DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING = False
 DEFAULT_MIN_EXPORT_MARGIN_W = 0.0
 DEFAULT_SWITCHING_PENALTY_FACTOR = 0.5
+DEFAULT_AUTO_SWITCHING_PENALTY = False
+DEFAULT_CLAMP_PRICE_STEP = 0.0  # 0 means no clamping, use 0.05 for 5-cent steps
 
 CONF_ACTION_MODE_ACTION = "action_call"
 CONF_ACTION_MODE_EVENT = "event"
@@ -69,6 +71,8 @@ CONF_BATTERY_RECHARGE_RESERVE_W = "battery_recharge_reserve_w"
 CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING = "battery_recharge_reserve_before_smoothing"
 CONF_MIN_EXPORT_MARGIN_W = "min_export_margin_w"
 CONF_SWITCHING_PENALTY_FACTOR = "switching_penalty_factor"
+CONF_AUTO_SWITCHING_PENALTY = "auto_switching_penalty"
+CONF_CLAMP_PRICE_STEP = "clamp_price_step"
 CONF_REFRESH_PERIOD_SEC = "refresh_period_sec"
 CONF_NAME = "name"
 CONF_ENTITY_ID = "entity_id"

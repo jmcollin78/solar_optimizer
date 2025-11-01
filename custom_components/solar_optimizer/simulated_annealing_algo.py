@@ -20,6 +20,7 @@ class SimulatedAnnealingAlgorithm:
     _facteur_refroidissement: float = 0.95
     _nombre_iterations: float = 1000
     _switching_penalty_factor: float = 0.5  # Penalty for switching off active devices
+    _last_suggested_penalty: float = None  # Last calculated suggested penalty
     _equipements: list[ManagedDevice]
     _puissance_totale_eqt_initiale: float
     _cout_achat: float = 15  # centimes
@@ -35,21 +36,141 @@ class SimulatedAnnealingAlgorithm:
         cooling_factor: float,
         max_iteration_number: int,
         switching_penalty_factor: float = 0.5,
+        auto_switching_penalty: bool = False,
+        clamp_price_step: float = 0.0,
     ):
-        """Initialize the algorithm with values"""
+        """Initialize the algorithm with values
+        
+        Args:
+            initial_temp: Initial temperature for simulated annealing
+            min_temp: Minimum temperature before stopping
+            cooling_factor: Factor to reduce temperature each iteration
+            max_iteration_number: Maximum number of iterations
+            switching_penalty_factor: Penalty for switching off active devices (0-1)
+            auto_switching_penalty: If True, automatically calculate optimal penalty
+            clamp_price_step: If > 0, clamp prices to this step (e.g., 0.05 for 5 cents)
+        """
         self._temperature_initiale = initial_temp
         self._temperature_minimale = min_temp
         self._facteur_refroidissement = cooling_factor
         self._nombre_iterations = max_iteration_number
         self._switching_penalty_factor = switching_penalty_factor
+        self._auto_switching_penalty = auto_switching_penalty
+        self._clamp_price_step = clamp_price_step
         _LOGGER.info(
-            "Initializing the SimulatedAnnealingAlgorithm with initial_temp=%.2f min_temp=%.2f cooling_factor=%.2f max_iterations_number=%d switching_penalty_factor=%.2f",
+            "Initializing the SimulatedAnnealingAlgorithm with initial_temp=%.2f min_temp=%.2f cooling_factor=%.2f max_iterations_number=%d switching_penalty_factor=%.2f auto_penalty=%s clamp_price_step=%.2f",
             self._temperature_initiale,
             self._temperature_minimale,
             self._facteur_refroidissement,
             self._nombre_iterations,
             self._switching_penalty_factor,
+            self._auto_switching_penalty,
+            self._clamp_price_step,
         )
+
+    def _clamp_price(self, price: float) -> float:
+        """Clamp price to configured step to reduce volatility
+        
+        Args:
+            price: The raw price value
+            
+        Returns:
+            Clamped price if clamp_price_step > 0, otherwise original price
+        """
+        if self._clamp_price_step <= 0:
+            return price
+        
+        # Round to nearest step (e.g., 0.05 for 5-cent increments)
+        clamped = round(price / self._clamp_price_step) * self._clamp_price_step
+        
+        if abs(clamped - price) > 0.001:  # Log only if there's a change
+            _LOGGER.debug(
+                "Clamped price from %.4f to %.4f (step=%.2f)",
+                price,
+                clamped,
+                self._clamp_price_step
+            )
+        
+        return clamped
+
+    def _calculate_optimal_switching_penalty(
+        self,
+        devices: list[ManagedDevice],
+        solar_production: float,
+        household_consumption: float,
+    ) -> float:
+        """Calculate optimal switching penalty based on current conditions
+        
+        The penalty should be:
+        - Higher when there's abundant solar power (avoid unnecessary switching)
+        - Lower when power is scarce (allow more flexibility)
+        - Scaled by the number and size of active devices
+        - Balanced to prevent excessive switching costs
+        
+        Args:
+            devices: List of managed devices
+            solar_production: Current solar production in watts
+            household_consumption: Base household consumption in watts
+            
+        Returns:
+            Suggested switching penalty factor (0.0-1.0)
+        """
+        if solar_production <= 0:
+            # No solar power, minimal penalty to allow aggressive optimization
+            return 0.1
+        
+        # Count active devices and total active power capacity
+        active_count = sum(1 for d in devices if d.is_active and d.is_enabled)
+        total_active_capacity = sum(
+            d.power_max for d in devices if d.is_active and d.is_enabled
+        )
+        
+        if active_count == 0:
+            # No active devices, use moderate penalty
+            return 0.3
+        
+        # Calculate excess power ratio (how much headroom we have)
+        available_power = solar_production - household_consumption
+        if available_power <= 0:
+            # Deficit scenario: lower penalty to allow optimization
+            return 0.2
+        
+        # Calculate capacity utilization
+        capacity_ratio = min(1.0, total_active_capacity / solar_production) if solar_production > 0 else 0
+        
+        # Calculate stability factor based on number of devices
+        # More devices = higher penalty to avoid cascade switching
+        device_factor = min(1.0, active_count / 5.0)  # Normalize to 5 devices
+        
+        # Calculate abundance factor (how much excess power we have)
+        abundance_ratio = min(1.0, available_power / solar_production) if solar_production > 0 else 0
+        
+        # Combine factors:
+        # - High abundance + many devices = high penalty (keep things stable)
+        # - Low abundance + few devices = low penalty (optimize aggressively)
+        penalty = 0.2 + (0.6 * abundance_ratio * device_factor)
+        
+        # Clamp to reasonable range
+        penalty = max(0.1, min(0.9, penalty))
+        
+        # Store for later retrieval
+        self._last_suggested_penalty = penalty
+        
+        _LOGGER.info(
+            "Auto-calculated switching penalty: %.2f (active_devices=%d, capacity=%.0fW, production=%.0fW, available=%.0fW)",
+            penalty,
+            active_count,
+            total_active_capacity,
+            solar_production,
+            available_power
+        )
+        
+        return penalty
+
+    @property
+    def suggested_penalty(self) -> float | None:
+        """Get the last calculated suggested switching penalty"""
+        return self._last_suggested_penalty
 
     def recuit_simule(
         self,
@@ -100,12 +221,32 @@ class SimulatedAnnealingAlgorithm:
             sell_tax_percent,
             devices,
         )
-        self._cout_achat = buy_cost
-        self._cout_revente = sell_cost
+        
+        # Apply price clamping if configured
+        self._cout_achat = self._clamp_price(buy_cost)
+        self._cout_revente = self._clamp_price(sell_cost)
         self._taxe_revente = sell_tax_percent
         self._consommation_net = household_consumption
         self._production_solaire = solar_power_production
         self._priority_weight = priority_weight / 100.0  # to get percentage
+
+        # Always calculate suggested penalty for monitoring/tuning purposes
+        suggested_penalty = self._calculate_optimal_switching_penalty(
+            devices,
+            solar_power_production,
+            household_consumption
+        )
+        
+        # Apply auto-calculated penalty if enabled
+        if self._auto_switching_penalty:
+            original_penalty = self._switching_penalty_factor
+            self._switching_penalty_factor = suggested_penalty
+            if abs(original_penalty - self._switching_penalty_factor) > 0.05:
+                _LOGGER.info(
+                    "Switching penalty adjusted from %.2f to %.2f (auto-mode)",
+                    original_penalty,
+                    self._switching_penalty_factor
+                )
 
         # fix #131 - costs cannot be negative or 0
         if self._cout_achat <= 0 or self._cout_revente <= 0:
@@ -125,11 +266,14 @@ class SimulatedAnnealingAlgorithm:
             device.set_battery_soc(battery_soc)
             usable = device.is_usable
             waiting = device.is_waiting
+            # Track initial activity state for switching penalty calculation
+            was_active = device.is_active
             # Force deactivation if active, not usable and not waiting
+            # Note: We no longer force off based solely on current_power <= 0
+            # This allows devices in standby or with telemetry lag to remain active
             force_state = (
                 False
-                if device.is_active
-                and ((not usable and not waiting) or device.current_power <= 0)
+                if device.is_active and (not usable and not waiting)
                 else device.is_active
             )
             self._equipements.append(
@@ -146,6 +290,7 @@ class SimulatedAnnealingAlgorithm:
                     "is_waiting": waiting,
                     "can_change_power": device.can_change_power,
                     "priority": device.priority,
+                    "was_active": was_active,  # Track initial activity for switching penalty
                 }
             )
         if DEBUG:
@@ -267,35 +412,102 @@ class SimulatedAnnealingAlgorithm:
             priority_coef = 0
         priority_weight = self._priority_weight
 
-        # Calculate switching penalty: penalize turning OFF devices that are currently active
+        # Calculate switching penalty: penalize turning OFF devices that were initially active
+        # AND reward turning ON devices when there's abundant excess power
         # This encourages device stability and prevents frequent switching for marginal gains
-        # Note: For variable power devices, changing power (up or down) is NOT penalized.
-        # Only turning the device completely OFF incurs a penalty.
+        # Note: We use 'was_active' (initial state) rather than current_power to determine
+        # if a device was running, which correctly handles standby/0W devices.
+        # For variable power devices, changing power (up or down) is NOT penalized.
+        # Only turning the device completely OFF/ON incurs a penalty/reward.
         switching_penalty = 0
         if self._switching_penalty_factor > 0:
             for equip in solution:
-                # If device is currently active but solution turns it off, apply penalty
-                current_power = equip.get("current_power", 0)
-                is_currently_active = current_power > 0
-                solution_turns_off = not equip["state"] and is_currently_active
+                # If device was initially active but solution turns it off, apply penalty
+                was_active = equip.get("was_active", False)
+                solution_turns_off = not equip["state"] and was_active
+                solution_turns_on = equip["state"] and not was_active
                 
-                # Only penalize turning OFF, not power changes for variable power devices
+                # Penalize turning OFF active devices
                 if solution_turns_off:
-                    # Penalty proportional to the power being turned off
+                    # Penalty proportional to the device's power capacity
+                    # Use power_max as the reference since the device was active
                     # Normalized by total production to make it scale-invariant
                     penalty_value = 0
                     if self._production_solaire > 0:
-                        power_fraction = current_power / self._production_solaire
+                        # Scale penalty by device size relative to production
+                        power_max = equip.get("power_max", 0)
+                        power_fraction = power_max / self._production_solaire
                         penalty_value = self._switching_penalty_factor * power_fraction
                         switching_penalty += penalty_value
 
                     if DEBUG:
                         _LOGGER.debug(
-                            "Switching penalty for turning off %s (%.2fW): +%.4f",
+                            "Switching penalty for turning off %s (was_active=%s, power_max=%.2fW): +%.4f",
                             equip["name"],
-                            current_power,
+                            was_active,
+                            equip.get("power_max", 0),
                             penalty_value
                         )
+                
+                # Reward turning ON devices when there's excess power available
+                # This encourages using available solar power rather than exporting it
+                elif solution_turns_on:
+                    # Calculate if solution would have excess power after turning on this device
+                    devices_power = self.consommation_equipements(solution)
+                    total_consumption = self._consommation_net + devices_power
+                    net_consumption = total_consumption - self._production_solaire
+                    
+                    # If we'd still be exporting power (negative net), reward turning on
+                    if net_consumption < 0:  # Still exporting after device is on
+                        # Reward is smaller than penalty to prefer stability
+                        # But encourages using available solar power
+                        power_max = equip.get("power_max", 0)
+                        export_after_on = -net_consumption
+                        
+                        # Only reward if device power is smaller than the excess
+                        # This prevents turning on devices that would cause import
+                        if power_max <= export_after_on:
+                            if self._production_solaire > 0:
+                                # Base reward is 50% of the penalty factor to encourage use of excess
+                                reward_factor = self._switching_penalty_factor * 0.5
+                                power_fraction = power_max / self._production_solaire
+                                reward_value = reward_factor * power_fraction
+                                
+                                # Additional reward boost for low-priority devices when there's abundant excess
+                                # This counteracts the priority penalty that keeps them off
+                                device_priority = equip.get("priority", 4)
+                                excess_ratio = export_after_on / self._production_solaire
+                                
+                                # If priority > 8 (low priority) and excess > 20%, boost the reward
+                                if device_priority > 8 and excess_ratio > 0.2:
+                                    # Boost reward for low-priority devices with abundant excess
+                                    # The boost scales with both priority level and excess amount
+                                    priority_boost = (device_priority - 8) / 16.0  # 0 to 0.5 for priority 8-16
+                                    excess_boost = min(excess_ratio, 0.8)  # Cap at 80% excess
+                                    boost_factor = priority_boost * excess_boost * self._priority_weight
+                                    reward_value += boost_factor
+                                    
+                                    if DEBUG:
+                                        _LOGGER.debug(
+                                            "Low-priority boost for %s: priority=%d, excess_ratio=%.2f, boost=%.4f",
+                                            equip["name"],
+                                            device_priority,
+                                            excess_ratio,
+                                            boost_factor
+                                        )
+                                
+                                switching_penalty -= reward_value  # Negative = reward
+                                
+                                if DEBUG:
+                                    _LOGGER.debug(
+                                        "Switching reward for turning on %s with excess power (was_active=%s, power_max=%.2fW, excess=%.2fW, priority=%d): -%.4f",
+                                        equip["name"],
+                                        was_active,
+                                        power_max,
+                                        export_after_on,
+                                        device_priority,
+                                        reward_value
+                                    )
 
         ret = (
             consumption_coef * (1.0 - priority_weight)

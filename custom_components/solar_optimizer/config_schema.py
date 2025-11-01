@@ -62,6 +62,10 @@ central_config_schema = vol.Schema(
         vol.Optional(CONF_SWITCHING_PENALTY_FACTOR, default=DEFAULT_SWITCHING_PENALTY_FACTOR): selector.NumberSelector(
             selector.NumberSelectorConfig(min=0.0, max=5.0, step=0.1, mode=selector.NumberSelectorMode.BOX)
         ),
+        vol.Optional(CONF_AUTO_SWITCHING_PENALTY, default=DEFAULT_AUTO_SWITCHING_PENALTY): cv.boolean,
+        vol.Optional(CONF_CLAMP_PRICE_STEP, default=DEFAULT_CLAMP_PRICE_STEP): selector.NumberSelector(
+            selector.NumberSelectorConfig(min=0.0, max=1.0, step=0.01, mode=selector.NumberSelectorMode.BOX)
+        ),
         vol.Optional(CONF_BATTERY_SOC_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
