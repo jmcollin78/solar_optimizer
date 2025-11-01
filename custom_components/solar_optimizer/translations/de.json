@@ -304,7 +304,7 @@
         "device_type": {
             "options": {
                 "central_config": "Gemeinsame Konfiguration",
-                "device_type": "Normales Ein/Aus-Gerät",
+                "device": "Normales Ein/Aus-Gerät",
                 "powered_device_type": "Gerät mit variabler Leistung"
             }
         },
