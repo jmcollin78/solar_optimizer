@@ -303,7 +303,7 @@
         "device_type": {
             "options": {
                 "central_config": "Common configuration",
-                "device_type": "Normal on/off device",
+                "device": "Normal on/off device",
                 "powered_device_type": "Device with variable power"
             }
         },

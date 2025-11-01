@@ -304,7 +304,7 @@
         "device_type": {
             "options": {
                 "central_config": "Configuration commune",
-                "device_type": "Equipement normal de type on/off",
+                "device": "Equipement normal de type on/off",
                 "powered_device_type": "Equipement avec puissance variable"
             }
         },
