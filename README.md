@@ -336,8 +336,8 @@ To control light brightness
   name: "Eclairage dimmable"
   entity_id: "light.shelly_dimmer"
   power_min: 10
-  device_power: 100
-  # device_power / 255
+  power_max: 100
+  # power_max / 255
   power_step: 0.4
   check_usable_template: "{{ True }}"
   power_entity_id: "light.shelly_dimmer"
