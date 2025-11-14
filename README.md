@@ -201,7 +201,7 @@ You need to specify the following attributes:
 | ------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`                    | All                                 | The name of the device.                                                                                                                                                                                                                | Basement Ventilation                             | The name is used to identify the entities of this device.                                                                                                                                                         |
 | `entity_id`               | All                                 | The entity ID of the device to be controlled.                                                                                                                                                                                          | switch.basement_ventilation                      | Can be a `switch`, an `humidifier`, a `climate`, a `fan`, a `select` or a `light`. If it is not a `switch`, the `activation_service` and `deactivation_service` fields must be adjusted.                          |
-| `power_max`               | All                                 | The maximum power consumption of the device when turned on, in watts.                                                                                                                                                                  | 250                                              | -                                                                                                                                                                                                                 |
+| `device_power` or `power_max`              | All                                 | The maximum power consumption of the device when turned on, in watts.                                                                                                                                                                  | 250                                              | -                                                                                                                                                                                                                 |
 | `check_usable_template`   | All                                 | A template that evaluates to `True` if the device can be used by Solar Optimizer. A template must start with `{{` and end with `}}`.                                                                                                   | {{ is_state('cover.garage_door', 'closed') }}    | In this example, Solar Optimizer will not attempt to control the "Basement Ventilation" if the garage door is open. Use `{{ True }}` if you do not need this condition.                                           |
 | `active_template`         | All                                 | A template that evaluates to `True` if the device is currently active. A template must start with `{{` and end with `}}`. This template is not necessary when the state of the device is 'on' or 'off' when turned-on or off.          | {{ is_state('climate.living_room_ac', 'cool') }} | In this example, a `climate` device will be considered active by Solar Optimizer if its state is `cool`. Leave it blank for devices where the default 'on'/'off' state applies (switches and input_booleans).     |
 | `duration_min`            | All                                 | The minimum activation duration in minutes.                                                                                                                                                                                            | 60                                               | The basement ventilation will always run for at least one hour when turned on.                                                                                                                                    |
@@ -266,7 +266,7 @@ To turn on an air conditioner if the temperature is above 27°C:
 ```yaml
     name: "Climatisation salon"
     entity_id: "climate.clim_salon"
-    power_max: 1500
+    device_power: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
     active_template: "{{ is_state('climate.vtherm', 'cool') }}"
     # 1 h minimum
@@ -283,7 +283,7 @@ To change the preset of an air conditioner if the temperature is above 27°C:
 ```yaml
     name: "Climatisation salon"
     entity_id: "climate.clim_salon"
-    power_max: 1500
+    device_power: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
     active_template: "{{ is_state_attr('climate.clim_salon', 'preset_mode', 'boost') }}"
     # 1 h minimum
@@ -300,7 +300,7 @@ To turn on a dehumidifier if the humidity exceeds a threshold for at least one h
 ```yaml
   name: "Dehumidification musique"
   entity_id: "humidifier.humidifier_musique"
-  power_max: 250
+  device_power: 250
   # 1 h
   duration_min: 60
   duration_stop_min: 30
@@ -320,7 +320,7 @@ To turn on a light as an indicator of available solar production:
 ```yaml
   name: "Lighting"
   entity_id: "light.production_indicator_lamp"
-  power_max: 100
+  device_power: 100
   check_usable_template: "{{ True }}"
   action_mode: "service_call"
   activation_service: "light/turn_on"
@@ -336,8 +336,8 @@ To control light brightness
   name: "Eclairage dimmable"
   entity_id: "light.shelly_dimmer"
   power_min: 10
-  power_max: 100
-  # power_max / 255
+  device_power: 100
+  # device_power / 255
   power_step: 0.4
   check_usable_template: "{{ True }}"
   power_entity_id: "light.shelly_dimmer"
