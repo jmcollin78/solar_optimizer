@@ -190,7 +190,7 @@ Vous devez spécifier les attributs suivant :
 | ------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`                    | tous                                    | Le nom de l'équipement.                                                                                                                                                                                                                      | VMC sous-sol                                          | Le nom est utilisé pour nommé les entités de cet équipement.                                                                                                                                                                                   |
 | `entity_id`               | tous                                    | l'entity id de l'équipement à commander                                                                                                                                                                                                      | switch.vmc_sous_sol                                   | Peut être un `switch`, un `input_boolean`, un `humidifier`, un `climate`, un `fan`, un `select` ou un `light`. Si l'entité n'est pas un `switch`, les champs `activation_service` et `deactivation_service` doivent être adaptés               |
-| `power_max`               | tous                                    | la puissance maximale consommée par l'équipement lorsqu'il est allumé en watts                                                                                                                                                               | 250                                                   | -                                                                                                                                                                                                                                              |
+| `device_power`               | tous                                    | la puissance maximale consommée par l'équipement lorsqu'il est allumé en watts                                                                                                                                                               | 250                                                   | -                                                                                                                                                                                                                                              |
 | `check_usable_template`   | tous                                    | Un template qui vaut True si l'équipement pourra être utilisé par Solar Optimizer. Un template commence par {{ et doit se terminer par }}.                                                                                                   | {{ is_state('cover.porte_garage_garage', 'closed') }} | Dans l'exemple, Sonar Optimizer n'essayera pas de commander la "VMC sous-sol" si la porte du garage est ouverte. Laissez {{ True }} si vous ne vous servez pas de ce champ                                                                     |
 | `active_template`         | tous                                    | Un template qui vaut True si l'équipement si l'équipement est actif. Un template commence par {{ et doit se terminer par }}. Ce template n'est pas nécessaire si l'état allumé est 'on' (switch, light, humidifier)                          | {{ is_state('climate.clim_salon', 'cool') }}          | Dans l'exemple, l'équipement de type `climate` sera vu par Solar Optimizer comme actif si son état est `cool`. Laissez vide pour les équipements pour lesquels l'état par défaut 'on' / 'off' est valable (les switchs et input_boolean)       |
 | `duration_min`            | tous                                    | La durée en minute minimale d'activation                                                                                                                                                                                                     | 60                                                    | La VMC sous-sol s'allumera toujours pour une heure au minimum                                                                                                                                                                                  |
@@ -256,7 +256,7 @@ Pour allumer une climatisation si la température est supérieure à 27° :
 ```yaml
     name: "Climatisation salon"
     entity_id: "climate.clim_salon"
-    power_max: 1500
+    device_power: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
     active_template: "{{ is_state('climate.vtherm', 'cool') }}"
     # 1 h minimum
@@ -272,7 +272,7 @@ Pour changer le preset d'une climatisation si la température est supérieure à
 ```yaml
     name: "Climatisation salon"
     entity_id: "climate.clim_salon"
-    power_max: 1500
+    device_power: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
     active_template: "{{ is_state_attr('climate.clim_salon', 'preset_mode', 'boost') }}"
     # 1 h minimum
@@ -288,7 +288,7 @@ Pour allumer un déhumidificateur si l'humidité dépasse un seuil pour au moins
 ```yaml
   name: "Dehumidification musique"
   entity_id: "humidifier.humidifier_musique"
-  power_max: 250
+  device_power: 250
   # 1 h
   duration_min: 60
   duration_stop_min: 30
@@ -307,7 +307,7 @@ Pour allumer une lampe témoin de production disponible:
 ```yaml
   name: "Eclairage"
   entity_id: "light.lampe_temoin_production"
-  power_max: 100
+  device_power: 100
   check_usable_template: "{{ True }}"
   action_mode: "service_call"
   activation_service: "light/turn_on"
