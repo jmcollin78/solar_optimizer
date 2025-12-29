@@ -16,6 +16,7 @@ from .const import (
     get_template_or_value,
     get_safe_float,
     convert_to_template_or_value,
+    parse_time_ranges,
     CONF_ACTION_MODE_ACTION,
     CONF_ACTION_MODE_EVENT,
     CONF_ACTION_MODES,
@@ -203,13 +204,21 @@ class ManagedDevice:
 
         self._min_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("min_on_time_per_day_min") or 0)
 
+        # Off-peak configuration - supports two modes:
+        # 1. Time ranges string like "13:00-14:00,01:00-07:00"
+        # 2. Entity ID (binary_sensor, input_boolean, sensor, calendar)
         offpeak_time = device_config.get("offpeak_time", None)
-        self._offpeak_time = None
+        self._offpeak_time = None  # Legacy single time (kept for backward compatibility)
+        self._offpeak_time_ranges = []  # List of (start_time, end_time) tuples
+        self._offpeak_entity_id = device_config.get("offpeak_entity_id", None)
 
         if offpeak_time:
-            self._offpeak_time = datetime.strptime(
-                device_config.get("offpeak_time"), "%H:%M"
-            ).time()
+            # Check if it's the new format with ranges (contains "-")
+            if "-" in offpeak_time:
+                self._offpeak_time_ranges = parse_time_ranges(offpeak_time)
+            else:
+                # Legacy format: single time "HH:MM"
+                self._offpeak_time = datetime.strptime(offpeak_time, "%H:%M").time()
 
         if self.is_active:
             self._requested_power = self._current_power = self.power_max if self._can_change_power else self._power_min
@@ -217,9 +226,14 @@ class ManagedDevice:
         self._enable = True
 
         # Some checks
-        # min_on_time_per_day_sec requires an offpeak_time
-        if self.min_on_time_per_day_sec > 0 and self._offpeak_time is None:
-            msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec requires offpeak_time value"
+        # min_on_time_per_day_sec requires an offpeak configuration (time, time_ranges, or entity)
+        has_offpeak_config = (
+            self._offpeak_time is not None
+            or len(self._offpeak_time_ranges) > 0
+            or self._offpeak_entity_id is not None
+        )
+        if self.min_on_time_per_day_sec > 0 and not has_offpeak_config:
+            msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec requires offpeak_time or offpeak_entity_id value"
             _LOGGER.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
 
@@ -456,25 +470,69 @@ class ManagedDevice:
         and the _max_on_time_per_day_sec is not exceeded"""
         return self.check_usable(True)
 
-    @property
-    def should_be_forced_offpeak(self) -> bool:
-        """True is we are offpeak and the max_on_time is not exceeded"""
-        if not self.check_usable(False) or self._offpeak_time is None:
+    def _is_currently_offpeak(self) -> bool:
+        """Check if current time is within offpeak hours.
+        Supports three modes:
+        1. Entity-based: checks the state of offpeak_entity_id
+        2. Time ranges: checks if current time is within any defined range
+        3. Legacy single time: checks if current time is between offpeak_time and raz_time
+        """
+        # Mode 1: Entity-based off-peak detection
+        if self._offpeak_entity_id is not None:
+            entity_state = self._hass.states.get(self._offpeak_entity_id)
+            if entity_state is not None:
+                state_value = entity_state.state.lower()
+                # Handle various "on" states for different entity types
+                return state_value in (STATE_ON, "true", "1", "on", "yes")
             return False
 
-        if self._offpeak_time >= self._coordinator.raz_time:
-            return (
-                (self.now.time() >= self._offpeak_time or self.now.time() < self._coordinator.raz_time)
-                and self._on_time_sec < self.max_on_time_per_day_sec
-                and self._on_time_sec < self.min_on_time_per_day_sec
-            )
-        else:
-            return (
-                self.now.time() >= self._offpeak_time
-                and self.now.time() < self._coordinator.raz_time
-                and self._on_time_sec < self.max_on_time_per_day_sec
-                and self._on_time_sec < self.min_on_time_per_day_sec
-            )
+        # Mode 2: Multiple time ranges like "13:00-14:00,01:00-07:00"
+        if len(self._offpeak_time_ranges) > 0:
+            current_time = self.now.time()
+            for start_time, end_time in self._offpeak_time_ranges:
+                if start_time <= end_time:
+                    # Normal range (e.g., 13:00-14:00)
+                    if start_time <= current_time < end_time:
+                        return True
+                else:
+                    # Range crosses midnight (e.g., 22:00-06:00)
+                    if current_time >= start_time or current_time < end_time:
+                        return True
+            return False
+
+        # Mode 3: Legacy single offpeak_time (from offpeak_time to raz_time)
+        if self._offpeak_time is not None:
+            current_time = self.now.time()
+            raz_time = self._coordinator.raz_time
+            if self._offpeak_time >= raz_time:
+                # Offpeak crosses midnight (e.g., 23:00 to 05:00)
+                return current_time >= self._offpeak_time or current_time < raz_time
+            else:
+                # Offpeak within same day (e.g., 01:00 to 05:00)
+                return self._offpeak_time <= current_time < raz_time
+
+        return False
+
+    @property
+    def should_be_forced_offpeak(self) -> bool:
+        """True if we are offpeak and the max_on_time is not exceeded"""
+        if not self.check_usable(False):
+            return False
+
+        # Check if any offpeak configuration exists
+        has_offpeak_config = (
+            self._offpeak_time is not None
+            or len(self._offpeak_time_ranges) > 0
+            or self._offpeak_entity_id is not None
+        )
+        if not has_offpeak_config:
+            return False
+
+        return (
+            self._is_currently_offpeak()
+            and self._on_time_sec < self.max_on_time_per_day_sec
+            and self._on_time_sec < self.min_on_time_per_day_sec
+        )
 
     @property
     def is_waiting(self):
@@ -577,9 +635,24 @@ class ManagedDevice:
         return get_template_or_value(self._hass, self._min_on_time_per_day_min) * 60
 
     @property
-    def offpeak_time(self) -> int:
-        """The offpeak_time configured"""
+    def offpeak_time(self) -> time:
+        """The offpeak_time configured (legacy single time)"""
         return self._offpeak_time
+
+    @property
+    def offpeak_time_ranges(self) -> list:
+        """The offpeak time ranges configured as list of (start, end) tuples"""
+        return self._offpeak_time_ranges
+
+    @property
+    def offpeak_entity_id(self) -> str:
+        """The entity ID used for off-peak detection"""
+        return self._offpeak_entity_id
+
+    @property
+    def is_offpeak(self) -> bool:
+        """Returns True if currently in off-peak period"""
+        return self._is_currently_offpeak()
 
     @property
     def battery_soc(self) -> int:

@@ -79,6 +79,11 @@ CONF_BATTERY_SOC_THRESHOLD = "battery_soc_threshold"
 CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
 CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
 CONF_OFFPEAK_TIME = "offpeak_time"
+CONF_OFFPEAK_ENTITY_ID = "offpeak_entity_id"
+
+# Regex for time range format like "13:00-14:00" or "01:00-07:00,13:00-14:00"
+TIME_RANGE_REGEX = r"^(?:[01]\d|2[0-3]):[0-5]\d-(?:[01]\d|2[0-3]):[0-5]\d$"
+TIME_RANGES_REGEX = r"^((?:[01]\d|2[0-3]):[0-5]\d-(?:[01]\d|2[0-3]):[0-5]\d)(,((?:[01]\d|2[0-3]):[0-5]\d-(?:[01]\d|2[0-3]):[0-5]\d))*$"
 
 PRIORITY_WEIGHT_NULL = "None"
 PRIORITY_WEIGHT_LOW = "Low"
@@ -155,6 +160,38 @@ def validate_time_format(value: str) -> str:
     if value is not None and not re.match(TIME_REGEX, value):
         raise Invalid("The time value should be formatted like 'hh:mm'")
     return value
+
+
+def validate_time_ranges_format(value: str) -> str:
+    """Check if a string has format "HH:MM-HH:MM" or "HH:MM-HH:MM,HH:MM-HH:MM,..."
+    Example: "13:00-14:00" or "01:00-07:00,13:00-14:00"
+    """
+    if value is not None and not re.match(TIME_RANGES_REGEX, value):
+        raise Invalid(
+            "The time ranges value should be formatted like 'HH:MM-HH:MM' or 'HH:MM-HH:MM,HH:MM-HH:MM'. "
+            "Example: '13:00-14:00' or '01:00-07:00,13:00-14:00'"
+        )
+    return value
+
+
+def parse_time_ranges(value: str) -> list[tuple]:
+    """Parse a time ranges string like "13:00-14:00,01:00-07:00" into a list of (start_time, end_time) tuples.
+    Returns a list of tuples where each tuple contains (start_time, end_time) as datetime.time objects.
+    """
+    from datetime import datetime
+
+    if not value:
+        return []
+
+    ranges = []
+    for time_range in value.split(","):
+        time_range = time_range.strip()
+        if "-" in time_range:
+            start_str, end_str = time_range.split("-")
+            start_time = datetime.strptime(start_str.strip(), "%H:%M").time()
+            end_time = datetime.strptime(end_str.strip(), "%H:%M").time()
+            ranges.append((start_time, end_time))
+    return ranges
 
 
 def get_safe_float(hass, str_as_float) -> float | None:

@@ -15,6 +15,8 @@ from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
+from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from homeassistant.components.calendar import DOMAIN as CALENDAR_DOMAIN
 
 
 from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -87,6 +89,11 @@ managed_device_schema = vol.Schema(
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
+        vol.Optional(CONF_OFFPEAK_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[BINARY_SENSOR_DOMAIN, INPUT_BOOLEAN_DOMAIN, SENSOR_DOMAIN, CALENDAR_DOMAIN]
+            )
+        ),
     }
 )
 
@@ -138,5 +145,10 @@ power_managed_device_schema = vol.Schema(
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
+        vol.Optional(CONF_OFFPEAK_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[BINARY_SENSOR_DOMAIN, INPUT_BOOLEAN_DOMAIN, SENSOR_DOMAIN, CALENDAR_DOMAIN]
+            )
+        ),
     }
 )
