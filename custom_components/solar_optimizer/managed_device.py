@@ -163,6 +163,7 @@ class ManagedDevice:
         )
 
         self._current_power = self._requested_power = 0
+        self._last_non_zero_power = 0  # Track last known non-zero power for debounce
         duration_min = float(device_config.get("duration_min"))
         self._duration_sec = round(duration_min * 60)
         self._duration_power_sec = round(
@@ -335,7 +336,14 @@ class ManagedDevice:
             )
 
     def set_current_power_with_device_state(self):
-        """Set the current power according to the real device state"""
+        """Set the current power according to the real device state
+        
+        Implements debounce/grace handling: when a device is active and can_change_power,
+        and the measured power is 0 but we are still within the device's power change
+        grace window (next_date_available_power in the future), treat current_power as
+        the last requested power or last known non-zero power instead of 0.
+        This prevents spurious 0W readings immediately after issuing change_power.
+        """
         if not self.is_active:
             self._current_power = 0
             _LOGGER.debug(
@@ -376,15 +384,49 @@ class ManagedDevice:
         else:
             power_entity_value = power_entity_state.state
 
-        self._current_power = round(
+        measured_power = round(
             float(power_entity_value) * self._convert_power_divide_factor
         )
-        _LOGGER.debug(
-            "Set current_power to %s for device %s cause can_change_power and amps is %s",
-            self._current_power,
-            self._name,
-            power_entity_value,
-        )
+        
+        # Debounce logic: if measured power is 0 and we're within the power change grace window,
+        # use the requested power or last non-zero power instead of 0
+        # This prevents immediate reversion of decisions due to telemetry lag
+        if measured_power == 0 and self.now < self._next_date_available_power:
+            # We're still within the grace period after a power change
+            # Use requested_power if available and non-zero, otherwise use last_non_zero_power
+            if self._requested_power > 0:
+                self._current_power = self._requested_power
+                _LOGGER.debug(
+                    "Debounce: Set current_power to requested_power %s for device %s (measured 0W within grace window)",
+                    self._current_power,
+                    self._name,
+                )
+            elif self._last_non_zero_power > 0:
+                self._current_power = self._last_non_zero_power
+                _LOGGER.debug(
+                    "Debounce: Set current_power to last_non_zero_power %s for device %s (measured 0W within grace window)",
+                    self._current_power,
+                    self._name,
+                )
+            else:
+                # No fallback available, use measured 0
+                self._current_power = 0
+                _LOGGER.debug(
+                    "Set current_power to 0 for device %s (no fallback available)",
+                    self._name,
+                )
+        else:
+            # Normal case: use measured power
+            self._current_power = measured_power
+            # Track last non-zero power for future debouncing
+            if self._current_power > 0:
+                self._last_non_zero_power = self._current_power
+            _LOGGER.debug(
+                "Set current_power to %s for device %s cause can_change_power and amps is %s",
+                self._current_power,
+                self._name,
+                power_entity_value,
+            )
 
     def set_enable(self, enable: bool):
         """Enable or disable the ManagedDevice for Solar Optimizer"""

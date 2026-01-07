@@ -53,6 +53,19 @@ central_config_schema = vol.Schema(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
         vol.Optional(CONF_SMOOTH_PRODUCTION, default=True): cv.boolean,
+        vol.Optional(CONF_SMOOTHING_PRODUCTION_WINDOW_MIN, default=DEFAULT_SMOOTHING_PRODUCTION_WINDOW_MIN): vol.Coerce(int),
+        vol.Optional(CONF_SMOOTHING_CONSUMPTION_WINDOW_MIN, default=DEFAULT_SMOOTHING_CONSUMPTION_WINDOW_MIN): vol.Coerce(int),
+        vol.Optional(CONF_SMOOTHING_HOUSEHOLD_WINDOW_MIN, default=DEFAULT_SMOOTHING_HOUSEHOLD_WINDOW_MIN): vol.Coerce(int),
+        vol.Optional(CONF_BATTERY_RECHARGE_RESERVE_W, default=DEFAULT_BATTERY_RECHARGE_RESERVE_W): vol.Coerce(float),
+        vol.Optional(CONF_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING, default=DEFAULT_BATTERY_RECHARGE_RESERVE_BEFORE_SMOOTHING): cv.boolean,
+        vol.Optional(CONF_MIN_EXPORT_MARGIN_W, default=DEFAULT_MIN_EXPORT_MARGIN_W): vol.Coerce(float),
+        vol.Optional(CONF_SWITCHING_PENALTY_FACTOR, default=DEFAULT_SWITCHING_PENALTY_FACTOR): selector.NumberSelector(
+            selector.NumberSelectorConfig(min=0.0, max=5.0, step=0.1, mode=selector.NumberSelectorMode.BOX)
+        ),
+        vol.Optional(CONF_AUTO_SWITCHING_PENALTY, default=DEFAULT_AUTO_SWITCHING_PENALTY): cv.boolean,
+        vol.Optional(CONF_CLAMP_PRICE_STEP, default=DEFAULT_CLAMP_PRICE_STEP): selector.NumberSelector(
+            selector.NumberSelectorConfig(min=0.0, max=1.0, step=0.01, mode=selector.NumberSelectorMode.BOX)
+        ),
         vol.Optional(CONF_BATTERY_SOC_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),

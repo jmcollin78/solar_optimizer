@@ -53,6 +53,11 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.6.0**:
+>   - **Simplified power calculation**: The algorithm now expects household base consumption (positive watts) as input, providing more accurate optimization
+>   - **Updated configuration**: `power_consumption_entity_id` should now represent household consumption, not net metering. See [Creating Sensor Templates](#creating-sensor-templates-for-your-installation) for migration guidance
+>   - **Battery handling improvements**: Battery charge power sensor is now optional (used for diagnostics only). Battery reserve and SOC are handled more efficiently
+>   - **Default smoothing updated**: PV production smoothing now defaults to 15 minutes for better stability. Consumption and battery smoothing disabled by default
 > * **release 3.5.0**:
 >   - added support for priority management. See [Priority Management](#priority-management)
 > * **release 3.2.0** :
@@ -91,6 +96,27 @@ The algorithm used is a simulated annealing type algorithm, a description of whi
 ## Anti-flickering
 To avoid the effects of flickering from one cycle to another, a minimum activation delay can be configured by equipment: `duration_min`. For example: a water heater must be activated for at least one hour for the ignition to be useful, charging an electric car must last at least two hours, ...
 Similarly, a minimum stop duration can be specified in the `duration_stop_min` parameter.
+
+### Device Switching Stability
+In addition to the minimum duration constraints, the algorithm includes a **switching penalty** mechanism to prevent excessive device switching. This addresses scenarios where available power increases slightly (e.g., by 200W), which might otherwise cause the algorithm to immediately switch from one device to another, even if the improvement is marginal.
+
+The switching penalty discourages turning off currently active devices unless there is a significant benefit. This results in:
+- **Reduced relay wear**: Devices stay on longer, reducing mechanical stress on relays
+- **Better minimum on-time compliance**: Devices are more likely to reach their `duration_min` before being turned off
+- **Incremental device addition**: As power increases, new devices are added rather than swapping existing ones
+- **Dynamic behavior**: The penalty automatically adjusts based on the power difference - small improvements incur higher penalties, while significant improvements can still trigger switches
+- **Variable power device support**: Devices with adjustable power can freely increase or decrease their power consumption. Only turning them completely OFF incurs the switching penalty.
+
+The switching penalty can be configured in the UI when setting up or reconfiguring the Solar Optimizer integration:
+- **Location**: Common Parameters configuration page
+- **Parameter name**: "Device switching penalty factor"
+- **Default value**: 0.5 (balanced approach)
+- **Range**: 0 (disabled) to 2.0+ (very strong)
+- **Recommended values**:
+  - 0.0 = Disabled (original behavior, more volatile)
+  - 0.3 = Light penalty (more responsive to power changes)
+  - 0.5 = Default (good balance between stability and optimization)
+  - 1.0 = Strong penalty (maximum stability, minimal switching)
 
 ## Usability
 Each configured device is associated with a switch-type entity named `enable` that authorizes the algorithm to use the device. If I want to force the heating of the hot water tank, I put its switch to off. The algorithm will therefore not look at it, the water heater switches back to manual, not managed by Solar Optimizer.
@@ -381,6 +407,8 @@ Explanation of Parameters
 	•	`cooling_factor`: The temperature is multiplied by 0.95 at each iteration, ensuring a slow and progressive decrease. A lower value makes the algorithm converge faster but may reduce solution quality.	A higher value (strictly less than 1) increases computation time but improves the solution quality.
 	•	`max_iteration_number`: The maximum number of iterations. Reducing this number can shorten computation time but may degrade solution quality if no stable solution is found.
 
+**Note:** The `switching_penalty_factor` parameter is now configured via the UI (Common Parameters page) and is no longer supported in `solar_optimizer.yaml`.
+
 The default values are suited for setups with around 20 devices (which results in many possible configurations). If you have fewer than 5 devices and no variable power devices, you can try these alternative parameters (not tested):
 
   ```yaml
@@ -584,7 +612,36 @@ data: {}
 
 Your setup may require the creation of specific sensors that need to be configured [here](README-en.md#configure-the-integration-for-the-first-time). The rules for these sensors are crucial and must be strictly followed to ensure the proper functioning of Solar Optimizer.
 
-Below are my sensor templates (applicable only for an Enphase installation):
+## Important: Household Consumption Sensor
+
+**As of version 3.6.0**, Solar Optimizer expects the `power_consumption_entity_id` to represent **positive household base consumption in watts**. This is the power consumed by your home, excluding the managed devices controlled by Solar Optimizer.
+
+### What this means:
+- The sensor should report **positive values** representing actual household consumption
+- It should **not** include the power of devices managed by Solar Optimizer (they are tracked separately)
+- If you use a **net-metering sensor** (where negative values indicate export to grid), you should create a template sensor to convert it to positive household consumption
+
+### Example scenarios:
+1. **If you have a direct household consumption sensor**: Use it directly
+2. **If you have a net-metering sensor**: Create a template sensor like:
+   ```yaml
+   - sensor:
+       - name: "Household Base Consumption (W)"
+         unit_of_measurement: "W"
+         device_class: power
+         state_class: measurement
+         state: >
+           {% set net_power = states('sensor.your_net_power_sensor') | float(default=0) %}
+           {{ [0, net_power] | max }}
+   ```
+
+### Battery handling:
+- Battery state of charge (SOC) is used for device usability rules
+- Battery reserve can be configured to prioritize battery charging over devices
+- Battery charge power sensor is now **optional** and used only for diagnostics
+- The algorithm automatically accounts for battery behavior through the configured reserve
+
+Below are example sensor templates (applicable for an Enphase installation):
 
 ### File `configuration.yaml`:
 ```
