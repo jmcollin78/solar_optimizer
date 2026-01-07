@@ -102,7 +102,8 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
-                    "offpeak_time": "Offpeak time"
+                    "offpeak_time": "Offpeak time",
+                    "min_energy_per_day_kwh": "Mininal Energy per day"
                 },
                 "data_description": {
                     "name": "The name of the device",
@@ -124,7 +125,8 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
-                    "offpeak_time": "The offpeak time with format HH:MM"
+                    "offpeak_time": "The offpeak time with format HH:MM",
+                    "min_energy_per_day_kwh": "The minimum energy to put in device in kWh. If minium energy is not reached during daylight, it will be activated at max power during offpeak time until max time is reached"
                 }
             }
         },

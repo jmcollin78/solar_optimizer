@@ -86,6 +86,7 @@ managed_device_schema = vol.Schema(
         vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
+        vol.Optional(CONF_MIN_ENERGY_PER_DAY_KWH, default="0"): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=200.0, step=0.1, mode=selector.NumberSelectorMode.BOX)),
         vol.Optional(CONF_OFFPEAK_TIME): str,
     }
 )
@@ -137,6 +138,7 @@ power_managed_device_schema = vol.Schema(
         vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
+        vol.Optional(CONF_MIN_ENERGY_PER_DAY_KWH, default="0"): selector.NumberSelector(selector.NumberSelectorConfig(min=0.0, max=200.0, step=0.1, mode=selector.NumberSelectorMode.BOX)),
         vol.Optional(CONF_OFFPEAK_TIME): str,
     }
 )
