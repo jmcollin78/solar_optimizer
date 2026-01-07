@@ -60,7 +60,8 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
-                    "offpeak_time": "Offpeak time"
+                    "offpeak_time": "Offpeak time ranges",
+                    "offpeak_entity_id": "Offpeak sensor entity"
                 },
                 "data_description": {
                     "name": "The name of the device",
@@ -76,7 +77,8 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
-                    "offpeak_time": "The offpeak time with format HH:MM"
+                    "offpeak_time": "Off-peak time ranges. Format: HH:MM-HH:MM or multiple ranges separated by commas. Examples: '22:00-06:00' or '13:00-14:00,22:00-06:00'",
+                    "offpeak_entity_id": "Entity (binary_sensor, input_boolean, sensor, or calendar) that indicates off-peak periods. When 'on', it's off-peak time. Alternative to offpeak_time"
                 }
             },
             "powered_device": {
@@ -102,7 +104,8 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
-                    "offpeak_time": "Offpeak time"
+                    "offpeak_time": "Offpeak time ranges",
+                    "offpeak_entity_id": "Offpeak sensor entity"
                 },
                 "data_description": {
                     "name": "The name of the device",
@@ -124,7 +127,8 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
-                    "offpeak_time": "The offpeak time with format HH:MM"
+                    "offpeak_time": "Off-peak time ranges. Format: HH:MM-HH:MM or multiple ranges separated by commas. Examples: '22:00-06:00' or '13:00-14:00,22:00-06:00'",
+                    "offpeak_entity_id": "Entity (binary_sensor, input_boolean, sensor, or calendar) that indicates off-peak periods. When 'on', it's off-peak time. Alternative to offpeak_time"
                 }
             }
         },
@@ -192,7 +196,8 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
-                    "offpeak_time": "Offpeak time"
+                    "offpeak_time": "Offpeak time ranges",
+                    "offpeak_entity_id": "Offpeak sensor entity"
                 },
                 "data_description": {
                     "name": "The name of the device",
@@ -208,7 +213,8 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
-                    "offpeak_time": "The offpeak time with format HH:MM"
+                    "offpeak_time": "Off-peak time ranges. Format: HH:MM-HH:MM or multiple ranges separated by commas. Examples: '22:00-06:00' or '13:00-14:00,22:00-06:00'",
+                    "offpeak_entity_id": "Entity (binary_sensor, input_boolean, sensor, or calendar) that indicates off-peak periods. When 'on', it's off-peak time. Alternative to offpeak_time"
                 }
             },
             "powered_device": {
@@ -234,7 +240,8 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
-                    "offpeak_time": "Offpeak time"
+                    "offpeak_time": "Offpeak time ranges",
+                    "offpeak_entity_id": "Offpeak sensor entity"
                 },
                 "data_description": {
                     "name": "The name of the device",
@@ -256,7 +263,8 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
-                    "offpeak_time": "The offpeak time with format HH:MM"
+                    "offpeak_time": "Off-peak time ranges. Format: HH:MM-HH:MM or multiple ranges separated by commas. Examples: '22:00-06:00' or '13:00-14:00,22:00-06:00'",
+                    "offpeak_entity_id": "Entity (binary_sensor, input_boolean, sensor, or calendar) that indicates off-peak periods. When 'on', it's off-peak time. Alternative to offpeak_time"
                 }
             }
         },
