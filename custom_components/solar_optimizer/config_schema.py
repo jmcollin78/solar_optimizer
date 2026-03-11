@@ -60,6 +60,12 @@ central_config_schema = vol.Schema(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
         vol.Optional(CONF_RAZ_TIME, default=DEFAULT_RAZ_TIME): str,
+        vol.Optional(CONF_ALGORITHM_TYPE, default=ALGORITHM_SIMULATED_ANNEALING): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=ALGORITHM_TYPES,
+                mode=selector.SelectSelectorMode.LIST,
+            )
+        ),
     }
 )
 
@@ -87,6 +93,7 @@ managed_device_schema = vol.Schema(
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
+        vol.Optional(CONF_CAN_BE_SHED, default=False): cv.boolean,
     }
 )
 
@@ -138,5 +145,6 @@ power_managed_device_schema = vol.Schema(
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
+        vol.Optional(CONF_CAN_BE_SHED, default=False): cv.boolean,
     }
 )

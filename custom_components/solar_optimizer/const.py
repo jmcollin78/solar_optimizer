@@ -79,6 +79,12 @@ CONF_BATTERY_SOC_THRESHOLD = "battery_soc_threshold"
 CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
 CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
 CONF_OFFPEAK_TIME = "offpeak_time"
+CONF_CAN_BE_SHED = "can_be_shed"
+
+CONF_ALGORITHM_TYPE = "algorithm_type"
+ALGORITHM_SIMULATED_ANNEALING = "simulated_annealing"
+ALGORITHM_GREEDY_PRIORITY = "greedy_priority"
+ALGORITHM_TYPES = [ALGORITHM_SIMULATED_ANNEALING, ALGORITHM_GREEDY_PRIORITY]
 
 PRIORITY_WEIGHT_NULL = "None"
 PRIORITY_WEIGHT_LOW = "Low"

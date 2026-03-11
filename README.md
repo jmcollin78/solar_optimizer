@@ -22,6 +22,7 @@
   - [Configure the Devices](#configure-the-devices)
     - [Configuring a Simple Device (On/Off)](#configuring-a-simple-device-onoff)
   - [Configuring a Device with Variable Power](#configuring-a-device-with-variable-power)
+  - [Algorithm Selection](#algorithm-selection)
   - [Configuration Examples](#configuration-examples)
     - [Controlling Tesla Charging](#controlling-tesla-charging)
     - [Controlling an Air Conditioner hvac mode](#controlling-an-air-conditioner-hvac-mode)
@@ -86,7 +87,10 @@ The operation is as follows:
 2. the algorithm keeps the best configuration (the one with a minimum cost) and looks for other solutions, until a minimum is reached.
 3. the best configuration is then applied.
 
-The algorithm used is a simulated annealing type algorithm, a description of which you will find here: https://fr.wikipedia.org/wiki/Recuit_simul%C3%A9
+Two optimization algorithms are available, selectable via the `algorithm_type` configuration field:
+
+- **Simulated Annealing** (default): a probabilistic metaheuristic that explores many random configurations and converges on a near-optimal solution. It handles variable-power devices and complex trade-offs well. A description can be found here: https://fr.wikipedia.org/wiki/Recuit_simul%C3%A9
+- **Greedy Priority**: a fast deterministic two-pass algorithm that turns on the highest-priority devices first (within available solar surplus), then turns off the lowest-priority devices if there is a deficit. It also supports **load shedding** — forcing a lower-priority active device off to free power for a higher-priority waiting device (when `priority_weight > 0` and the device has `can_be_shed: true`). Recommended when device priority ordering matters more than fine-grained power balance.
 
 ## Anti-flickering
 To avoid the effects of flickering from one cycle to another, a minimum activation delay can be configured by equipment: `duration_min`. For example: a water heater must be activated for at least one hour for the ignition to be useful, charging an electric car must last at least two hours, ...
@@ -178,6 +182,7 @@ You need to specify:
 7. An optional sensor that provides **the charge level of a possible solar battery** in percentage. If your solar installation does not include a battery, leave this field empty.
 8. A sensor that provides **the net instantaneous charging power of the battery**. It must be expressed in watt and should be negative when the battery is charging and positive when the battery is discharging. This value will be added to the net consumed power. If the net consumed power is -1000 W (selling 1000 W) but the battery is charging at -500 W, it means that the surplus available for the algorithm is 1500 W.
 9. **The start time of the day**. At this time, the usage counters of the equipment are reset to zero. The default value is 05:00. Ideally, this should be set before the first production of the day and as late as possible for off-peak activations.
+10. **The optimization algorithm** (`algorithm_type`). Selects the algorithm used to find the optimal device configuration. Two choices: `simulated_annealing` (default) and `greedy_priority`. See [How does it work?](#how-does-it-work) for a comparison.
 
 Except for the solar battery charge level, these parameters are essential for the algorithm to function, so they are all mandatory. Using sensors or `input_number` allows values to be updated in real-time at each cycle. Consequently, when off-peak hours begin, the calculation may change, impacting the state of the equipment as importing energy becomes cheaper. Everything is dynamic and recalculated in each cycle.
 
@@ -213,6 +218,7 @@ You need to specify the following attributes:
 | `max_on_time_per_day_min` | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
 | `min_on_time_per_day_min` | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
 | `offpeak_time`            | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
+| `can_be_shed`             | All                                 | Whether this device can be force-stopped by the **Greedy Priority** algorithm even during its cooldown period, to free power for a higher-priority device.                                                                              | false                                            | Only relevant when using `algorithm_type: greedy_priority` and `priority_weight > 0`. Has no effect with Simulated Annealing.                                                                                     |
 
 ## Configuring a Device with Variable Power
 This type of device allows for adjusting the power consumption based on solar production and the algorithm's decisions. Essentially, it acts as a software-based solar router, enabling, for example, an electric vehicle to charge using only surplus solar energy.
@@ -226,6 +232,7 @@ All the parameters described [here](#configuring-a-simple-device-onoff) apply an
 | `power_step`                  | Variable power device | The power adjustment step in watts                           | 10                                                       | For an electric vehicle, set this to 220 (220V x 1A).<br/>For `light` entity with `brightness` attribute set it to `power_max / 255`<br/>For `fan` entity with `percentage` attribute set it to `power_max / 100`                                                                                                                         |
 | `change_power_service`        | Variable power device | The service to call to adjust power levels                   | `number/set_value`<br/>or<br/>`light/turn_on/brightness` | For `fan` or `light` power entities, you must provide the attribute to set power, typically `brightness` or `percentage`                                                                                                                                                                                                                  |
 | `convert_power_divide_factor` | Variable power device | The divisor applied to convert power into the required value | 50                                                       | In this example, the `"number/set_value"` service is called with `power setpoint / 50` on the `entity_id`. For a Tesla in a three-phase installation, the value should be 660 (220V x 3) to convert power into amperes. For a single-phase setup, use 220.<br/>For `light` or `fan` entity set it to the same value of `power_step` field |
+| `can_be_shed`                 | All                   | Whether this device can be force-stopped by the **Greedy Priority** algorithm even during its cooldown period, to free power for a higher-priority device. | false | Only relevant when using `algorithm_type: greedy_priority` and `priority_weight > 0`. Has no effect with Simulated Annealing. |
 
 ## Configuration Examples
 The examples below should be adapted to your specific case.
@@ -352,8 +359,22 @@ To control light brightness
   offpeak_time: "02:00"
 ```
 
-## Configuring the Algorithm in Advanced Mode
-Advanced configuration allows modifying the algorithm's settings. It is not recommended to change these settings unless you have specific needs. The algorithm uses a **simulated annealing** approach to search for optimal configurations (combinations of on/off states) and evaluates a cost function at each iteration.
+## Algorithm Selection
+
+Solar Optimizer supports two optimization algorithms. Choose based on your needs:
+
+| | Simulated Annealing (default) | Greedy Priority |
+|---|---|---|
+| **Strategy** | Probabilistic search over many random configurations | Deterministic two-pass: turn on high-priority first, turn off low-priority if deficit |
+| **Variable power** | Full support | Not supported |
+| **Load shedding** | Not supported | Supported (`can_be_shed: true` + `priority_weight > 0`) |
+| **CPU usage** | Higher (~1000 iterations per cycle) | Lower (O(n log n) per cycle) |
+| **Best for** | Variable-power devices (EV charger, solar router) | Fixed-power devices where priority ordering matters |
+
+Set `algorithm_type` in the integration configuration to `simulated_annealing` (default) or `greedy_priority`.
+
+## Configuring the Algorithm in Advanced Mode (Simulated Annealing only)
+Advanced configuration allows modifying the **Simulated Annealing** algorithm's settings. These settings have no effect when `algorithm_type: greedy_priority` is selected. It is not recommended to change these settings unless you have specific needs. The algorithm uses a **simulated annealing** approach to search for optimal configurations (combinations of on/off states) and evaluates a cost function at each iteration.
 
 During each iteration, the algorithm randomly changes the state of some devices and evaluates the cost function. If the new evaluation is better than the previous one, it is kept. If it is worse, it may still be kept based on a "temperature" parameter. This temperature gradually decreases over iterations, allowing the algorithm to converge toward an optimal solution.
 

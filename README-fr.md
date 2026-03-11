@@ -23,6 +23,7 @@
   - [Configurer les équipements](#configurer-les-équipements)
     - [Configurer un équipement simple (on/off)](#configurer-un-équipement-simple-onoff)
   - [Configurer un équipement avec une puissance variable](#configurer-un-équipement-avec-une-puissance-variable)
+  - [Choix de l'algorithme](#choix-de-lalgorithme)
   - [Exemples de configurations](#exemples-de-configurations)
     - [Commande d'une recharge de Tesla](#commande-dune-recharge-de-tesla)
     - [Commande d'une climatisation](#commande-dune-climatisation)
@@ -30,7 +31,7 @@
     - [Commande d'un deshumidificateur](#commande-dun-deshumidificateur)
     - [Commande pour une lampe](#commande-pour-une-lampe)
     - [Commande pour une lampe dimmable](#commande-pour-une-lampe-dimmable)
-  - [Configurer l'algorithme en mode avancé](#configurer-lalgorithme-en-mode-avancé)
+  - [Configurer l'algorithme en mode avancé (Recuit Simulé uniquement)](#configurer-lalgorithme-en-mode-avancé-recuit-simulé-uniquement)
 - [Entités disponibles](#entités-disponibles)
   - [L'appareil "configuration"](#lappareil-configuration)
   - [Les appareils](#les-appareils)
@@ -85,7 +86,10 @@ Le fonctionnement est le suivant :
 2. l'algorithme garde la meilleure configuration (celle qui a un cout minimum) et cherche d'autres solutions, jusqu'à ce qu'un minimum soit atteint.
 3. la meilleure configuration est alors appliquée.
 
-L'algorithme utilisé est un algorithme de type recuit simulé dont vous trouverez une description ici : https://fr.wikipedia.org/wiki/Recuit_simul%C3%A9
+Deux algorithmes d'optimisation sont disponibles, sélectionnables via le champ de configuration `algorithm_type` :
+
+- **Recuit Simulé** (par défaut) : métaheuristique probabiliste qui explore de nombreuses configurations aléatoires et converge vers une solution quasi-optimale. Gère bien les équipements à puissance variable et les compromis complexes. Une description est disponible ici : https://fr.wikipedia.org/wiki/Recuit_simul%C3%A9
+- **Greedy Priority (priorité gloutonne)** : algorithme déterministe en deux passes qui allume en priorité les équipements les plus prioritaires (dans la limite du surplus solaire disponible), puis éteint les équipements les moins prioritaires en cas de déficit. Supporte aussi la **délestage** (forcer l'arrêt d'un équipement moins prioritaire en cours de fonctionnement pour libérer de la puissance, lorsque `priority_weight > 0` et que l'équipement a `can_be_shed: true`). Recommandé lorsque l'ordre de priorité des équipements prime sur l'équilibre fin de la puissance.
 
 ## Anti-bagot
 Pour éviter les effets de bagottements d'un cycle à l'autre, un délai minimal d'activation est paramétrable par équipements : `duration_min`. Par exemple : un chauffe-eau doit être activé au moins une heure pour que l'allumage soit utile, la charge d'une voiture électrique doit durer au moins deux heures, ...
@@ -166,6 +170,7 @@ Vous devez spécifier :
 7. un sensor facultatif qui donne **l'état de charge d'une éventuelle batterie solaire** en pourcentage. Si vous n'avez pas de batterie dans votre installation solaire, laissez ce champ vide,
 8. un sensor qui donne la **puissance nette instantanée de charge de la batterie**. Elle doit être exprimée en watt et doit être négative si la batterie charge et positive si la batterie se décharge. Cette valeur sera ajoutée à la puissance net consommée. Si la puissance consommée nette est de -1000 w (vente de 1000 w) mais que la batterie charge de -500 w, cela veut dire que le surplus utilisable par l'algorithme est de 1500 w.
 9. **l'heure de début de journée**. A cette heure les compteurs d'uitlisation des équipements sont remis à zéro. La valeur par défaut est 05:00. Pour bien faire, elle doit être avant la première production et le plus tard possible pour les activations en heures creuses.
+10. **L'algorithme d'optimisation** (`algorithm_type`). Sélectionne l'algorithme utilisé pour trouver la configuration optimale des équipements. Deux choix : `simulated_annealing` (par défaut) et `greedy_priority`. Voir [Comment fonctionne-t-elle ?](#comment-fonctionne-t-elle-) pour une comparaison.
 
 
 A part l'état de charge de la batterie solaire, ces informations sont nécessaires à l'algorithme pour fonctionner, elles sont donc toutes obligatoires. Le fait que ce soit des sensor ou input_number permet d'avoir des valeurs qui sont réévaluées à chaque cycle. En conséquence le passage en heure creuse peut modifier le calcul et donc les états des équipements puisque l'import devient moins cher. Donc tout est dynamique et recalculé à chaque cycle.
@@ -202,6 +207,7 @@ Vous devez spécifier les attributs suivant :
 | `max_on_time_per_day_min` | tous                                    | le nombre de minutes maximal en position allumé pour cet équipement. Au delà, l'équipement n'est plus utilisable par l'algorithme                                                                                                            | 10                                                    | L'équipement sera allumé au maximum 10 minutes par jour                                                                                                                                                                                        |
 | `min_on_time_per_day_min` | tous                                    | le nombre de minutes minimale en position allumé pour cet équipement. Si lors du démarrage des heures creuses, ce minimum n'est pas atteint alors l'équipement sera allumé à concurrence du début de journée ou du `max_on_time_per_day_min` | 5                                                     | L'équipement est sera allumé au minimum 5 minutes par jour ; soit pendant la production solaire, soit pendant les heures creuses                                                                                                               |
 | `offpeak_time`            | tous                                    | L'heure de début des heures creuses au format hh:mm                                                                                                                                                                                          | 22:00                                                 | L'équipement pourra être allumé à 22h00 si la production de la journée n'a pas été suffisante                                                                                                                                                  |
+| `can_be_shed`             | tous                                    | Indique si cet équipement peut être arrêté de force par l'algorithme **Greedy Priority** même pendant sa période de refroidissement, afin de libérer de la puissance pour un équipement plus prioritaire.                                    | false                                                 | Uniquement pertinent avec `algorithm_type: greedy_priority` et `priority_weight > 0`. Sans effet avec le Recuit Simulé.                                                                                                                         |
 
 ## Configurer un équipement avec une puissance variable
 Ce type d'équipement permet moduler la puissance consommée par l'équipement en fonction de la production solaire et de ce que décide l'algorithme. Vous avez ainsi une sorte de routeur solaire logiciel qui permet, par exemple, de moduler la charge d'une voiture électrique avec uniquement le surplus de production.
@@ -215,6 +221,7 @@ Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'a
 | `power_step`                  | équipement a puissance variable | Le pas de puissance en watt                                   | 10                                                       | Pour une voiture mettre 230 (230 v x 1 A).<br/>Pour une entité `light` mettre `power_max / 255`<br/>Pour une entité `fan` mettre `power_max / 100`                                                                                                                                                                                                                                                 |
 | `change_power_service`        | équipement a puissance variable | Le service à appeler pour changer la puissance                | `number/set_value`<br/>or<br/>`light/turn_on/brightness` | -                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `convert_power_divide_factor` | équipement a puissance variable | Le diviseur a appliquer pour convertir la puissance en valeur | 50                                                       | Dans l'exemple, le service "number/set_value" sera appelé avec la `consigne de puissance / 50` sur l'entité `entity_id`. Pour une Tesla sur une installation tri-phasée, la valeur est 660 (230 v x 3) ce qui permet de convertir une puissance en ampère. Pour une installation mono-phasé, mettre 230.<br/>Pour une entité `light` ou `fan` mettre la même valeur que dans le champ `power_step` |
+| `can_be_shed`                 | tous                            | Indique si cet équipement peut être arrêté de force par l'algorithme **Greedy Priority** même pendant sa période de refroidissement, afin de libérer de la puissance pour un équipement plus prioritaire. | false | Uniquement pertinent avec `algorithm_type: greedy_priority` et `priority_weight > 0`. Sans effet avec le Recuit Simulé. |
 
 ## Exemples de configurations
 Les exemples ci-dessus sont à adapter à votre cas.
@@ -337,8 +344,22 @@ Pour allumer une lampe témoin de production disponible:
   offpeak_time: "02:00"
 ```
 
-## Configurer l'algorithme en mode avancé
-La configuration avancée permet de modifier la configuration de l'algorithme. Il n'est pas conseillé d'y toucher mais cette fonction reste disponible pour des besoins spécifiques. L'algorithme est un algorithme de type recuit simulé qui cherche des configurations (combinaisons de on/off) et procède à une évaluation d'une fonction de coût à chaque itération.
+## Choix de l'algorithme
+
+Solar Optimizer propose deux algorithmes d'optimisation. Choisissez en fonction de vos besoins :
+
+| | Recuit Simulé (par défaut) | Greedy Priority |
+|---|---|---|
+| **Stratégie** | Recherche probabiliste sur de nombreuses configurations aléatoires | Déterministe en deux passes : allume les plus prioritaires, éteint les moins prioritaires si déficit |
+| **Puissance variable** | Prise en charge complète | Non supporté |
+| **Délestage** | Non supporté | Supporté (`can_be_shed: true` + `priority_weight > 0`) |
+| **Usage CPU** | Plus élevé (~1000 itérations par cycle) | Plus faible (O(n log n) par cycle) |
+| **Idéal pour** | Équipements à puissance variable (chargeur VE, routeur solaire) | Équipements fixes où l'ordre de priorité prime |
+
+Définissez `algorithm_type` dans la configuration de l'intégration à `simulated_annealing` (par défaut) ou `greedy_priority`.
+
+## Configurer l'algorithme en mode avancé (Recuit Simulé uniquement)
+La configuration avancée permet de modifier la configuration de l'algorithme de **Recuit Simulé**. Ces paramètres n'ont aucun effet lorsque `algorithm_type: greedy_priority` est sélectionné. Il n'est pas conseillé d'y toucher mais cette fonction reste disponible pour des besoins spécifiques. L'algorithme est un algorithme de type recuit simulé qui cherche des configurations (combinaisons de on/off) et procède à une évaluation d'une fonction de coût à chaque itération.
 A chaque itération, l'algorithme échange de façon aléatoire l'état de certains équipements et évalue la fonction de cout. Si l'évaluation est meilleure que la prédédente elle est gardée. Si elle est plus forte, elle peut être gardée en fonction d'une "température". Cette température va baisser au fur et à mesure des itérations ce qui va permettre de converger vers une solution quasi optimale.
 
 Pour utiliser la configuration avancée, vous devez :

@@ -23,9 +23,17 @@ from homeassistant.util.unit_conversion import (
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN, DEFAULT_RAZ_TIME
+from .const import (
+    DEFAULT_REFRESH_PERIOD_SEC,
+    name_to_unique_id,
+    SOLAR_OPTIMIZER_DOMAIN,
+    DEFAULT_RAZ_TIME,
+    CONF_ALGORITHM_TYPE,
+    ALGORITHM_GREEDY_PRIORITY,
+)
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
+from .greedy_priority_algo import GreedyPriorityAlgorithm
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -127,6 +135,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
         ).time()
+
+        if config.data.get(CONF_ALGORITHM_TYPE) == ALGORITHM_GREEDY_PRIORITY:
+            self._algo = GreedyPriorityAlgorithm()
+            _LOGGER.info("Solar Optimizer using Greedy Priority algorithm")
+        else:
+            _LOGGER.info("Solar Optimizer using Simulated Annealing algorithm")
+
         self._central_config_done = True
 
     async def on_ha_started(self, _) -> None:
