@@ -14,6 +14,7 @@ class SolarOptimizerAlgorithm(Protocol):
         devices: list[ManagedDevice],
         power_consumption: float,
         solar_power_production: float,
+        allowed_power_overage: float,
         sell_cost: float,
         buy_cost: float,
         sell_tax_percent: float,
@@ -26,6 +27,7 @@ class SolarOptimizerAlgorithm(Protocol):
             devices: list of managed devices to optimize
             power_consumption: current net grid consumption in W (including battery charge)
             solar_power_production: current solar production in W
+            allowed_power_overage: max W of grid import allowed to turn on a device (Greedy only)
             sell_cost: grid sell price in €/kWh
             buy_cost: grid buy price in €/kWh
             sell_tax_percent: tax applied to sold energy (%)

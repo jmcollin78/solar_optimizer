@@ -28,6 +28,7 @@ class GreedyPriorityAlgorithm:
         devices: list[ManagedDevice],
         power_consumption: float,
         solar_power_production: float,
+        allowed_power_overage: float,
         sell_cost: float,
         buy_cost: float,
         sell_tax_percent: float,
@@ -89,9 +90,9 @@ class GreedyPriorityAlgorithm:
             return [], -1, -1
 
         # excess > 0: solar surplus available; < 0: currently importing from grid.
-        # power_consumption already includes the load from currently-active managed
-        # devices, so we can simply subtract to get available headroom.
-        excess = solar_power_production - power_consumption
+        # power_consumption is net grid consumption (positive = importing, negative = exporting),
+        # matching the real HA sensor. excess = -(net_consumption) = available solar headroom.
+        excess = -power_consumption
 
         # Sort ascending by priority int: lower int = higher importance (VERY_HIGH=1)
         by_priority = sorted(equipements, key=lambda d: d["priority"])
@@ -113,16 +114,17 @@ class GreedyPriorityAlgorithm:
 
             power_needed = s["power_min"]
 
-            if excess >= power_needed:
-                # Enough surplus to turn on directly
+            if excess + allowed_power_overage >= power_needed:
+                # Enough surplus (or within allowed overage) to turn on
                 s["state"] = True
                 s["requested_power"] = power_needed
                 excess -= power_needed
                 _LOGGER.debug(
-                    "GreedyPriorityAlgorithm: turning ON %s (%.0fW, direct excess=%.0f)",
+                    "GreedyPriorityAlgorithm: turning ON %s (%.0fW, excess=%.0f, overage=%.0f)",
                     name,
                     power_needed,
                     excess + power_needed,
+                    allowed_power_overage,
                 )
             elif priority_weight > 0:
                 # Try load shedding: free power from lower-priority active devices
@@ -144,10 +146,12 @@ class GreedyPriorityAlgorithm:
 
         # ------------------------------------------------------------------ #
         # PASS 2: Turn off, lowest priority first (highest int first)         #
+        # Only shed when deficit exceeds the allowed overage — a deficit      #
+        # within that tolerance is intentional (we chose to import for it).  #
         # ------------------------------------------------------------------ #
         for dev in reversed(by_priority):
-            if excess >= 0:
-                break  # no deficit, stop
+            if excess >= -allowed_power_overage:
+                break  # deficit is within tolerance, stop
 
             name = dev["name"]
             s = solution[name]

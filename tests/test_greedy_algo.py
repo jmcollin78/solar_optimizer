@@ -153,8 +153,8 @@ async def test_greedy_turns_on_with_sufficient_excess(hass: HomeAssistant):
     device_a = await create_managed_device(hass, entry_a, "device_a")
     assert device_a is not None
 
-    # 2000W solar, 200W house load → 1800W excess, device needs 1000W
-    se = _side_effects(production=2000, consumption=200)
+    # 2000W solar, 200W house load → net = 200-2000 = -1800W (exporting), excess = 1800W, device needs 1000W
+    se = _side_effects(production=2000, consumption=-1800)
     with patch("homeassistant.core.StateMachine.get", side_effect=se.get_side_effects()):
         data = await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -172,8 +172,8 @@ async def test_greedy_stays_off_insufficient_excess(hass: HomeAssistant):
     device_a = await create_managed_device(hass, entry_a, "device_a")
     assert device_a is not None
 
-    # 500W solar, 400W house load → 100W excess, device needs 1000W
-    se = _side_effects(production=500, consumption=400)
+    # 500W solar, 400W house load → net = 400-500 = -100W (exporting 100W), excess = 100W < 1000W needed
+    se = _side_effects(production=500, consumption=-100)
     with patch("homeassistant.core.StateMachine.get", side_effect=se.get_side_effects()):
         data = await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -202,8 +202,8 @@ async def test_greedy_priority_ordering(hass: HomeAssistant):
     priority_b.select_option(PRIORITY_VERY_HIGH)
     await hass.async_block_till_done()
 
-    # Solar 1000W, house 200W → 800W excess: exactly fits one 800W device
-    se = _side_effects(production=1000, consumption=200)
+    # Solar 1000W, house 200W → net = 200-1000 = -800W (exporting 800W): exactly fits one 800W device
+    se = _side_effects(production=1000, consumption=-800)
     with patch("homeassistant.core.StateMachine.get", side_effect=se.get_side_effects()):
         data = await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -239,12 +239,12 @@ async def test_greedy_load_shedding_enables_higher_priority(hass: HomeAssistant)
     priority_b.select_option(PRIORITY_VERY_HIGH)
     await hass.async_block_till_done()
 
-    # Cycle 1: Solar=700W, house=100W → 600W excess. Only A (600W LOW) fits exactly.
+    # Cycle 1: Solar=700W, house=100W → net = 100-700 = -600W (exporting 600W). Only A (600W LOW) fits exactly.
     # B (800W VERY_HIGH) can't fit (0W left) and nothing to shed yet (A just turned on).
     now = datetime.now(tz=get_tz(hass))
     device_a._set_now(now)
     device_b._set_now(now)
-    se1 = _side_effects(production=700, consumption=100)
+    se1 = _side_effects(production=700, consumption=-600)
     with patch("homeassistant.core.StateMachine.get", side_effect=se1.get_side_effects()):
         data1 = await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -256,12 +256,12 @@ async def test_greedy_load_shedding_enables_higher_priority(hass: HomeAssistant)
     device_b._set_now(now)
 
     # Cycle 2: A is ON (mock its HA entity as "on" so is_active=True).
-    # Solar=1000W, measured consumption = house(100) + A(600) = 700W.
-    # excess = 1000 - 700 = 300W. B needs 800W → can't turn on directly.
+    # Solar=1000W, house(100) + A(600) = 700W total → net = 700-1000 = -300W (exporting 300W).
+    # excess = 300W. B needs 800W → can't turn on directly.
     # But shed A (600W): 300 + 600 = 900W >= 800W → B turns on, A is shed.
     se2 = _side_effects(
         production=1000,
-        consumption=700,
+        consumption=-300,
         extra={"input_boolean.device_a": State("input_boolean.device_a", "on")},
     )
     with patch("homeassistant.core.StateMachine.get", side_effect=se2.get_side_effects()):
@@ -298,11 +298,11 @@ async def test_greedy_no_shedding_when_priority_weight_zero(hass: HomeAssistant)
     priority_b.select_option(PRIORITY_VERY_HIGH)
     await hass.async_block_till_done()
 
-    # Cycle 1: A turns on (600W fits in 600W excess)
+    # Cycle 1: A turns on (net = 100-700 = -600W exporting, excess=600W fits A)
     now = datetime.now(tz=get_tz(hass))
     device_a._set_now(now)
     device_b._set_now(now)
-    se1 = _side_effects(production=700, consumption=100)
+    se1 = _side_effects(production=700, consumption=-600)
     with patch("homeassistant.core.StateMachine.get", side_effect=se1.get_side_effects()):
         await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -312,11 +312,11 @@ async def test_greedy_no_shedding_when_priority_weight_zero(hass: HomeAssistant)
     device_a._set_now(now)
     device_b._set_now(now)
 
-    # Cycle 2: A is ON. With shedding disabled (priority_weight=0), B cannot displace A.
-    # A stays on, B stays off.
+    # Cycle 2: A is ON. net = (100+600)-1000 = -300W exporting, excess=300W < 800W.
+    # With shedding disabled (priority_weight=0), B cannot displace A. A stays on, B stays off.
     se2 = _side_effects(
         production=1000,
-        consumption=700,
+        consumption=-300,
         extra={"input_boolean.device_a": State("input_boolean.device_a", "on")},
     )
     with patch("homeassistant.core.StateMachine.get", side_effect=se2.get_side_effects()):
@@ -336,10 +336,10 @@ async def test_greedy_turns_off_on_production_drop(hass: HomeAssistant):
     device_a = await create_managed_device(hass, entry_a, "device_a")
     assert device_a is not None
 
-    # Cycle 1: enough solar → device on (is_waiting=True because duration_min=0.3)
+    # Cycle 1: enough solar → net = 200-2000 = -1800W (exporting), excess=1800W > 1000W → device on
     now = datetime.now(tz=get_tz(hass))
     device_a._set_now(now)
-    se = _side_effects(production=2000, consumption=200)
+    se = _side_effects(production=2000, consumption=-1800)
     with patch("homeassistant.core.StateMachine.get", side_effect=se.get_side_effects()):
         data = await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -349,9 +349,9 @@ async def test_greedy_turns_off_on_production_drop(hass: HomeAssistant):
     now = now + timedelta(minutes=1)
     device_a._set_now(now)
 
-    # Cycle 2: solar drops → measured consumption = house(200) + device(1000) = 1200W
-    # excess = 500 - 1200 = -700W (deficit) → device should be turned off
-    se2 = _side_effects(production=500, consumption=1200)
+    # Cycle 2: solar drops → house(200)+device(1000)=1200W total, net = 1200-500 = +700W (importing)
+    # excess = -700W (deficit) → device should be turned off
+    se2 = _side_effects(production=500, consumption=700)
     with patch("homeassistant.core.StateMachine.get", side_effect=se2.get_side_effects()):
         data2 = await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -370,8 +370,8 @@ async def test_greedy_multiple_devices_all_fit(hass: HomeAssistant):
     device_a = await create_managed_device(hass, entry_a, "device_a")
     device_b = await create_managed_device(hass, entry_b, "device_b")
 
-    # 2000W solar, 100W house → 1900W excess, both devices need 500+700=1200W
-    se = _side_effects(production=2000, consumption=100)
+    # 2000W solar, 100W house → net = 100-2000 = -1900W (exporting), excess=1900W > 1200W needed
+    se = _side_effects(production=2000, consumption=-1900)
     with patch("homeassistant.core.StateMachine.get", side_effect=se.get_side_effects()):
         data = await coordinator._async_update_data()
         await hass.async_block_till_done()
@@ -389,6 +389,7 @@ async def test_greedy_no_solar_nothing_turns_on(hass: HomeAssistant):
     entry_a = _device_entry("Device A", "device_a", power_max=1000)
     device_a = await create_managed_device(hass, entry_a, "device_a")
 
+    # 0W solar, 300W house → net = 300-0 = +300W (importing), excess = -300W → nothing turns on
     se = _side_effects(production=0, consumption=300)
     with patch("homeassistant.core.StateMachine.get", side_effect=se.get_side_effects()):
         data = await coordinator._async_update_data()

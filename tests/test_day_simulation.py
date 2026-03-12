@@ -140,7 +140,7 @@ BASE_HOUSE_LOAD = 350  # W (fridge, lights, standby)
 # Simulation engine
 # ---------------------------------------------------------------------------
 
-def run_day(algo, devices_cfg, priority_weight: int) -> dict:
+def run_day(algo, devices_cfg, priority_weight: int, allowed_power_overage_percent: float = 0.0) -> dict:
     """Simulate a full day using the given algorithm.
 
     Returns aggregated metrics dict.
@@ -160,14 +160,20 @@ def run_day(algo, devices_cfg, priority_weight: int) -> dict:
 
     for step, solar in enumerate(SOLAR_CURVE):
         house_load = BASE_HOUSE_LOAD
-        # power_consumption as seen by the algo: house + currently-active managed devices
+        # power_consumption as seen by the algo:
+        #   - Greedy expects gross total consumption (house + active managed), always positive
+        #   - SA expects net grid consumption (gross - solar), negative when exporting
+        # The real HA sensor provides net consumption. We match that convention here.
         managed_active_power = sum(d.current_power for d in devices if d.is_active)
-        consumption = house_load + managed_active_power
+        gross_consumption = house_load + managed_active_power
+        net_consumption = gross_consumption - solar  # negative = exporting to grid
+        allowed_power_overage = solar * allowed_power_overage_percent / 100.0
 
         solution, objective, total_power = algo.recuit_simule(
             devices=devices,
-            power_consumption=consumption,
+            power_consumption=net_consumption,
             solar_power_production=solar,
+            allowed_power_overage=allowed_power_overage,
             sell_cost=0.07,
             buy_cost=0.22,
             sell_tax_percent=0.0,
@@ -332,6 +338,7 @@ def test_day_simulation_no_solar_no_devices():
             devices=devices,
             power_consumption=consumption,
             solar_power_production=solar,
+            allowed_power_overage=0.0,
             sell_cost=0.07,
             buy_cost=0.22,
             sell_tax_percent=0.0,
@@ -347,3 +354,62 @@ def test_day_simulation_no_solar_no_devices():
     # All devices should be off after a zero-solar day
     for device in devices:
         assert not device.is_active, f"{device.name} should be off with zero solar"
+
+
+def test_day_simulation_three_way_comparison():
+    """Compare SA, Greedy (0% overage) and Greedy (20% overage) over a full synthetic day."""
+    priority_weight = PRIORITY_WEIGHT_MAP[PRIORITY_WEIGHT_HIGH]  # 50
+
+    algo_sa = SimulatedAnnealingAlgorithm(
+        initial_temp=1000, min_temp=0.1, cooling_factor=0.95, max_iteration_number=1000
+    )
+    algo_greedy = GreedyPriorityAlgorithm()
+
+    m_sa = run_day(algo_sa, DEVICES_CFG, priority_weight, allowed_power_overage_percent=0.0)
+    m_greedy = run_day(algo_greedy, DEVICES_CFG, priority_weight, allowed_power_overage_percent=0.0)
+    m_greedy20 = run_day(algo_greedy, DEVICES_CFG, priority_weight, allowed_power_overage_percent=20.0)
+
+    total_solar = sum(SOLAR_CURVE)
+
+    col = 14
+    w = 35 + col * 3 + 4
+    print("\n" + "=" * w)
+    print(f"{'DAY SIMULATION: SA vs Greedy vs Greedy+20% overage':^{w}}")
+    print(f"{'Total solar production: ' + str(total_solar) + ' W·steps':^{w}}")
+    print("=" * w)
+    print(f"{'Metric':<35} {'SA':>{col}} {'Greedy 0%':>{col}} {'Greedy 20%':>{col}}")
+    print("-" * w)
+    for label, key in [
+        ("Solar used (W·steps)",  "solar_used_Wstep"),
+        ("Grid import (W·steps)", "grid_import_Wstep"),
+        ("Grid export (W·steps)", "grid_export_Wstep"),
+    ]:
+        print(
+            f"{label:<35}"
+            f" {m_sa[key]:>{col}.0f}"
+            f" {m_greedy[key]:>{col}.0f}"
+            f" {m_greedy20[key]:>{col}.0f}"
+        )
+    print(
+        f"{'Solar utilization %':<35}"
+        f" {100 * m_sa['solar_used_Wstep'] / total_solar:>{col}.1f}%"
+        f" {100 * m_greedy['solar_used_Wstep'] / total_solar:>{col}.1f}%"
+        f" {100 * m_greedy20['solar_used_Wstep'] / total_solar:>{col}.1f}%"
+    )
+    print("-" * w)
+    for name, _, _ in DEVICES_CFG:
+        print(
+            f"  {name:<33}"
+            f" {m_sa['device_on_steps'][name]:>{col}}"
+            f" {m_greedy['device_on_steps'][name]:>{col}}"
+            f" {m_greedy20['device_on_steps'][name]:>{col}}"
+        )
+    print("=" * w)
+
+    # With 20% overage, greedy should import more than 0% overage
+    assert m_greedy20["grid_import_Wstep"] >= m_greedy["grid_import_Wstep"]
+    # But import should still be zero at night (overage is % of solar, so 0W when solar=0)
+    # Verify by checking no device turns on during zero-solar steps
+    zero_steps = [c for c in m_greedy20["per_cycle"] if c["solar"] == 0]
+    for step in zero_steps:
+        assert step["active"] == [], f"Devices active at night with zero solar: {step['active']}"

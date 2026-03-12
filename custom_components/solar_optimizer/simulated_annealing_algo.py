@@ -52,6 +52,7 @@ class SimulatedAnnealingAlgorithm:
         devices: list[ManagedDevice],
         power_consumption: float,
         solar_power_production: float,
+        allowed_power_overage: float,  # unused by SA; handled via buy/sell cost ratio
         sell_cost: float,
         buy_cost: float,
         sell_tax_percent: float,
