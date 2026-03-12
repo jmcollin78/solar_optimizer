@@ -46,13 +46,11 @@ For each device sorted by ascending priority integer (VERY_HIGH=1 first):
 - Skip if already on, not usable, or in cooldown.
 - Turn on if `excess + allowed_power_overage ≥ device_power_min`.
 - Otherwise, if `priority_weight > 0`: attempt load shedding — turn off the
-  lowest-priority active device(s) that have `can_be_shed: true` until enough
-  power is freed.
+  lowest-priority active device(s) until enough power is freed.
 
 **Pass 2 — turn OFF, lowest priority first:**
 While `excess < −allowed_power_overage` (deficit exceeds tolerance):
-- Turn off the lowest-priority active device that is not in cooldown
-  (or has `can_be_shed: true`).
+- Turn off the lowest-priority active device that is not in cooldown.
 
 `excess = −power_consumption` (net convention: negative consumption = surplus).
 
@@ -177,7 +175,7 @@ device — a silent failure mode producing ~12% utilisation.
 | Strict priority ordering required | **Greedy Priority** |
 | Low CPU / many devices | **Greedy Priority** — O(n log n) vs 1,000 iterations |
 | Fine-grained import/export cost optimisation | **SA** — models buy/sell costs explicitly |
-| Load shedding (interrupt lower-priority device for higher-priority one) | **Greedy Priority** + `can_be_shed: true` |
+| Load shedding (interrupt lower-priority device for higher-priority one) | **Greedy Priority** + `priority_weight > 0` |
 | Maximum solar absorption with controlled grid import | **Greedy Priority** + `allowed_power_overage_percent > 0` |
 
 ---
@@ -194,5 +192,4 @@ device — a silent failure mode producing ~12% utilisation.
 ### Greedy Priority
 - `priority` per device — strict ordering enforced
 - `priority_weight` — enables/disables load shedding
-- `can_be_shed` per device — opts a device into forced-stop during cooldown
 - `allowed_power_overage_percent` — controls grid import tolerance (0 = solar only)

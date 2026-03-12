@@ -197,7 +197,6 @@ class ManagedDevice:
 
         self._battery_soc = None
         self._battery_soc_threshold = convert_to_template_or_value(hass, device_config.get("battery_soc_threshold") or 0)
-        self._can_be_shed = bool(device_config.get("can_be_shed", False))
 
         self._max_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("max_on_time_per_day_min") or 60 * 24)
         self._on_time_sec = 0
@@ -621,11 +620,6 @@ class ManagedDevice:
         if self._priority_entity is None:
             return 0
         return self._priority_entity.current_priority
-
-    @property
-    def can_be_shed(self) -> bool:
-        """Whether this device can be force-stopped even during cooldown for load shedding."""
-        return self._can_be_shed
 
     # For testing purpose only
     def _set_now(self, now: datetime):

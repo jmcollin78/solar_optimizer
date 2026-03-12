@@ -52,10 +52,6 @@ class FakeDevice:
         return False
 
     @property
-    def can_be_shed(self):
-        return False
-
-    @property
     def power_min(self):
         return self.power_max
 

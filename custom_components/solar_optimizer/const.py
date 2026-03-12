@@ -79,7 +79,6 @@ CONF_BATTERY_SOC_THRESHOLD = "battery_soc_threshold"
 CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
 CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
 CONF_OFFPEAK_TIME = "offpeak_time"
-CONF_CAN_BE_SHED = "can_be_shed"
 CONF_ALLOWED_POWER_OVERAGE_PERCENT = "allowed_power_overage_percent"
 
 CONF_ALGORITHM_TYPE = "algorithm_type"

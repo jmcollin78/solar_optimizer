@@ -82,7 +82,6 @@ class GreedyPriorityAlgorithm:
                     "is_waiting": waiting,
                     "can_change_power": device.can_change_power,
                     "priority": device.priority,
-                    "can_be_shed": getattr(device, "can_be_shed", False),
                 }
             )
 
@@ -159,8 +158,8 @@ class GreedyPriorityAlgorithm:
             if not s["state"]:
                 continue
 
-            # Can only turn off if not in cooldown, unless explicitly can_be_shed
-            if not s["is_waiting"] or s["can_be_shed"]:
+            # Can only turn off if not in cooldown
+            if not s["is_waiting"]:
                 _LOGGER.debug(
                     "GreedyPriorityAlgorithm: turning OFF %s (%.0fW) to reduce deficit=%.0f",
                     name,
@@ -197,7 +196,7 @@ class GreedyPriorityAlgorithm:
             for d in solution.values()
             if d["state"]
             and d["priority"] > above_priority
-            and (not d["is_waiting"] or d["can_be_shed"])
+            and not d["is_waiting"]
         )
 
     def _shed_for(
@@ -215,7 +214,7 @@ class GreedyPriorityAlgorithm:
                 for d in solution.values()
                 if d["state"]
                 and d["priority"] > above_priority
-                and (not d["is_waiting"] or d["can_be_shed"])
+                and not d["is_waiting"]
             ],
             key=lambda d: -d["priority"],
         )
