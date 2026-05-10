@@ -244,8 +244,24 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         self._attr_native_value = 0
         old_state = await self.async_get_last_state()
         if old_state is not None:
-            if old_state.state is not None and old_state.state != "unknown":
-                self._attr_native_value = round(float(old_state.state))
+            # Filter out both STATE_UNKNOWN and STATE_UNAVAILABLE: float() of either string
+            # would otherwise raise ValueError and abort async_added_to_hass, leaving the
+            # entity stuck as "unavailable" across restarts because the bad state is then
+            # re-persisted by RestoreEntity.
+            if old_state.state is not None and old_state.state not in (
+                STATE_UNAVAILABLE,
+                STATE_UNKNOWN,
+            ):
+                try:
+                    self._attr_native_value = round(float(old_state.state))
+                except (ValueError, TypeError) as err:
+                    _LOGGER.warning(
+                        "%s - could not restore on_time from stored state %r: %s. Resetting to 0.",
+                        self,
+                        old_state.state,
+                        err,
+                    )
+                    self._attr_native_value = 0
                 _LOGGER.info(
                     "%s - read on_time from storage is %s",
                     self,
