@@ -118,6 +118,7 @@ power_managed_device_schema = vol.Schema(
             domain=[
                 INPUT_NUMBER_DOMAIN,
                 NUMBER_DOMAIN,
+                SENSOR_DOMAIN,
                 FAN_DOMAIN,
                 LIGHT_DOMAIN,
             ]
