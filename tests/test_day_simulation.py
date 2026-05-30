@@ -1,6 +1,6 @@
 """Fake-day simulation: run SA and Greedy algorithms through a synthetic solar day.
 
-Calls recuit_simule() directly via FakeDevice stubs — no HA dependencies.
+Calls optimize() directly via FakeDevice stubs — no HA dependencies.
 Compares aggregate metrics between the two algorithms for the 9 actual devices
 configured in ha-advanced-blueprints (sada_optimizador_solar_*.yaml).
 """
@@ -165,7 +165,7 @@ def run_day(algo, devices_cfg, priority_weight: int, allowed_power_overage_perce
         net_consumption = gross_consumption - solar  # negative = exporting to grid
         allowed_power_overage = solar * allowed_power_overage_percent / 100.0
 
-        solution, objective, total_power = algo.recuit_simule(
+        solution, objective, total_power = algo.optimize(
             devices=devices,
             power_consumption=net_consumption,
             solar_power_production=solar,
@@ -330,7 +330,7 @@ def test_day_simulation_no_solar_no_devices():
 
     for solar in zero_curve:
         consumption = BASE_HOUSE_LOAD + sum(d.current_power for d in devices if d.is_active)
-        solution, _, _ = algo.recuit_simule(
+        solution, _, _ = algo.optimize(
             devices=devices,
             power_consumption=consumption,
             solar_power_production=solar,

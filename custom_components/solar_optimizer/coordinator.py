@@ -213,12 +213,12 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         calculated_data["priority_weight"] = self.priority_weight
 
         #
-        # Call Algorithm Recuit simulé
+        # Call optimization algorithm
         #
         allowed_power_overage = (
             calculated_data["power_production"] * self._allowed_power_overage_percent / 100.0
         )
-        best_solution, best_objective, total_power = self._algo.recuit_simule(
+        best_solution, best_objective, total_power = self._algo.optimize(
             self._devices,
             calculated_data["power_consumption"] + calculated_data["battery_charge_power"],
             calculated_data["power_production"],

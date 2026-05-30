@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 class GreedyPriorityAlgorithm:
     """Priority-based greedy algorithm with load shedding."""
 
-    def recuit_simule(
+    def optimize(
         self,
         devices: list[ManagedDevice],
         power_consumption: float,
@@ -52,7 +52,7 @@ class GreedyPriorityAlgorithm:
             priority_weight,
         )
 
-        # Build internal device dicts (mirrors SA's recuit_simule preamble)
+        # Build internal device dicts (mirrors SA's optimize preamble)
         equipements: list[dict] = []
         for device in devices:
             if not device.is_enabled:

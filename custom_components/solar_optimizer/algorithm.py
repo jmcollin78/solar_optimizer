@@ -9,7 +9,7 @@ from .managed_device import ManagedDevice
 class SolarOptimizerAlgorithm(Protocol):
     """Protocol that all optimization algorithms must implement."""
 
-    def recuit_simule(
+    def optimize(
         self,
         devices: list[ManagedDevice],
         power_consumption: float,
