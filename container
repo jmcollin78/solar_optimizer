@@ -1,0 +1,179 @@
+#!/bin/bash
+
+# set -x
+
+. .bashrc
+
+# Utiliser l'environnement virtuel local s'il existe (pour contourner le manque d'espace disque global)
+if [ -d "/workspaces/solar_optimizer/.venv" ]; then
+    export PATH="/workspaces/solar_optimizer/.venv/bin:$PATH"
+fi
+
+function install_rtk() {
+    # Check if rtk is already installed and functional
+    if command -v rtk >/dev/null 2>&1 && rtk --version >/dev/null 2>&1; then
+        echo "RTK is already installed and functional."
+        return 0
+    fi
+
+    echo "RTK is not installed or not working. Installing..."
+
+    # Ensure ~/.local/bin exists
+    mkdir -p "$HOME/.local/bin"
+
+    local arch
+    arch=$(uname -m)
+
+    if [ "$arch" = "x86_64" ]; then
+        echo "Detected x86_64 architecture. Attempting to download statically-linked musl binary..."
+        local temp_dir
+        temp_dir=$(mktemp -d)
+        if curl -s https://api.github.com/repos/rtk-ai/rtk/releases/latest > "$temp_dir/release.json"; then
+            local download_url
+            download_url=$(grep "browser_download_url" "$temp_dir/release.json" | grep "musl" | grep "x86_64" | head -n 1 | cut -d '"' -f 4)
+            if [ -n "$download_url" ]; then
+                echo "Downloading static release from $download_url..."
+                if curl -fsSL "$download_url" -o "$temp_dir/rtk.tar.gz"; then
+                    tar -xzf "$temp_dir/rtk.tar.gz" -C "$temp_dir"
+                    local bin_path
+                    bin_path=$(find "$temp_dir" -type f -name "rtk" | head -n 1)
+                    if [ -n "$bin_path" ] && [ -f "$bin_path" ]; then
+                        cp "$bin_path" "$HOME/.local/bin/rtk"
+                        chmod +x "$HOME/.local/bin/rtk"
+                        echo "RTK installed successfully from static musl binary!"
+                        rm -rf "$temp_dir"
+                        return 0
+                    fi
+                fi
+            fi
+        fi
+        rm -rf "$temp_dir"
+    elif [ "$arch" = "aarch64" ]; then
+        echo "Detected aarch64 architecture. Utilizing Debian package pool download for GLIBC 2.39+..."
+        local temp_dir
+        temp_dir=$(mktemp -d)
+
+        # 1. Download and unpack gnu target rtk binary (0.42.3 or latest)
+        local latest_version
+        latest_version=$(curl -sI "https://github.com/rtk-ai/rtk/releases/latest" | grep -i '^location:' | sed -E 's|.*/tag/([^[:space:]]+).*|\1|' | tr -d '\r')
+        if [ -z "$latest_version" ]; then
+            latest_version=$(curl -fsSL "https://api.github.com/repos/rtk-ai/rtk/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        fi
+
+        if [ -n "$latest_version" ]; then
+            local rtk_url="https://github.com/rtk-ai/rtk/releases/download/${latest_version}/rtk-aarch64-unknown-linux-gnu.tar.gz"
+            echo "Downloading RTK GNU binary: $rtk_url"
+            if curl -fsSL "$rtk_url" -o "$temp_dir/rtk.tar.gz"; then
+                tar -xzf "$temp_dir/rtk.tar.gz" -C "$temp_dir"
+                cp "$temp_dir/rtk" "$HOME/.local/bin/rtk-bin"
+                chmod +x "$HOME/.local/bin/rtk-bin"
+            else
+                echo "Failed to download RTK."
+                rm -rf "$temp_dir"
+                return 1
+            fi
+        else
+            echo "Failed to retrieve RTK latest version."
+            rm -rf "$temp_dir"
+            return 1
+        fi
+
+        # 2. Add trixie repo and download libc6:arm64 without root
+        echo "Fetching dynamic library for safe compatibility..."
+        mkdir -p "$temp_dir/apt/lists/partial" "$temp_dir/apt/archives/partial"
+        echo "deb http://deb.debian.org/debian/ trixie main" > "$temp_dir/apt.sources.list"
+        if apt-get -o Dir::State="$temp_dir/apt" -o Dir::State::Lists="$temp_dir/apt/lists" -o Dir::Cache="$temp_dir/apt" -o Dir::Etc::SourceList="$temp_dir/apt.sources.list" update >/dev/null 2>&1; then
+            if apt-get -o Dir::State="$temp_dir/apt" -o Dir::State::Lists="$temp_dir/apt/lists" -o Dir::Cache="$temp_dir/apt" -o Dir::Etc::SourceList="$temp_dir/apt.sources.list" download libc6:arm64 >/dev/null 2>&1; then
+                echo "Extracting compatible libraries..."
+                local deb_file
+                deb_file=$(find . -name "libc6_*_arm64.deb" | head -n 1)
+                if [ -n "$deb_file" ] && [ -f "$deb_file" ]; then
+                    mkdir -p "$HOME/.local/glibc"
+                    dpkg -x "$deb_file" "$HOME/.local/glibc"
+                    rm "$deb_file"
+
+                    # 3. Create the wrapper script
+                    echo "Creating launcher wrapper script..."
+                    cat << 'EOF' > "$HOME/.local/bin/rtk"
+#!/bin/sh
+exec "$HOME/.local/glibc/usr/lib/ld-linux-aarch64.so.1" --library-path "$HOME/.local/glibc/usr/lib/aarch64-linux-gnu" "$HOME/.local/bin/rtk-bin" "$@"
+EOF
+                    chmod +x "$HOME/.local/bin/rtk"
+                    echo "RTK installed successfully under a compatible dynamic runtime link!"
+                    rm -rf "$temp_dir"
+                    return 0
+                fi
+            fi
+        fi
+
+        rm -rf "$temp_dir"
+    fi
+
+    echo "Failed to install RTK."
+    return 1
+}
+
+function get_dev() {
+     pip install -r requirements_dev.txt
+     pip install -r requirements_test.txt
+     if [ -d /home/vscode/core ]; then
+        sudo chown -R vscode:  /home/vscode/core
+     fi
+}
+
+echo "arguments are: "$1
+
+case $1 in
+    start)
+        echo "Running container start"
+        ./scripts/starts_ha.sh
+    ;;
+
+    install-rtk)
+        install_rtk
+    ;;
+    dev-setup)
+        install_rtk
+        # appelle rtk init -g si rtk est disponible dans l'image ou fraichement installe
+        if [ -x "$(command -v rtk)" ] || [ -f "$HOME/.local/bin/rtk" ]; then
+            export PATH="$HOME/.local/bin:$PATH"
+            # Assurer que les dossiers de configuration des agents existent pour éviter les erreurs d'initialisation de rtk
+            mkdir -p "$HOME/.claude" "$HOME/.copilot"
+            # Désactive la télémétrie rtk de manière non interactive avant d'exécuter `rtk init`
+            rtk telemetry disable
+            # rtk init -g en mode non interactif si possible, sinon l'initialisation par défaut
+            rtk init -g --auto-patch || rtk init -g
+        fi
+        get_dev
+    ;;
+    install)
+        echo "Running container post installation"
+        script/setup
+    ;;
+    translations)
+        echo "Running container start"
+        cd $HA
+        python3 -m script.translations develop
+    ;;
+    hassfest)
+        echo "Running container start"
+        python3 -m script.hassfest
+        # python -m script.hassfest --requirements --action validate --integration-path config/custom_components/versatile_thermostat/
+    ;;
+    restart)
+        echo "Killing existing container"
+        pkill hass
+        echo "Restarting existing container"
+        pwd
+        ./scripts/starts_ha.sh
+    ;;
+    coverage)
+        rm -rf htmlcov/*
+        echo "Starting coverage tests"
+        coverage run -m pytest tests/
+        echo "Starting coverage report"
+        coverage report
+        echo "Starting coverage html"
+        coverage html
+    ;;
+esac
