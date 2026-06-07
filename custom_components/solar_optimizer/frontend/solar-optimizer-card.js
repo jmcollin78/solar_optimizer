@@ -1,124 +1,138 @@
 class SolarOptimizerCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
+    this.style.display = "block";
+    this.style.width = "100%";
     if (!this.content) {
       this.innerHTML = `
+        <style>
+          solar-optimizer-card {
+            display: block !important;
+            width: 100% !important;
+          }
+          solar-optimizer-card ha-card {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          solar-optimizer-card .so-card-body {
+            display: block;
+            padding: 16px;
+            color: var(--primary-text-color);
+            width: 100%;
+            box-sizing: border-box;
+          }
+          solar-optimizer-card .so-grid-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+          }
+          solar-optimizer-card .so-stat-box {
+            background-color: var(--card-background-color, var(--paper-card-background-color, #fff));
+            border: 1px solid var(--divider-color, #e0e0e0);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: var(--ha-card-box-shadow, none);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+          }
+          solar-optimizer-card .so-stat-title {
+            font-size: 0.85em;
+            color: var(--secondary-text-color);
+            margin-bottom: 4px;
+          }
+          solar-optimizer-card .so-stat-value {
+            font-size: 1.25em;
+            font-weight: bold;
+            color: var(--primary-color);
+          }
+          solar-optimizer-card .so-device-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+          solar-optimizer-card .so-device-card {
+            background-color: var(--card-background-color, var(--paper-card-background-color, #fff));
+            border: 1px solid var(--divider-color, #e0e0e0);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          solar-optimizer-card .so-device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          solar-optimizer-card .so-device-name {
+            font-weight: bold;
+            font-size: 1.05em;
+            margin-right: 8px;
+          }
+          solar-optimizer-card .so-device-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            color: var(--secondary-text-color);
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+          solar-optimizer-card .so-badge {
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: inline-block;
+            vertical-align: middle;
+          }
+          solar-optimizer-card .so-badge-active {
+            background-color: var(--success-color, #4caf50);
+            color: white;
+          }
+          solar-optimizer-card .so-badge-inactive {
+            background-color: var(--disabled-text-color, #9e9e9e);
+            color: white;
+          }
+          solar-optimizer-card .so-badge-waiting {
+            background-color: var(--warning-color, #ff9800);
+            color: white;
+          }
+          solar-optimizer-card .so-power-bar-container {
+            background-color: var(--secondary-background-color, #f5f5f5);
+            border-radius: 4px;
+            height: 8px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            margin-top: 4px;
+          }
+          solar-optimizer-card .so-power-bar {
+            background-color: var(--primary-color);
+            height: 100%;
+            transition: width 0.3s ease;
+          }
+          solar-optimizer-card .so-priority-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+          }
+          solar-optimizer-card .so-priority-select {
+            background: var(--card-background-color, #fff);
+            color: var(--primary-text-color);
+            border: 1px solid var(--divider-color, #ccc);
+            border-radius: 4px;
+            padding: 2px 4px;
+            cursor: pointer;
+          }
+        </style>
         <ha-card header="Solar Optimizer">
-          <style>
-            .container {
-              padding: 16px;
-              color: var(--primary-text-color);
-            }
-            .grid-stats {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 12px;
-              margin-bottom: 16px;
-            }
-            .stat-box {
-              background-color: var(--card-background-color, var(--paper-card-background-color, #fff));
-              border: 1px solid var(--divider-color, #e0e0e0);
-              border-radius: 8px;
-              padding: 10px;
-              box-shadow: var(--ha-card-box-shadow, none);
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              text-align: center;
-            }
-            .stat-title {
-              font-size: 0.85em;
-              color: var(--secondary-text-color);
-              margin-bottom: 4px;
-            }
-            .stat-value {
-              font-size: 1.25em;
-              font-weight: bold;
-              color: var(--primary-color);
-            }
-            .device-list {
-              display: flex;
-              flex-direction: column;
-              gap: 12px;
-            }
-            .device-card {
-              background-color: var(--card-background-color, var(--paper-card-background-color, #fff));
-              border: 1px solid var(--divider-color, #e0e0e0);
-              border-radius: 8px;
-              padding: 12px;
-              display: flex;
-              flex-direction: column;
-              gap: 8px;
-            }
-            .device-header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            }
-            .device-name {
-              font-weight: bold;
-              font-size: 1.05em;
-              margin-right: 8px;
-            }
-            .device-meta {
-              display: flex;
-              justify-content: space-between;
-              font-size: 0.85em;
-              color: var(--secondary-text-color);
-              flex-wrap: wrap;
-              gap: 8px;
-            }
-            .badge {
-              border-radius: 4px;
-              padding: 2px 6px;
-              font-size: 0.75em;
-              font-weight: bold;
-              text-transform: uppercase;
-              display: inline-block;
-              vertical-align: middle;
-            }
-            .badge-active {
-              background-color: var(--success-color, #4caf50);
-              color: white;
-            }
-            .badge-inactive {
-              background-color: var(--disabled-text-color, #9e9e9e);
-              color: white;
-            }
-            .badge-waiting {
-              background-color: var(--warning-color, #ff9800);
-              color: white;
-            }
-            .power-bar-container {
-              background-color: var(--secondary-background-color, #f5f5f5);
-              border-radius: 4px;
-              height: 8px;
-              width: 100%;
-              overflow: hidden;
-              position: relative;
-              margin-top: 4px;
-            }
-            .power-bar {
-              background-color: var(--primary-color);
-              height: 100%;
-              transition: width 0.3s ease;
-            }
-            .priority-control {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              font-size: 0.85em;
-            }
-            .priority-select {
-              background: var(--card-background-color, #fff);
-              color: var(--primary-text-color);
-              border: 1px solid var(--divider-color, #ccc);
-              border-radius: 4px;
-              padding: 2px 4px;
-              cursor: pointer;
-            }
-          </style>
-          <div class="container" id="content"></div>
+          <div class="so-card-body" id="content" style="display:block;width:100%;box-sizing:border-box;padding:16px;"></div>
         </ha-card>
       `;
       this.content = this.querySelector("#content");
@@ -177,22 +191,22 @@ class SolarOptimizerCard extends HTMLElement {
 
       let statusBadge = "";
       if (!isEnabled) {
-        statusBadge = `<span class="badge badge-inactive">Désactivé</span>`;
+        statusBadge = `<span class="so-badge so-badge-inactive">Désactivé</span>`;
       } else if (isActive) {
-        statusBadge = `<span class="badge badge-active">Actif</span>`;
+        statusBadge = `<span class="so-badge so-badge-active">Actif</span>`;
       } else if (isWaiting) {
-        statusBadge = `<span class="badge badge-waiting">Attente</span>`;
+        statusBadge = `<span class="so-badge so-badge-waiting">Attente</span>`;
       } else {
-        statusBadge = `<span class="badge badge-inactive">Inactif</span>`;
+        statusBadge = `<span class="so-badge so-badge-inactive">Inactif</span>`;
       }
 
       // Construction des sélections d'options de priorité
       let prioritySelectHtml = "";
       if (priorityStateObj) {
         prioritySelectHtml = `
-          <div class="priority-control">
+          <div class="so-priority-control">
             <span>Priorité:</span>
-            <select class="priority-select" data-entity-id="${prioritySelectKey}">
+            <select class="so-priority-select" data-entity-id="${prioritySelectKey}">
               ${priorityOptions.map(opt => `
                 <option value="${opt}" ${opt === currentPriority ? "selected" : ""}>${opt}</option>
               `).join("")}
@@ -201,27 +215,27 @@ class SolarOptimizerCard extends HTMLElement {
         `;
       }
 
-      // Bouton pour activer / désactiver l'interrupteur
+      // Bouton pour activer / désactiver l'entité enable du managed device
+      const enableEntityKey = `switch.solar_optimizer_enable_${deviceId}`;
       const switchToggleHtml = `
         <ha-switch
-          .checked="${isActive}"
           class="device-toggle"
-          data-entity-id="${switchKey}"
+          data-entity-id="${enableEntityKey}"
         ></ha-switch>
       `;
 
       devicesHtml += `
-        <div class="device-card">
-          <div class="device-header">
+        <div class="so-device-card">
+          <div class="so-device-header">
             <div>
-              <span class="device-name">${attrs.friendly_name || deviceId}</span>
+              <span class="so-device-name">${attrs.friendly_name || deviceId}</span>
               ${statusBadge}
             </div>
             <div>
               ${switchToggleHtml}
             </div>
           </div>
-          <div class="device-meta">
+          <div class="so-device-meta">
             <div>Puissance active: <strong>${currentPower} W</strong> (Dmd: ${requestedPower} W)</div>
             <div>Temps marche: <strong>${todayOnTime} min</strong></div>
           </div>
@@ -230,8 +244,8 @@ class SolarOptimizerCard extends HTMLElement {
               <span>Min: ${powerMin} W</span>
               <span>Max: ${powerMax} W</span>
             </div>
-            <div class="power-bar-container">
-              <div class="power-bar" style="width: ${powerPercent}%"></div>
+            <div class="so-power-bar-container">
+              <div class="so-power-bar" style="width: ${powerPercent}%"></div>
             </div>
           ` : ''}
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
@@ -245,34 +259,41 @@ class SolarOptimizerCard extends HTMLElement {
     });
 
     this.content.innerHTML = `
-      <div class="grid-stats">
-        <div class="stat-box">
-          <span class="stat-title">Prod. Nette</span>
-          <span class="stat-value">${powerProduction} W</span>
+      <div class="so-grid-stats">
+        <div class="so-stat-box">
+          <span class="so-stat-title">Prod. Nette</span>
+          <span class="so-stat-value">${powerProduction} W</span>
         </div>
-        <div class="stat-box">
-          <span class="stat-title">Prod. Brute</span>
-          <span class="stat-value">${powerProductionBrut} W</span>
+        <div class="so-stat-box">
+          <span class="so-stat-title">Prod. Brute</span>
+          <span class="so-stat-value">${powerProductionBrut} W</span>
         </div>
-        <div class="stat-box">
-          <span class="stat-title">Optimisé</span>
-          <span class="stat-value">${totalPower} W</span>
+        <div class="so-stat-box">
+          <span class="so-stat-title">Optimisé</span>
+          <span class="so-stat-value">${totalPower} W</span>
         </div>
-        <div class="stat-box">
-          <span class="stat-title">Objectif Algo</span>
-          <span class="stat-value">${typeof bestObjective === 'number' || !isNaN(parseFloat(bestObjective)) ? parseFloat(bestObjective).toFixed(2) : bestObjective}</span>
+        <div class="so-stat-box">
+          <span class="so-stat-title">Objectif Algo</span>
+          <span class="so-stat-value">${typeof bestObjective === 'number' || !isNaN(parseFloat(bestObjective)) ? parseFloat(bestObjective).toFixed(2) : bestObjective}</span>
         </div>
       </div>
-      <div>
+      <div style="display:block;">
         <h3 style="margin: 0 0 12px 0; font-size: 1.1em; border-bottom: 1px solid var(--divider-color); padding-bottom: 6px;">Appareils Gérés</h3>
-        <div class="device-list">
+        <div class="so-device-list">
           ${devicesHtml || '<p style="color: var(--secondary-text-color); text-align: center;">Aucun appareil géré trouvé.</p>'}
         </div>
       </div>
     `;
 
+    // Fixer l'état checked des ha-switch (le property binding ne fonctionne pas via innerHTML)
+    this.content.querySelectorAll("ha-switch.device-toggle").forEach(sw => {
+      const entityId = sw.getAttribute("data-entity-id");
+      const stateObj = this._hass.states[entityId];
+      if (stateObj) sw.checked = stateObj.state === "on";
+    });
+
     // Attacher des écouteurs d'événements pour les dropdowns de priorité
-    this.content.querySelectorAll(".priority-select").forEach(select => {
+    this.content.querySelectorAll(".so-priority-select").forEach(select => {
       select.addEventListener("change", (e) => {
         const entityId = e.target.getAttribute("data-entity-id");
         const value = e.target.value;
@@ -303,10 +324,9 @@ class SolarOptimizerCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      columns: 4,
-      rows: 4,
-      min_columns: 2,
-      min_rows: 2,
+      columns: 12,
+      rows: "auto",
+      min_columns: 3,
     };
   }
 
@@ -356,7 +376,7 @@ customElements.define("solar-optimizer-card-editor", SolarOptimizerCardEditor);
 
 // Afficher un log au démarrage dans la console du navigateur avec la version de la carte
 console.info(
-  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.0.2 `,
+  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.1.1 `,
   "color: white; background: #4caf50; font-weight: bold;",
   "color: #4caf50; background: white; font-weight: bold; border: 1px solid #4caf50;"
 );
