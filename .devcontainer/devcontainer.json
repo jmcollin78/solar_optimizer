@@ -1,25 +1,20 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "Solar Optimizer",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
-	"appPort": [
-		"9123:8123"
-	],
-	"postCreateCommand": "pip install --upgrade pip ; pip install -r requirements_test.txt",
+    "name": "Solar Optimizer",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "appPort": ["9123:8123"],
+    "postCreateCommand": "./container dev-setup",
 
-	"mounts": [
-		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
-	],
+    "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"],
 
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"ms-python.python",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
                 "ms-python.pylint",
-                "ms-python.isort",
                 "ms-python.black-formatter",
                 "visualstudioexptteam.vscodeintellicode",
                 "redhat.vscode-yaml",
@@ -35,13 +30,11 @@
                 "azuretools.vscode-docker",
                 "huizhou.githd",
                 "github.copilot",
-                "github.copilot-chat",
                 "ms-azuretools.vscode-docker",
-                "openai.chatgpt"
+                "petermefrandsen.rtk-inspector"
+            ],
 
-			],
-
-			"settings": {
+            "settings": {
                 "files.eol": "\n",
                 "editor.tabSize": 4,
                 "terminal.integrated.profiles.linux": {
@@ -56,35 +49,28 @@
                 "python.analysis.autoSearchPaths": true,
                 "pylint.lintOnChange": false,
                 "python.formatting.provider": "black",
-                "black-formatter.args": [
-                    "--line-length",
-                    "180"
-                ],
-                // "python.formatting.blackArgs": ["--line-length", "180"],
-                "black-formatter.path": ["/usr/local/py-utils/bin/black"],
-                // "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
+                "python.formatting.blackArgs": ["--line-length", "180"],
+                "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
                 "editor.formatOnPaste": false,
                 "editor.formatOnSave": true,
                 "editor.formatOnType": true,
                 "files.trimTrailingWhitespace": true
-                // "python.experiments.optOutFrom": ["pythonTestAdapter"],
-                // "python.analysis.logLevel": "Trace"
             }
-		}
-	}
+        }
+    }
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+    // Features to add to the dev container. More info: https://containers.dev/features.
+    // "features": {},
 
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+    // Use 'forwardPorts' to make a list of ports inside the container available locally.
+    // "forwardPorts": [],
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "pip3 install --user -r requirements.txt",
+    // Use 'postCreateCommand' to run commands after the container is created.
+    // "postCreateCommand": "pip3 install --user -r requirements.txt",
 
-	// Configure tool-specific properties.
-	// "customizations": {},
+    // Configure tool-specific properties.
+    // "customizations": {},
 
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+    // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    // "remoteUser": "root"
 }
