@@ -595,7 +595,27 @@ Fichier `templates.yaml` :
 
 A adapter à votre cas bien sûr.
 
-# Une carte pour vos dashboards en complément
+# Carte Lovelace officielle
+L'intégration distribue désormais une carte officielle native pour piloter et visualiser de façon centralisée tous vos appareils gérés par le planificateur `Solar Optimizer`.
+
+Cette carte s'adapte automatiquement à votre thème et affiche en temps réel :
+- La production solaire brute et nette, la puissance optimisée, et l'objectif résolu de l'algorithme.
+- La liste des équipements gérés avec un badge indiquant leur statut (`Actif`, `Attente`, `Inactif` ou `Désactivé`).
+- Un interrupteur (`ha-switch` natif) pour activer/désactiver directement la gestion de chaque équipement.
+- La puissance active, demandée, le temps d'activation quotidien ainsi qu'une barre de puissance entre son minimum et son maximum.
+- Un sélecteur de priorité pour modifier dynamiquement les priorités directement depuis votre tableau de bord.
+
+### Utilisation de la carte officielle
+
+Il suffit d'ajouter une carte de type `custom:solar-optimizer-card` à votre tableau de bord Lovelace :
+
+```yaml
+type: custom:solar-optimizer-card
+```
+
+La carte est également directement sélectionnable sous le nom **Solar Optimizer Card** dans l'éditeur visuel de cartes de Home Assistant.
+
+# Une carte pour vos dashboards en complément (Alternative HACS)
 En complément, les codes Lovelace suivant permet de controller chaque équipement déclaré.
 Les étapes à suivre sont :
 1. Avec HACS, installez les plugins nommés `streamline-card`, `expander-card` et `mushroom-template` si vous ne les avez pas déjà,
