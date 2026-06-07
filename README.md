@@ -617,7 +617,27 @@ template: !include templates.yaml
 
 Adapt these to fit your specific setup.
 
-# A Card for Your Dashboards as a complement
+# Official Lovelace Card
+The integration now bundles an official built-in card to centralizedly control and check all devices managed by the `Solar Optimizer` scheduler.
+
+This card automatically blends with your Home Assistant theme and renders real-time updates:
+- Net and brute solar production, overall optimized power, and the current algorithm's best objective score.
+- Active/Inactive/Waiting/Disabled status badges for each managed device.
+- Standard interactive toggles (`ha-switch`) to easily enable/disable power planning for each device.
+- Current active power, requested power, today's operating time, and a sleek power allocation range bar.
+- Interactive priority dropdown selection to instantly adjust devices weights and priority directly on your dashboard.
+
+### How to use the official card
+
+Simply add a card of type `custom:solar-optimizer-card` into your Lovelace dashboard configuration:
+
+```yaml
+type: custom:solar-optimizer-card
+```
+
+The card is also fully registered in Home Assistant's card editor list under the name **Solar Optimizer Card**.
+
+# A Card for Your Dashboards as a complement (HACS Alternative)
 As a complement, the following Lovelace code allows you to control each declared device.
 The steps to follow are:
 1. Using HACS, install the plugins named `streamline-card`, `expander-card`, and `mushroom-template` if you haven't already.

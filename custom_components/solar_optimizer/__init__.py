@@ -63,6 +63,75 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
+async def async_register_frontend(hass: HomeAssistant) -> None:
+    """Enregistre le dossier frontend pour servir la carte et l'ajoute dans Lovelace."""
+    if not hasattr(hass, "http") or hass.http is None:
+        _LOGGER.debug("Le serveur HTTP de Home Assistant n'est pas disponible (environnement de test)")
+        return
+
+    import os
+    current_dir = os.path.dirname(__file__)
+    frontend_path = os.path.join(current_dir, "frontend")
+    _LOGGER.info("Enregistrement du chemin statique pour Solar Optimizer Card : /solar-optimizer-frontend -> %s", frontend_path)
+
+    try:
+        from homeassistant.components.http import StaticPathConfig
+
+        await hass.http.async_register_static_paths([StaticPathConfig("/solar-optimizer-frontend", frontend_path, False)])
+    except ImportError:
+        hass.http.register_static_path(
+            "/solar-optimizer-frontend",
+            frontend_path,
+            cache_headers=False,
+        )
+
+    async def register_lovelace_resource(*_):
+        lovelace_data = hass.data.get("lovelace")
+        if lovelace_data is None:
+            _LOGGER.debug("L'intégration Lovelace n'est pas chargée, impossible d'enregistrer la ressource automatiquement.")
+            return
+
+        resources = None
+        if hasattr(lovelace_data, "resources"):
+            resources = lovelace_data.resources
+        elif isinstance(lovelace_data, dict):
+            resources = lovelace_data.get("resources")
+
+        if resources is None:
+            _LOGGER.debug("Les ressources Lovelace ne sont pas accessibles.")
+            return
+
+        if not resources.loaded:
+            try:
+                await resources.async_load()
+            except Exception as err:
+                _LOGGER.warning("Erreur lors du chargement des ressources Lovelace: %s", err)
+                return
+
+        url = "/solar-optimizer-frontend/solar-optimizer-card.js"
+
+        exists = False
+        try:
+            for entry in resources.async_items():
+                if entry.get("url") == url:
+                    exists = True
+                    break
+        except Exception as err:
+            _LOGGER.warning("Erreur lors de la lecture des ressources Lovelace: %s", err)
+            return
+
+        if not exists:
+            _LOGGER.info("Ajout de la carte Solar Optimizer aux ressources Lovelace : %s", url)
+            try:
+                await resources.async_create_item({"res_type": "module", "url": url})
+            except Exception as err:
+                _LOGGER.warning(
+                    "Impossible d'ajouter automatiquement la ressource Lovelace : %s. " "Si vous êtes en mode Lovelace YAML, vous devez ajouter la ressource manuellement.", err
+                )
+
+    hass.async_create_task(register_lovelace_resource())
+
+
 async def async_setup(
     hass: HomeAssistant, config: ConfigType
 ):  # pylint: disable=unused-argument
@@ -75,6 +144,9 @@ async def async_setup(
     )
 
     hass.data.setdefault(DOMAIN, {})
+
+    # On enregistre la partie frontend (carte Lovelace)
+    await async_register_frontend(hass)
 
     # L'argument config contient votre fichier configuration.yaml
     solar_optimizer_config = config.get(DOMAIN)

@@ -14,6 +14,7 @@ git log -10                rtk git log -10
 cargo test                 rtk cargo test
 docker ps                  rtk docker ps
 kubectl get pods           rtk kubectl pods
+pytest                     rtk pytest
 ```
 
 ## Meta commands (use directly)
