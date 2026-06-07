@@ -24,7 +24,7 @@ class SolarOptimizerCard extends HTMLElement {
           }
           solar-optimizer-card .so-grid-stats {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             margin-bottom: 16px;
           }
@@ -62,6 +62,24 @@ class SolarOptimizerCard extends HTMLElement {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0,0,0,0.10));
+            border-left-width: 4px;
+            border-left-style: solid;
+          }
+          solar-optimizer-card .so-device-card-active {
+            border-left-color: var(--success-color, #4caf50);
+            background-color: color-mix(in srgb, var(--success-color, #4caf50) 5%, var(--card-background-color, #fff));
+          }
+          solar-optimizer-card .so-device-card-waiting {
+            border-left-color: var(--warning-color, #ff9800);
+            background-color: color-mix(in srgb, var(--warning-color, #ff9800) 5%, var(--card-background-color, #fff));
+          }
+          solar-optimizer-card .so-device-card-disabled {
+            border-left-color: var(--disabled-text-color, #9e9e9e);
+            background-color: color-mix(in srgb, var(--disabled-text-color, #9e9e9e) 5%, var(--card-background-color, #fff));
+          }
+          solar-optimizer-card .so-device-card-inactive {
+            border-left-color: var(--divider-color, #e0e0e0);
           }
           solar-optimizer-card .so-device-header {
             display: flex;
@@ -170,6 +188,11 @@ class SolarOptimizerCard extends HTMLElement {
             background-color: var(--error-color, #f44336);
             color: white;
           }
+          solar-optimizer-card .so-btn-reset {
+            background-color: transparent;
+            color: var(--secondary-text-color);
+            border: 1px solid var(--divider-color, #ccc);
+          }
           solar-optimizer-card .so-power-bar-container {
             background-color: var(--secondary-background-color, #f5f5f5);
             border-radius: 4px;
@@ -246,11 +269,25 @@ class SolarOptimizerCard extends HTMLElement {
       return date.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
+    // Recherche robuste d'un sensor SO central : essai direct, puis avec préfixe,
+    // puis scan des states (gère les entity_id générés par HA avec préfixe d'instance)
+    const getSoState = (idx) => {
+      if (this._hass.states[`sensor.${idx}`])
+        return this._hass.states[`sensor.${idx}`].state;
+      if (this._hass.states[`sensor.solar_optimizer_${idx}`])
+        return this._hass.states[`sensor.solar_optimizer_${idx}`].state;
+      const found = Object.keys(this._hass.states).find(k =>
+        k.startsWith('sensor.') && k.includes('solar_optimizer') && k.endsWith(`_${idx}`)
+      );
+      return found ? this._hass.states[found].state : 'N/A';
+    };
+
     // Récupérer les entités centrales
-    const bestObjective = this._hass.states["sensor.best_objective"]?.state || "N/A";
-    const totalPower = this._hass.states["sensor.total_power"]?.state || "N/A";
-    const powerProduction = this._hass.states["sensor.power_production"]?.state || "N/A";
-    const powerProductionBrut = this._hass.states["sensor.power_production_brut"]?.state || "N/A";
+    const bestObjective = getSoState('best_objective');
+    const totalPower = getSoState('total_power');
+    const powerProduction = getSoState('power_production');
+    const powerConsumption = getSoState('power_consumption');
+    const batterySoc = getSoState('battery_soc');
 
     // Récupérer la liste des switch (les Managed Devices) de solar_optimizer
     const devicesSwitches = Object.keys(this._hass.states).filter(key =>
@@ -301,7 +338,7 @@ class SolarOptimizerCard extends HTMLElement {
 
       // Calcul du pourcentage de la barre de puissance
       const totalRange = powerMax - powerMin;
-      const powerPercent = totalRange > 0 ? Math.round(((requestedPower - powerMin) / totalRange) * 100) : 0;
+      const powerPercent = totalRange > 0 ? Math.round(((currentPower - powerMin) / totalRange) * 100) : (currentPower > 0 ? 100 : 0);
 
       let statusBadge = "";
       if (!isEnabled) {
@@ -386,18 +423,38 @@ class SolarOptimizerCard extends HTMLElement {
             <span class="so-info-value">${offpeakTime}</span>
           </div>
           ` : ''}
+          ${attrs.battery_soc_threshold != null && attrs.battery_soc_threshold > 0 ? `
+          <div class="so-info-item">
+            <span class="so-info-label">Seuil SOC batterie</span>
+            <span class="so-info-value">${attrs.battery_soc_threshold} %</span>
+          </div>
+          ` : ''}
           <div class="so-info-item">
             <span class="so-info-label">Temps marche</span>
             <span class="so-info-value">${todayOnTimeHms}${maxOnTimeHms ? ' / ' + maxOnTimeHms : ''}</span>
           </div>
         </div>
+        <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+          <button
+            class="so-btn so-btn-reset device-reset-on-time"
+            data-entity-id="sensor.on_time_today_solar_optimizer_${deviceId}"
+            title="Remettre à zéro le temps de marche"
+          >
+            <ha-icon icon="mdi:timer-refresh-outline" style="--mdi-icon-size: 14px;"></ha-icon>
+            Reset
+          </button>
+        </div>
       `;
 
       const isCollapsed = this._collapsedDevices[deviceId] === true;
       const chevronClass = isCollapsed ? 'so-collapse-btn collapsed' : 'so-collapse-btn';
+      const cardStateClass = !isEnabled ? 'so-device-card-disabled'
+        : isActive ? 'so-device-card-active'
+          : isWaiting ? 'so-device-card-waiting'
+            : 'so-device-card-inactive';
 
       devicesHtml += `
-        <div class="so-device-card" data-device-id="${deviceId}">
+        <div class="so-device-card ${cardStateClass}" data-device-id="${deviceId}">
           <div class="so-device-header">
             <div style="display:flex;align-items:center;gap:6px;">
               <button class="${chevronClass}" data-collapse-id="${deviceId}" title="${isCollapsed ? 'Déplier' : 'Plier'}">
@@ -411,21 +468,19 @@ class SolarOptimizerCard extends HTMLElement {
               ${switchToggleHtml}
             </div>
           </div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.85em; color:var(--secondary-text-color); padding: 0 4px;">
+            <span><strong style="color:var(--primary-text-color);">${currentPower} W</strong> / ${powerMax} W</span>
+            ${powerMax > 0 ? `
+              <div class="so-power-bar-container" style="flex:1; margin-top:0;">
+                <div class="so-power-bar" style="width: ${powerPercent}%"></div>
+              </div>
+            ` : ''}
+          </div>
           <div class="so-device-details${isCollapsed ? ' hidden' : ''}">
             ${indicatorsHtml}
             <div class="so-device-meta">
               <div>Puissance requise: <strong>${requestedPower} W</strong></div>
-              <div>Puissance courante: <strong>${currentPower} W</strong></div>
             </div>
-            ${powerMax > 0 ? `
-              <div style="font-size: 0.85em; color: var(--secondary-text-color); margin-top: 4px; display: flex; justify-content: space-between;">
-                <span>Min: ${powerMin} W</span>
-                <span>Max: ${powerMax} W</span>
-              </div>
-              <div class="so-power-bar-container">
-                <div class="so-power-bar" style="width: ${powerPercent}%"></div>
-              </div>
-            ` : ''}
             ${availHtml}
             <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 4px;">
               ${prioritySelectHtml}
@@ -438,20 +493,29 @@ class SolarOptimizerCard extends HTMLElement {
     this.content.innerHTML = `
       <div class="so-grid-stats">
         <div class="so-stat-box">
-          <span class="so-stat-title">Prod. Nette</span>
+          <ha-icon icon="mdi:solar-power-variant" style="color:var(--warning-color,#ff9800);margin-bottom:4px;"></ha-icon>
+          <span class="so-stat-title">Production lissée</span>
           <span class="so-stat-value">${powerProduction} W</span>
         </div>
         <div class="so-stat-box">
-          <span class="so-stat-title">Prod. Brute</span>
-          <span class="so-stat-value">${powerProductionBrut} W</span>
+          <ha-icon icon="mdi:home-lightning-bolt" style="color:var(--primary-color);margin-bottom:4px;"></ha-icon>
+          <span class="so-stat-title">Consommation nette</span>
+          <span class="so-stat-value">${powerConsumption} W</span>
         </div>
         <div class="so-stat-box">
-          <span class="so-stat-title">Optimisé</span>
+          <ha-icon icon="mdi:battery" style="color:var(--success-color,#4caf50);margin-bottom:4px;"></ha-icon>
+          <span class="so-stat-title">SOC Batterie</span>
+          <span class="so-stat-value">${batterySoc !== "N/A" ? batterySoc + " %" : "N/A"}</span>
+        </div>
+        <div class="so-stat-box">
+          <ha-icon icon="mdi:flash" style="color:var(--primary-color);margin-bottom:4px;"></ha-icon>
+          <span class="so-stat-title">Total Optimisé</span>
           <span class="so-stat-value">${totalPower} W</span>
         </div>
         <div class="so-stat-box">
+          <ha-icon icon="mdi:bullseye-arrow" style="color:var(--primary-color);margin-bottom:4px;"></ha-icon>
           <span class="so-stat-title">Objectif Algo</span>
-          <span class="so-stat-value">${typeof bestObjective === 'number' || !isNaN(parseFloat(bestObjective)) ? parseFloat(bestObjective).toFixed(2) : bestObjective}</span>
+          <span class="so-stat-value">${!isNaN(parseFloat(bestObjective)) ? parseFloat(bestObjective).toFixed(2) + " €" : bestObjective}</span>
         </div>
       </div>
       <div style="display:block;">
@@ -503,6 +567,14 @@ class SolarOptimizerCard extends HTMLElement {
         const isActive = btn.getAttribute("data-is-active") === "true";
         const service = isActive ? "turn_off" : "turn_on";
         this._hass.callService("switch", service, { entity_id: entityId });
+      });
+    });
+
+    // Attacher les écouteurs pour les boutons reset_on_time
+    this.content.querySelectorAll(".device-reset-on-time").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const entityId = btn.getAttribute("data-entity-id");
+        this._hass.callService("solar_optimizer", "reset_on_time", {}, { entity_id: entityId });
       });
     });
 
@@ -589,7 +661,7 @@ customElements.define("solar-optimizer-card-editor", SolarOptimizerCardEditor);
 
 // Afficher un log au démarrage dans la console du navigateur avec la version de la carte
 console.info(
-  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.2.0 `,
+  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.2.1 `,
   "color: white; background: #4caf50; font-weight: bold;",
   "color: #4caf50; background: white; font-weight: bold; border: 1px solid #4caf50;"
 );

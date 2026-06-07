@@ -13,7 +13,17 @@ Cette carte a pour objectifs :
 # Specifications UI
 La carte doit prendre toute la largeur disponible spécifiée via l'IHM de HA.
 
-## Les informations à afficher
+## Les informations globales
+Un bloc dont le titre est Solar Optimizer contient les informations globales suivantes:
+1. La puissance solaire produite lissée (sensor.power_production),
+2. La puissance nette consommée,
+3. Le SOC de la batterie,
+4. Le total de la puissance allumé par l'algo,
+5. Le meilleur objectif de l'algo.
+
+Chaque info doit être affichée avec un icone qui la représente le mieux.
+
+## Les informations à afficher pour chaque device
 
 - Prochaine dispo : heure minutes secondes de la prochaines dispo. Si inférieure à l'heure courante, affiche "disponible immédiatement",
 - Prochaine dispo puissance: heure minutes secondes de la prochaines dispo du changement de puissance. Si inférieure à l'heure courante, affiche "disponible immédiatement",
@@ -24,8 +34,9 @@ La carte doit prendre toute la largeur disponible spécifiée via l'IHM de HA.
 - Puissance requise : la puissance requise
 - Puissance courante : la puissance courante
 - temps de marche / temps max utilisable : sous la forme hh:mm:ss / hh:mm:ss.
+- le seuil de SOC batterie si il est configuré et > 0
 
-Le bloc pour chaque équipement est pliable et dépliable. Lorsqu'il est plié, seuls les infos de nom, état, bouton start/stop et bouton enable sont visibles.
+Le bloc pour chaque équipement est pliable et dépliable. Lorsqu'il est plié, seuls les infos de nom, état, puissance courante / puissance max, bouton start/stop et bouton enable sont visibles.
 Un chevron global permet de tout plier / déplier.
 
 ## Les actions
