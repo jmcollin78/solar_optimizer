@@ -39,6 +39,29 @@ Chaque info doit être affichée avec un icone qui la représente le mieux.
 Le bloc pour chaque équipement est pliable et dépliable. Lorsqu'il est plié, seuls les infos de nom, état, puissance courante / puissance max, bouton start/stop et bouton enable sont visibles.
 Un chevron global permet de tout plier / déplier.
 
+## La barre d'historique d'activation
+
+Chaque équipement dispose d'une barre horizontale d'historique d'activation, **toujours visible** (même lorsque la carte est pliée), placée juste en dessous de la barre de puissance.
+
+- Les segments de couleur (`--success-color`) correspondent aux périodes d'activation (état `on`).
+- Les segments gris correspondent aux périodes d'inactivité (état `off`).
+- La barre couvre les N dernières heures (24h par défaut).
+- Un label sous la barre indique : `Historique d'activation – Nh`.
+- Les données sont récupérées via l'API History de Home Assistant et mises en cache 5 minutes.
+- L'apparence imite les barres d'historique natives des `binary_sensor` de Home Assistant.
+
+### Option de configuration
+
+| Paramètre | Type | Valeur par défaut | Description |
+|---|---|---|---|
+| `history_hours` | `number` | `24` | Durée en heures de la fenêtre d'historique affichée |
+
+Exemple YAML :
+```yaml
+type: custom:solar-optimizer-card
+history_hours: 48
+```
+
 ## Les actions
 Chaque bloc représentant un équipement sera équipé des boutons d'actions suivants:
 1. Un bouton enable : un bouton permettant d'enable l'équipement,

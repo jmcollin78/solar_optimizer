@@ -33,6 +33,9 @@ const TRANSLATIONS = {
     totalOptimized: 'Total Optimisé',
     algoObjective: 'Objectif Algo',
     availableNow: 'Disponible immédiatement',
+    historyBar: 'Historique d\'activation',
+    powerHistory: 'Puissance courante',
+    editorHistoryHours: 'Durée de l\'historique (heures)',
     editorAutoConfig: 'Cette carte est configurée de façon automatique.',
     editorDesc: 'Elle scanne et agrège automatiquement les mesures de l\'algorithme ainsi que tous vos commutateurs et entités de priorité commençant par <code>solar_optimizer</code>.',
     editorNote: '<strong>Note :</strong> Aucun paramètre optionnel ou configuration YAML supplémentaire n\'est nécessaire pour le fonctionnement de cette carte !',
@@ -72,6 +75,9 @@ const TRANSLATIONS = {
     totalOptimized: 'Total optimized',
     algoObjective: 'Algo objective',
     availableNow: 'Available immediately',
+    historyBar: 'Activation history',
+    powerHistory: 'Current power',
+    editorHistoryHours: 'History duration (hours)',
     editorAutoConfig: 'This card is automatically configured.',
     editorDesc: 'It automatically scans and aggregates algorithm measurements and all your switches and priority entities starting with <code>solar_optimizer</code>.',
     editorNote: '<strong>Note:</strong> No optional parameters or additional YAML configuration are needed for this card to work!',
@@ -323,6 +329,41 @@ class SolarOptimizerCard extends HTMLElement {
           solar-optimizer-card .so-device-details.hidden {
             display: none;
           }
+          solar-optimizer-card .so-history-bar-wrapper {
+            margin-top: 6px;
+          }
+          solar-optimizer-card .so-history-bar-container {
+            display: flex;
+            background-color: var(--secondary-background-color, #e0e0e0);
+            border-radius: 4px;
+            height: 8px;
+            width: 100%;
+            overflow: hidden;
+          }
+          solar-optimizer-card .so-history-segment-on {
+            background-color: var(--history-state-on-color, #fdd835);
+            height: 100%;
+            flex-shrink: 0;
+          }
+          solar-optimizer-card .so-history-segment-off {
+            background-color: var(--secondary-background-color, #e0e0e0);
+            height: 100%;
+            flex-shrink: 0;
+          }
+          solar-optimizer-card .so-history-bar-label {
+            font-size: 0.72em;
+            color: var(--secondary-text-color);
+            margin-top: 2px;
+            text-align: right;
+            opacity: 0.8;
+          }
+          solar-optimizer-card .so-power-history-svg {
+            display: block;
+            width: 100%;
+            height: 40px;
+            border-radius: 4px;
+            overflow: hidden;
+          }
         </style>
         <ha-card header="Solar Optimizer">
           <div class="so-card-body" id="content" style="display:block;width:100%;box-sizing:border-box;padding:16px;"></div>
@@ -517,16 +558,6 @@ class SolarOptimizerCard extends HTMLElement {
             <span class="so-info-value">${todayOnTimeHms}${maxOnTimeHms ? ' / ' + maxOnTimeHms : ''}</span>
           </div>
         </div>
-        <div style="display:flex; justify-content:flex-end; margin-top:4px;">
-          <button
-            class="so-btn so-btn-reset device-reset-on-time"
-            data-entity-id="sensor.on_time_today_solar_optimizer_${deviceId}"
-            title="${t('resetTitle')}"
-          >
-            <ha-icon icon="mdi:timer-refresh-outline" style="--mdi-icon-size: 14px;"></ha-icon>
-            ${t('reset')}
-          </button>
-        </div>
       `;
 
       const isCollapsed = this._collapsedDevices[deviceId] === true;
@@ -565,8 +596,22 @@ class SolarOptimizerCard extends HTMLElement {
               <div>${t('requiredPower')}: <strong>${requestedPower} W</strong></div>
             </div>
             ${availHtml}
-            <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 4px;">
-              ${prioritySelectHtml}
+            <div style="display:flex; gap:12px; align-items:flex-start; margin-top:6px;">
+              <div style="flex:1; min-width:0;">
+                ${this._renderHistoryBar(switchKey, t)}
+                ${attrs.can_change_power ? this._renderPowerHistoryGraph(switchKey, powerMax, t) : ''}
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">
+                <button
+                  class="so-btn so-btn-reset device-reset-on-time"
+                  data-entity-id="sensor.on_time_today_solar_optimizer_${deviceId}"
+                  title="${t('resetTitle')}"
+                >
+                  <ha-icon icon="mdi:timer-refresh-outline" style="--mdi-icon-size: 14px;"></ha-icon>
+                  ${t('reset')}
+                </button>
+                ${prioritySelectHtml}
+              </div>
             </div>
           </div>
         </div>
@@ -710,6 +755,189 @@ class SolarOptimizerCard extends HTMLElement {
   setConfig(config) {
     this._config = config;
     if (!this._collapsedDevices) this._collapsedDevices = {};
+    if (!this._historyCache) this._historyCache = {};
+    if (!this._fetchingHistory) this._fetchingHistory = new Set();
+    if (!this._powerHistoryCache) this._powerHistoryCache = {};
+    if (!this._fetchingPowerHistory) this._fetchingPowerHistory = new Set();
+  }
+
+  async _fetchHistory(entityId) {
+    const historyHours = (this._config && this._config.history_hours) ? this._config.history_hours : 24;
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - historyHours * 3600 * 1000);
+    try {
+      const result = await this._hass.callApi("GET",
+        `history/period/${startTime.toISOString()}?filter_entity_id=${encodeURIComponent(entityId)}&end_time=${encodeURIComponent(endTime.toISOString())}&minimal_response&no_attributes`
+      );
+      this._historyCache[entityId] = {
+        data: (result && result[0]) ? result[0] : [],
+        startTime,
+        endTime,
+        fetchedAt: Date.now(),
+      };
+    } catch (e) {
+      console.error("[SolarOptimizerCard] History fetch failed for", entityId, e);
+      this._historyCache[entityId] = {
+        data: [], startTime, endTime, fetchedAt: Date.now()
+      };
+    }
+    this._fetchingHistory.delete(entityId);
+    this.updateCard();
+  }
+
+  async _fetchPowerHistory(entityId) {
+    const historyHours = (this._config && this._config.history_hours) ? this._config.history_hours : 24;
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - historyHours * 3600 * 1000);
+    try {
+      const result = await this._hass.callApi("GET",
+        `history/period/${startTime.toISOString()}?filter_entity_id=${encodeURIComponent(entityId)}&end_time=${encodeURIComponent(endTime.toISOString())}`
+      );
+      this._powerHistoryCache[entityId] = {
+        data: (result && result[0]) ? result[0] : [],
+        startTime,
+        endTime,
+        fetchedAt: Date.now(),
+      };
+    } catch (e) {
+      console.error("[SolarOptimizerCard] Power history fetch failed for", entityId, e);
+      this._powerHistoryCache[entityId] = {
+        data: [], startTime, endTime, fetchedAt: Date.now()
+      };
+    }
+    this._fetchingPowerHistory.delete(entityId);
+    this.updateCard();
+  }
+
+  _renderPowerHistoryGraph(entityId, powerMax, t) {
+    const CACHE_TTL = 5 * 60 * 1000;
+    if (!this._powerHistoryCache) this._powerHistoryCache = {};
+    if (!this._fetchingPowerHistory) this._fetchingPowerHistory = new Set();
+    const historyHours = (this._config && this._config.history_hours) ? this._config.history_hours : 24;
+    const cached = this._powerHistoryCache[entityId];
+    const label = `${t('powerHistory')} – ${historyHours}h`;
+    const pMax = powerMax > 0 ? powerMax : 1;
+
+    const emptyGraph = `
+      <div class="so-history-bar-wrapper" style="margin-top:4px;">
+        <svg class="so-power-history-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
+          <rect x="0" y="0" width="100" height="30" fill="var(--secondary-background-color, #e0e0e0)" />
+        </svg>
+        <div class="so-history-bar-label">${label}</div>
+      </div>`;
+
+    if (!cached || (Date.now() - cached.fetchedAt > CACHE_TTL)) {
+      if (!this._fetchingPowerHistory.has(entityId)) {
+        this._fetchingPowerHistory.add(entityId);
+        this._fetchPowerHistory(entityId);
+      }
+      if (!cached) return emptyGraph;
+    }
+
+    const { data, startTime, endTime } = cached;
+    const totalMs = endTime.getTime() - startTime.getTime();
+
+    const sorted = [...(data || [])]
+      .sort((a, b) => new Date(a.last_changed) - new Date(b.last_changed))
+      .filter(s => s.attributes && s.attributes.current_power != null);
+
+    if (sorted.length === 0) return emptyGraph;
+
+    const toPoint = (tMs, power) => {
+      const x = ((tMs - startTime.getTime()) / totalMs) * 100;
+      const y = 30 - (parseFloat(power) / pMax) * 28;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    };
+
+    const linePoints = sorted.map(s =>
+      toPoint(new Date(s.last_changed).getTime(), s.attributes.current_power)
+    );
+    // Étend jusqu'à endTime avec la dernière valeur connue
+    const lastPower = sorted[sorted.length - 1].attributes.current_power;
+    linePoints.push(toPoint(endTime.getTime(), lastPower));
+
+    const polylinePoints = linePoints.join(' ');
+    const polygonPoints = `0,30 ${linePoints.join(' ')} 100,30`;
+
+    return `
+      <div class="so-history-bar-wrapper" style="margin-top:4px;">
+        <svg class="so-power-history-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
+          <polygon points="${polygonPoints}" fill="var(--primary-color)" fill-opacity="0.2" />
+          <polyline points="${polylinePoints}" fill="none" stroke="var(--primary-color)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+        </svg>
+        <div class="so-history-bar-label">${label}</div>
+      </div>`;
+  }
+
+  _renderHistoryBar(entityId, t) {
+    const CACHE_TTL = 5 * 60 * 1000;
+    if (!this._historyCache) this._historyCache = {};
+    if (!this._fetchingHistory) this._fetchingHistory = new Set();
+    const historyHours = (this._config && this._config.history_hours) ? this._config.history_hours : 24;
+    const cached = this._historyCache[entityId];
+    const label = `${t('historyBar')} – ${historyHours}h`;
+
+    if (!cached || (Date.now() - cached.fetchedAt > CACHE_TTL)) {
+      if (!this._fetchingHistory.has(entityId)) {
+        this._fetchingHistory.add(entityId);
+        this._fetchHistory(entityId);
+      }
+      if (!cached) {
+        return `
+          <div class="so-history-bar-wrapper">
+            <div class="so-history-bar-container">
+              <div class="so-history-segment-off" style="width:100%;"></div>
+            </div>
+            <div class="so-history-bar-label">${label}</div>
+          </div>`;
+      }
+    }
+
+    const { data, startTime, endTime } = cached;
+    const totalMs = endTime.getTime() - startTime.getTime();
+
+    if (!data || data.length === 0) {
+      return `
+        <div class="so-history-bar-wrapper">
+          <div class="so-history-bar-container">
+            <div class="so-history-segment-off" style="width:100%;"></div>
+          </div>
+          <div class="so-history-bar-label">${label}</div>
+        </div>`;
+    }
+
+    const sorted = [...data].sort((a, b) => new Date(a.last_changed) - new Date(b.last_changed));
+    const segments = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const segStart = Math.max(new Date(sorted[i].last_changed).getTime(), startTime.getTime());
+      const segEnd = i < sorted.length - 1
+        ? Math.min(new Date(sorted[i + 1].last_changed).getTime(), endTime.getTime())
+        : endTime.getTime();
+      const widthPct = Math.max(0, ((segEnd - segStart) / totalMs) * 100);
+      if (widthPct > 0.01) {
+        segments.push({ width: widthPct, isOn: sorted[i].state === "on" });
+      }
+    }
+
+    if (segments.length === 0) {
+      return `
+        <div class="so-history-bar-wrapper">
+          <div class="so-history-bar-container">
+            <div class="so-history-segment-off" style="width:100%;"></div>
+          </div>
+          <div class="so-history-bar-label">${label}</div>
+        </div>`;
+    }
+
+    const segmentsHtml = segments.map(seg =>
+      `<div class="so-history-segment-${seg.isOn ? 'on' : 'off'}" style="width:${seg.width.toFixed(3)}%;"></div>`
+    ).join('');
+
+    return `
+      <div class="so-history-bar-wrapper">
+        <div class="so-history-bar-container">${segmentsHtml}</div>
+        <div class="so-history-bar-label">${label}</div>
+      </div>`;
   }
 }
 
@@ -732,6 +960,7 @@ class SolarOptimizerCardEditor extends HTMLElement {
     const lang = this._hass?.locale?.language || navigator.language || 'en';
     const isFr = lang.toLowerCase().startsWith('fr');
     const t = (key) => TRANSLATIONS[isFr ? 'fr' : 'en'][key] || key;
+    const historyHours = (this._config && this._config.history_hours) ? this._config.history_hours : 24;
 
     this.innerHTML = `
       <div style="padding: 16px; font-family: var(--paper-font-body1_-_font-family); color: var(--primary-text-color);">
@@ -743,8 +972,24 @@ class SolarOptimizerCardEditor extends HTMLElement {
         <div style="background-color: var(--secondary-background-color); padding: 12px; border-radius: 6px; font-size: 0.85em; border-left: 4px solid var(--primary-color);">
           ${t('editorNote')}
         </div>
+        <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px;">
+          <label style="font-size: 0.9em; color: var(--primary-text-color);">${t('editorHistoryHours')}</label>
+          <input type="number" id="so-history-hours-input" min="1" max="168" value="${historyHours}"
+            style="width: 72px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--divider-color, #ccc); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 0.9em;">
+        </div>
       </div>
     `;
+
+    const input = this.querySelector("#so-history-hours-input");
+    if (input) {
+      input.addEventListener("change", (e) => {
+        const value = parseInt(e.target.value, 10);
+        if (!isNaN(value) && value > 0) {
+          this._config = { ...this._config, history_hours: value };
+          this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
+        }
+      });
+    }
   }
 }
 
@@ -753,7 +998,7 @@ customElements.define("solar-optimizer-card-editor", SolarOptimizerCardEditor);
 
 // Afficher un log au démarrage dans la console du navigateur avec la version de la carte
 console.info(
-  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.2.1 `,
+  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.3.0 `,
   "color: white; background: #4caf50; font-weight: bold;",
   "color: #4caf50; background: white; font-weight: bold; border: 1px solid #4caf50;"
 );
