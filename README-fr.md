@@ -592,6 +592,8 @@ L'intégration distribue une carte officielle native pour piloter et visualiser 
 
 Cette carte s'adapte automatiquement à votre thème Home Assistant.
 
+![Solar Optiizer Cad](images/solar-optimizer-card.png)
+
 ## Informations globales
 
 Un bloc d'en-tête **Solar Optimizer** affiche en temps réel :

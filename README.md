@@ -618,6 +618,8 @@ The integration bundles an official native card (`custom:solar-optimizer-card`) 
 
 The card automatically adapts to your Home Assistant theme.
 
+![Solar Optiizer Cad](images/solar-optimizer-card.png)
+
 ## Global Information
 
 A **Solar Optimizer** header block displays real-time:
