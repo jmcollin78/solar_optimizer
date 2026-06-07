@@ -1,3 +1,84 @@
+const TRANSLATIONS = {
+  fr: {
+    disabled: 'Désactivé',
+    active: 'Actif',
+    waiting: 'Attente',
+    inactive: 'Inactif',
+    usable: 'Utilisable',
+    waitingIndicator: 'En attente',
+    offpeakForced: 'HC forcées',
+    priority: 'Priorité',
+    enableTitle: 'Activer/Désactiver la gestion par l\'algorithme',
+    stopManually: 'Arrêter manuellement',
+    startManually: 'Démarrer manuellement',
+    stop: 'Stop',
+    start: 'Start',
+    nextAvailable: 'Prochaine dispo',
+    powerAvailable: 'Dispo puissance',
+    offpeakHours: 'Heures creuses',
+    batterySocThreshold: 'Seuil SOC batterie',
+    onTime: 'Temps marche',
+    resetTitle: 'Remettre à zéro le temps de marche',
+    reset: 'Reset',
+    expand: 'Déplier',
+    collapse: 'Plier',
+    expandAll: 'Tout déplier',
+    collapseAll: 'Tout plier',
+    managedDevices: 'Appareils Gérés',
+    noDevices: 'Aucun appareil géré trouvé.',
+    requiredPower: 'Puissance requise',
+    smoothedProduction: 'Production lissée',
+    netConsumption: 'Consommation nette',
+    batterySoc: 'SOC Batterie',
+    totalOptimized: 'Total Optimisé',
+    algoObjective: 'Objectif Algo',
+    availableNow: 'Disponible immédiatement',
+    editorAutoConfig: 'Cette carte est configurée de façon automatique.',
+    editorDesc: 'Elle scanne et agrège automatiquement les mesures de l\'algorithme ainsi que tous vos commutateurs et entités de priorité commençant par <code>solar_optimizer</code>.',
+    editorNote: '<strong>Note :</strong> Aucun paramètre optionnel ou configuration YAML supplémentaire n\'est nécessaire pour le fonctionnement de cette carte !',
+    cardDescription: 'Carte interactive pour contrôler et suivre les appareils gérés par le planificateur de charges Solar Optimizer.',
+  },
+  en: {
+    disabled: 'Disabled',
+    active: 'Active',
+    waiting: 'Waiting',
+    inactive: 'Inactive',
+    usable: 'Usable',
+    waitingIndicator: 'Waiting',
+    offpeakForced: 'Off-peak forced',
+    priority: 'Priority',
+    enableTitle: 'Enable/Disable algorithm management',
+    stopManually: 'Stop manually',
+    startManually: 'Start manually',
+    stop: 'Stop',
+    start: 'Start',
+    nextAvailable: 'Next available',
+    powerAvailable: 'Power available',
+    offpeakHours: 'Off-peak hours',
+    batterySocThreshold: 'Battery SOC threshold',
+    onTime: 'On time',
+    resetTitle: 'Reset on-time counter',
+    reset: 'Reset',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    expandAll: 'Expand all',
+    collapseAll: 'Collapse all',
+    managedDevices: 'Managed Devices',
+    noDevices: 'No managed device found.',
+    requiredPower: 'Required power',
+    smoothedProduction: 'Smoothed production',
+    netConsumption: 'Net consumption',
+    batterySoc: 'Battery SOC',
+    totalOptimized: 'Total optimized',
+    algoObjective: 'Algo objective',
+    availableNow: 'Available immediately',
+    editorAutoConfig: 'This card is automatically configured.',
+    editorDesc: 'It automatically scans and aggregates algorithm measurements and all your switches and priority entities starting with <code>solar_optimizer</code>.',
+    editorNote: '<strong>Note:</strong> No optional parameters or additional YAML configuration are needed for this card to work!',
+    cardDescription: 'Interactive card to control and monitor devices managed by the Solar Optimizer load scheduler.',
+  }
+};
+
 class SolarOptimizerCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
@@ -259,13 +340,15 @@ class SolarOptimizerCard extends HTMLElement {
     if (!this._collapsedDevices) this._collapsedDevices = {};
 
     const lang = this._hass.locale?.language;
+    const isFr = lang && lang.toLowerCase().startsWith('fr');
+    const t = (key) => TRANSLATIONS[isFr ? 'fr' : 'en'][key] || key;
 
     // Formate une date ISO en heure locale avec secondes
-    // Si la date est dans le passé, retourne "Disponible immédiatement"
+    // Si la date est dans le passé, retourne le texte de disponibilité immédiate
     const formatAvailability = (dateStr) => {
-      if (!dateStr) return 'Disponible immédiatement';
+      if (!dateStr) return t('availableNow');
       const date = new Date(dateStr);
-      if (date <= new Date()) return 'Disponible immédiatement';
+      if (date <= new Date()) return t('availableNow');
       return date.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
@@ -342,13 +425,13 @@ class SolarOptimizerCard extends HTMLElement {
 
       let statusBadge = "";
       if (!isEnabled) {
-        statusBadge = `<span class="so-badge so-badge-inactive">Désactivé</span>`;
+        statusBadge = `<span class="so-badge so-badge-inactive">${t('disabled')}</span>`;
       } else if (isActive) {
-        statusBadge = `<span class="so-badge so-badge-active">Actif</span>`;
+        statusBadge = `<span class="so-badge so-badge-active">${t('active')}</span>`;
       } else if (isWaiting) {
-        statusBadge = `<span class="so-badge so-badge-waiting">Attente</span>`;
+        statusBadge = `<span class="so-badge so-badge-waiting">${t('waiting')}</span>`;
       } else {
-        statusBadge = `<span class="so-badge so-badge-inactive">Inactif</span>`;
+        statusBadge = `<span class="so-badge so-badge-inactive">${t('inactive')}</span>`;
       }
 
       // Indicateurs booléens
@@ -356,15 +439,15 @@ class SolarOptimizerCard extends HTMLElement {
         <div class="so-indicators">
           <span class="so-indicator ${isUsable ? 'so-indicator-true' : 'so-indicator-false'}">
             <ha-icon icon="${isUsable ? 'mdi:check-circle' : 'mdi:cancel'}" style="--mdi-icon-size: 14px;"></ha-icon>
-            Utilisable
+            ${t('usable')}
           </span>
           <span class="so-indicator ${isWaiting ? 'so-indicator-true' : 'so-indicator-false'}">
             <ha-icon icon="${isWaiting ? 'mdi:timer-sand' : 'mdi:timer-sand-empty'}" style="--mdi-icon-size: 14px;"></ha-icon>
-            En attente
+            ${t('waitingIndicator')}
           </span>
           <span class="so-indicator ${shouldBeOForcedOffpeak ? 'so-indicator-true' : 'so-indicator-false'}">
             <ha-icon icon="${shouldBeOForcedOffpeak ? 'mdi:weather-night' : 'mdi:weather-night'}" style="--mdi-icon-size: 14px;"></ha-icon>
-            HC forcées
+            ${t('offpeakForced')}
           </span>
         </div>
       `;
@@ -374,7 +457,7 @@ class SolarOptimizerCard extends HTMLElement {
       if (priorityStateObj) {
         prioritySelectHtml = `
           <div class="so-priority-control">
-            <span>Priorité:</span>
+            <span>${t('priority')}:</span>
             <select class="so-priority-select" data-entity-id="${prioritySelectKey}">
               ${priorityOptions.map(opt => `
                 <option value="${opt}" ${opt === currentPriority ? "selected" : ""}>${opt}</option>
@@ -390,7 +473,7 @@ class SolarOptimizerCard extends HTMLElement {
         <ha-switch
           class="device-toggle"
           data-entity-id="${enableEntityKey}"
-          title="Activer/Désactiver la gestion par l'algorithme"
+          title="${t('enableTitle')}"
         ></ha-switch>
       `;
 
@@ -400,37 +483,37 @@ class SolarOptimizerCard extends HTMLElement {
           class="so-btn ${isActive ? 'so-btn-stop' : 'so-btn-start'} device-startstop"
           data-entity-id="${switchKey}"
           data-is-active="${isActive}"
-          title="${isActive ? 'Arrêter manuellement' : 'Démarrer manuellement'}"
-        >${isActive ? 'Stop' : 'Start'}</button>
+          title="${isActive ? t('stopManually') : t('startManually')}"
+        >${isActive ? t('stop') : t('start')}</button>
       `;
 
       // Infos disponibilité
       const availHtml = `
         <div class="so-info-grid">
           <div class="so-info-item">
-            <span class="so-info-label">Prochaine dispo</span>
+            <span class="so-info-label">${t('nextAvailable')}</span>
             <span class="so-info-value">${formatAvailability(attrs.next_date_available)}</span>
           </div>
           ${attrs.can_change_power ? `
           <div class="so-info-item">
-            <span class="so-info-label">Dispo puissance</span>
+            <span class="so-info-label">${t('powerAvailable')}</span>
             <span class="so-info-value">${formatAvailability(attrs.next_date_available_power)}</span>
           </div>
           ` : ''}
           ${offpeakTime ? `
           <div class="so-info-item">
-            <span class="so-info-label">Heures creuses</span>
+            <span class="so-info-label">${t('offpeakHours')}</span>
             <span class="so-info-value">${offpeakTime}</span>
           </div>
           ` : ''}
           ${attrs.battery_soc_threshold != null && attrs.battery_soc_threshold > 0 ? `
           <div class="so-info-item">
-            <span class="so-info-label">Seuil SOC batterie</span>
+            <span class="so-info-label">${t('batterySocThreshold')}</span>
             <span class="so-info-value">${attrs.battery_soc_threshold} %</span>
           </div>
           ` : ''}
           <div class="so-info-item">
-            <span class="so-info-label">Temps marche</span>
+            <span class="so-info-label">${t('onTime')}</span>
             <span class="so-info-value">${todayOnTimeHms}${maxOnTimeHms ? ' / ' + maxOnTimeHms : ''}</span>
           </div>
         </div>
@@ -438,10 +521,10 @@ class SolarOptimizerCard extends HTMLElement {
           <button
             class="so-btn so-btn-reset device-reset-on-time"
             data-entity-id="sensor.on_time_today_solar_optimizer_${deviceId}"
-            title="Remettre à zéro le temps de marche"
+            title="${t('resetTitle')}"
           >
             <ha-icon icon="mdi:timer-refresh-outline" style="--mdi-icon-size: 14px;"></ha-icon>
-            Reset
+            ${t('reset')}
           </button>
         </div>
       `;
@@ -457,7 +540,7 @@ class SolarOptimizerCard extends HTMLElement {
         <div class="so-device-card ${cardStateClass}" data-device-id="${deviceId}">
           <div class="so-device-header">
             <div style="display:flex;align-items:center;gap:6px;">
-              <button class="${chevronClass}" data-collapse-id="${deviceId}" title="${isCollapsed ? 'Déplier' : 'Plier'}">
+              <button class="${chevronClass}" data-collapse-id="${deviceId}" title="${isCollapsed ? t('expand') : t('collapse')}">
                 <ha-icon icon="mdi:chevron-down" style="--mdi-icon-size: 20px;"></ha-icon>
               </button>
               <span class="so-device-name">${attrs.device_name || deviceId}</span>
@@ -479,7 +562,7 @@ class SolarOptimizerCard extends HTMLElement {
           <div class="so-device-details${isCollapsed ? ' hidden' : ''}">
             ${indicatorsHtml}
             <div class="so-device-meta">
-              <div>Puissance requise: <strong>${requestedPower} W</strong></div>
+              <div>${t('requiredPower')}: <strong>${requestedPower} W</strong></div>
             </div>
             ${availHtml}
             <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 4px;">
@@ -494,39 +577,39 @@ class SolarOptimizerCard extends HTMLElement {
       <div class="so-grid-stats">
         <div class="so-stat-box">
           <ha-icon icon="mdi:solar-power-variant" style="color:var(--warning-color,#ff9800);margin-bottom:4px;"></ha-icon>
-          <span class="so-stat-title">Production lissée</span>
+          <span class="so-stat-title">${t('smoothedProduction')}</span>
           <span class="so-stat-value">${powerProduction} W</span>
         </div>
         <div class="so-stat-box">
           <ha-icon icon="mdi:home-lightning-bolt" style="color:var(--primary-color);margin-bottom:4px;"></ha-icon>
-          <span class="so-stat-title">Consommation nette</span>
+          <span class="so-stat-title">${t('netConsumption')}</span>
           <span class="so-stat-value">${powerConsumption} W</span>
         </div>
         <div class="so-stat-box">
           <ha-icon icon="mdi:battery" style="color:var(--success-color,#4caf50);margin-bottom:4px;"></ha-icon>
-          <span class="so-stat-title">SOC Batterie</span>
+          <span class="so-stat-title">${t('batterySoc')}</span>
           <span class="so-stat-value">${batterySoc !== "N/A" ? batterySoc + " %" : "N/A"}</span>
         </div>
         <div class="so-stat-box">
           <ha-icon icon="mdi:flash" style="color:var(--primary-color);margin-bottom:4px;"></ha-icon>
-          <span class="so-stat-title">Total Optimisé</span>
+          <span class="so-stat-title">${t('totalOptimized')}</span>
           <span class="so-stat-value">${totalPower} W</span>
         </div>
         <div class="so-stat-box">
           <ha-icon icon="mdi:bullseye-arrow" style="color:var(--primary-color);margin-bottom:4px;"></ha-icon>
-          <span class="so-stat-title">Objectif Algo</span>
+          <span class="so-stat-title">${t('algoObjective')}</span>
           <span class="so-stat-value">${!isNaN(parseFloat(bestObjective)) ? parseFloat(bestObjective).toFixed(2) + " €" : bestObjective}</span>
         </div>
       </div>
       <div style="display:block;">
         <div style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:12px; border-bottom: 1px solid var(--divider-color); padding-bottom: 6px; gap:6px;">
-          <button class="so-collapse-btn so-collapse-all" title="${allCollapsed ? 'Tout déplier' : 'Tout plier'}" style="transform: rotate(${allCollapsed ? '-90deg' : '0deg'});">
+          <button class="so-collapse-btn so-collapse-all" title="${allCollapsed ? t('expandAll') : t('collapseAll')}" style="transform: rotate(${allCollapsed ? '-90deg' : '0deg'});">
             <ha-icon icon="mdi:chevron-down" style="--mdi-icon-size: 20px;"></ha-icon>
           </button>
-          <h3 style="margin: 0; font-size: 1.1em;">Appareils Gérés</h3>
+          <h3 style="margin: 0; font-size: 1.1em;">${t('managedDevices')}</h3>
         </div>
         <div class="so-device-list">
-          ${devicesHtml || '<p style="color: var(--secondary-text-color); text-align: center;">Aucun appareil géré trouvé.</p>'}
+          ${devicesHtml || `<p style="color: var(--secondary-text-color); text-align: center;">${t('noDevices')}</p>`}
         </div>
       </div>
     `;
@@ -638,18 +721,27 @@ class SolarOptimizerCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    this._render();
   }
 
   connectedCallback() {
+    this._render();
+  }
+
+  _render() {
+    const lang = this._hass?.locale?.language || navigator.language || 'en';
+    const isFr = lang.toLowerCase().startsWith('fr');
+    const t = (key) => TRANSLATIONS[isFr ? 'fr' : 'en'][key] || key;
+
     this.innerHTML = `
       <div style="padding: 16px; font-family: var(--paper-font-body1_-_font-family); color: var(--primary-text-color);">
         <h3 style="margin-top: 0; color: var(--primary-color);">Solar Optimizer Card</h3>
-        <p style="margin-bottom: 8px;">Cette carte est configurée de façon automatique.</p>
+        <p style="margin-bottom: 8px;">${t('editorAutoConfig')}</p>
         <p style="margin-top: 0; font-size: 0.9em; color: var(--secondary-text-color);">
-          Elle scanne et agrège automatiquement les mesures de l'algorithme ainsi que tous vos commutateurs et entités de priorité commençant par <code>solar_optimizer</code>.
+          ${t('editorDesc')}
         </p>
         <div style="background-color: var(--secondary-background-color); padding: 12px; border-radius: 6px; font-size: 0.85em; border-left: 4px solid var(--primary-color);">
-          <strong>Note :</strong> Aucun paramètre optionnel ou configuration YAML supplémentaire n'est nécessaire pour le fonctionnement de cette carte !
+          ${t('editorNote')}
         </div>
       </div>
     `;
@@ -675,5 +767,5 @@ window.customCards.push({
   type: "solar-optimizer-card",
   name: "Solar Optimizer Card",
   preview: true,
-  description: "Carte interactive pour contrôler et suivre les appareils gérés par le planificateur de charges Solar Optimizer."
+  description: "Interactive card to control and monitor devices managed by the Solar Optimizer load scheduler."
 });
