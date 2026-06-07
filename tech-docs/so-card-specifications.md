@@ -12,3 +12,27 @@ Cette carte a pour objectifs :
 
 # Specifications UI
 La carte doit prendre toute la largeur disponible spécifiée via l'IHM de HA.
+
+## Les informations à afficher
+
+- Prochaine dispo : heure minutes secondes de la prochaines dispo. Si inférieure à l'heure courante, affiche "disponible immédiatement",
+- Prochaine dispo puissance: heure minutes secondes de la prochaines dispo du changement de puissance. Si inférieure à l'heure courante, affiche "disponible immédiatement",
+- Utilisable : un indicateur visuel disant si le managed device est utilisable par l'algorithme
+- Est en attente : un indicateur visuel disant le managed device est en attente d'une prochaine dispo
+- Est forcé en heures creuses : un indicateur visuel disant le managed device est forcé en heure creuses
+- Heures creuses : l'heure des heures creuses pour cet équipement,
+- Puissance requise : la puissance requise
+- Puissance courante : la puissance courante
+- temps de marche / temps max utilisable : sous la forme hh:mm:ss / hh:mm:ss.
+
+Le bloc pour chaque équipement est pliable et dépliable. Lorsqu'il est plié, seuls les infos de nom, état, bouton start/stop et bouton enable sont visibles.
+Un chevron global permet de tout plier / déplier.
+
+## Les actions
+Chaque bloc représentant un équipement sera équipé des boutons d'actions suivants:
+1. Un bouton enable : un bouton permettant d'enable l'équipement,
+2. Un bouton start/stop : un bouton permettant d'activer/desactiver l'équipement manuellement.
+
+
+
+
