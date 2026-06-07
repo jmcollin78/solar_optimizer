@@ -1,13 +1,14 @@
 # Loads default set of integrations. Do not remove.
-default_config:
+config:
+history:
+logbook:
+homeassistant:
+system_health:
+energy:
 
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
-
-# Text to speech
-tts:
-  - platform: google_translate
 
 automation: !include automations.yaml
 script: !include scripts.yaml
@@ -55,19 +56,18 @@ input_boolean:
     name: "Enable device H"
     icon: mdi:check
 
-switch:
-  - platform: template
-    switches:
-      fake_switch_1:
-        friendly_name: "Fake switch 1 (20 W)"
-        value_template: "{{ is_state('input_boolean.fake_device_i', 'on') }}"
+template:
+  - switch:
+      - name: "Fake switch 1 (20 W)"
+        unique_id: fake_switch_1
+        state: "{{ is_state('input_boolean.fake_device_i', 'on') }}"
         turn_on:
           action: input_boolean.turn_on
-          data:
+          target:
             entity_id: input_boolean.fake_device_i
         turn_off:
           action: input_boolean.turn_off
-          data:
+          target:
             entity_id: input_boolean.fake_device_i
 
 input_number:

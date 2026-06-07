@@ -13,6 +13,7 @@
   - [Anti-flickering](#anti-flickering)
   - [Usability](#usability)
   - [Device Prioritization](#device-prioritization)
+  - [Setting Purchase and Resale Costs](#setting-purchase-and-resale-costs)
 - [Installation](#installation)
   - [Migration Procedure from Version 2.x to 3.x](#migration-procedure-from-version-2x-to-3x)
   - [HACS installation (recommended)](#hacs-installation-recommended)
@@ -28,6 +29,9 @@
     - [Controlling an Air Conditioner preset](#controlling-an-air-conditioner-preset)
     - [Controlling a Dehumidifier](#controlling-a-dehumidifier)
     - [Control for a Light](#control-for-a-light)
+    - [Control for a dimmable Light](#control-for-a-dimmable-light)
+  - [Configuring the Algorithm in Advanced Mode](#configuring-the-algorithm-in-advanced-mode)
+    - [Enabling Advanced Configuration](#enabling-advanced-configuration)
 - [Available Entities](#available-entities)
   - [The "configuration" Device](#the-configuration-device)
   - [Devices and Their Entities](#devices-and-their-entities)
@@ -41,18 +45,18 @@
 - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
     - [File `configuration.yaml`:](#file-configurationyaml)
     - [File `templates.yaml`:](#file-templatesyaml)
-- [A Card for Your Dashboards as a complement](#a-card-for-your-dashboards-as-a-complement)
-  - [Install the Plugins](#install-the-plugins)
-  - [Install the Templates](#install-the-templates)
-  - [Add a Card for Each Device](#add-a-card-for-each-device)
-  - [Using the Card](#using-the-card)
-    - [Icon Color](#icon-color)
-    - [Badge](#badge)
-    - [Actions on the Card](#actions-on-the-card)
+- [Official Lovelace Card](#official-lovelace-card)
+  - [Global Information](#global-information)
+  - [Per-Device Information](#per-device-information)
+  - [Activation History Bar](#activation-history-bar)
+  - [Available Actions](#available-actions)
+  - [How to Use the Official Card](#how-to-use-the-official-card)
 - [Contributions are welcome!](#contributions-are-welcome)
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.7.0**:
+>   - added an official native Lovelace card (`custom:solar-optimizer-card`) bundled with the integration. See [Official Lovelace Card](#official-lovelace-card)
 > * **release 3.5.0**:
 >   - added support for priority management. See [Priority Management](#priority-management)
 > * **release 3.2.0** :
@@ -60,14 +64,6 @@
 > * **release 3.0.0** :
 > - Added a configuration UI for devices.
 > - ⚠️ Installing release 3.0.0 requires a specific procedure. See the migration procedure below [here](#migration-procedure-from-version-2x-to-3x).
-> * **release 2.1.0** :
-> - added a minimum duration of ignition during off-peak hours. Allows you to manage equipment that must have a minimum of ignition per day such as water heaters or chargers (cars, battery, ...). If the sunshine has not reached the required duration, then the equipment will turn on during off-peak hours. You can also define at what time the ignition counters are reset to zero, which allows you to take advantage of all off-peak hours
-> * **release 2.0.0** :
-> - added a device per controlled equipment to group the entities,
-> - added an ignition time counter for each device. When the controlled switch goes to 'Off', the time counter is incremented by the time spent 'On', in seconds. This counter is reset to zero every day at midnight.
-> - added a maximum time to 'On' in the configuration (in minutes). When this duration is exceeded, the equipment is no longer usable by the algorithm (is_usable = off) until the next reset. This offers the possibility of not exceeding a maximum ignition time per day, even when solar power is available.
-> - to take advantage of this new information, don't forget to update the decluterring template (at the end of this file)
-> - this release opens the door to more significant developments based on the ignition time (having a daily minimum for example) and prepares the ground for the arrival of the configuration via the graphical interface.
 
 # What is Solar Optimizer?
 This integration will allow you to maximize the use of your solar production. You delegate to it the control of your equipment whose activation can be deferred over time (water heater, swimming pool pump, electric vehicle charge, dishwasher, washing machine, etc.) and it takes care of launching them when the power produced is sufficient.
@@ -197,22 +193,22 @@ A simple device is controlled solely by turning it on or off (a switch). If the 
 
 You need to specify the following attributes:
 
-| Attribute                 | Applicable to                       | Meaning                                                                                                                                                                                                                                | Example                                          | Comment                                                                                                                                                                                                           |
-| ------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                    | All                                 | The name of the device.                                                                                                                                                                                                                | Basement Ventilation                             | The name is used to identify the entities of this device.                                                                                                                                                         |
-| `entity_id`               | All                                 | The entity ID of the device to be controlled.                                                                                                                                                                                          | switch.basement_ventilation                      | Can be a `switch`, an `humidifier`, a `climate`, a `fan`, a `select` or a `light`. If it is not a `switch`, the `activation_service` and `deactivation_service` fields must be adjusted.                          |
-| `device_power` or `power_max`              | All                                 | The maximum power consumption of the device when turned on, in watts.                                                                                                                                                                  | 250                                              | -                                                                                                                                                                                                                 |
-| `check_usable_template`   | All                                 | A template that evaluates to `True` if the device can be used by Solar Optimizer. A template must start with `{{` and end with `}}`.                                                                                                   | {{ is_state('cover.garage_door', 'closed') }}    | In this example, Solar Optimizer will not attempt to control the "Basement Ventilation" if the garage door is open. Use `{{ True }}` if you do not need this condition.                                           |
-| `active_template`         | All                                 | A template that evaluates to `True` if the device is currently active. A template must start with `{{` and end with `}}`. This template is not necessary when the state of the device is 'on' or 'off' when turned-on or off.          | {{ is_state('climate.living_room_ac', 'cool') }} | In this example, a `climate` device will be considered active by Solar Optimizer if its state is `cool`. Leave it blank for devices where the default 'on'/'off' state applies (switches and input_booleans).     |
-| `duration_min`            | All                                 | The minimum activation duration in minutes.                                                                                                                                                                                            | 60                                               | The basement ventilation will always run for at least one hour when turned on.                                                                                                                                    |
-| `duration_stop_min`       | All                                 | The minimum deactivation duration in minutes. Defaults to `duration_min` if not specified.                                                                                                                                             | 15                                               | The basement ventilation will always remain off for at least 15 minutes before restarting.                                                                                                                        |
-| `action_mode`             | All                                 | The action mode used to turn the device on or off. Can be either `"action_call"` or `"event"` (*).                                                                                                                                     | action_call                                      | `"action_call"` indicates that the device is controlled via an action call. See below. `"event"` means an event is triggered when the state should change. See (*) for more details.                              |
-| `activation_service`      | Only if `action_mode="action_call"` | The service to call for activating the device, in the format `"domain/service[/parameter:value]"`. This template should be adapted when the device is not a switch.                                                                    | switch/turn_on                                   | Activating the device will trigger the `"switch/turn_on"` service on the `entity_id` specified.                                                                                                                   |
-| `deactivation_service`    | Only if `action_mode="action_call"` | The service to call for deactivating the device, in the format `"domain/service[/parameter:value]"`.  This template should be adapted when the device is not a switch.                                                                 | switch/turn_off                                  | Deactivating the device will trigger the `"switch/turn_off"` service on the `entity_id` specified.                                                                                                                |
-| `battery_soc_threshold`   | All                                 | The minimum battery charge percentage required for the device to be usable.                                                                                                                                                            | 30                                               | In this example, the device will not be used by the algorithm if the solar battery is not charged to at least 30%. Requires the battery charge state entity to be configured in the common parameters. See above. |
-| `max_on_time_per_day_min` | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
-| `min_on_time_per_day_min` | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
-| `offpeak_time`            | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
+| Attribute                     | Applicable to                       | Meaning                                                                                                                                                                                                                                | Example                                          | Comment                                                                                                                                                                                                           |
+| ----------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                        | All                                 | The name of the device.                                                                                                                                                                                                                | Basement Ventilation                             | The name is used to identify the entities of this device.                                                                                                                                                         |
+| `entity_id`                   | All                                 | The entity ID of the device to be controlled.                                                                                                                                                                                          | switch.basement_ventilation                      | Can be a `switch`, an `humidifier`, a `climate`, a `fan`, a `select` or a `light`. If it is not a `switch`, the `activation_service` and `deactivation_service` fields must be adjusted.                          |
+| `device_power` or `power_max` | All                                 | The maximum power consumption of the device when turned on, in watts.                                                                                                                                                                  | 250                                              | -                                                                                                                                                                                                                 |
+| `check_usable_template`       | All                                 | A template that evaluates to `True` if the device can be used by Solar Optimizer. A template must start with `{{` and end with `}}`.                                                                                                   | {{ is_state('cover.garage_door', 'closed') }}    | In this example, Solar Optimizer will not attempt to control the "Basement Ventilation" if the garage door is open. Use `{{ True }}` if you do not need this condition.                                           |
+| `active_template`             | All                                 | A template that evaluates to `True` if the device is currently active. A template must start with `{{` and end with `}}`. This template is not necessary when the state of the device is 'on' or 'off' when turned-on or off.          | {{ is_state('climate.living_room_ac', 'cool') }} | In this example, a `climate` device will be considered active by Solar Optimizer if its state is `cool`. Leave it blank for devices where the default 'on'/'off' state applies (switches and input_booleans).     |
+| `duration_min`                | All                                 | The minimum activation duration in minutes.                                                                                                                                                                                            | 60                                               | The basement ventilation will always run for at least one hour when turned on.                                                                                                                                    |
+| `duration_stop_min`           | All                                 | The minimum deactivation duration in minutes. Defaults to `duration_min` if not specified.                                                                                                                                             | 15                                               | The basement ventilation will always remain off for at least 15 minutes before restarting.                                                                                                                        |
+| `action_mode`                 | All                                 | The action mode used to turn the device on or off. Can be either `"action_call"` or `"event"` (*).                                                                                                                                     | action_call                                      | `"action_call"` indicates that the device is controlled via an action call. See below. `"event"` means an event is triggered when the state should change. See (*) for more details.                              |
+| `activation_service`          | Only if `action_mode="action_call"` | The service to call for activating the device, in the format `"domain/service[/parameter:value]"`. This template should be adapted when the device is not a switch.                                                                    | switch/turn_on                                   | Activating the device will trigger the `"switch/turn_on"` service on the `entity_id` specified.                                                                                                                   |
+| `deactivation_service`        | Only if `action_mode="action_call"` | The service to call for deactivating the device, in the format `"domain/service[/parameter:value]"`.  This template should be adapted when the device is not a switch.                                                                 | switch/turn_off                                  | Deactivating the device will trigger the `"switch/turn_off"` service on the `entity_id` specified.                                                                                                                |
+| `battery_soc_threshold`       | All                                 | The minimum battery charge percentage required for the device to be usable.                                                                                                                                                            | 30                                               | In this example, the device will not be used by the algorithm if the solar battery is not charged to at least 30%. Requires the battery charge state entity to be configured in the common parameters. See above. |
+| `max_on_time_per_day_min`     | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
+| `min_on_time_per_day_min`     | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
+| `offpeak_time`                | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
 
 ## Configuring a Device with Variable Power
 This type of device allows for adjusting the power consumption based on solar production and the algorithm's decisions. Essentially, it acts as a software-based solar router, enabling, for example, an electric vehicle to charge using only surplus solar energy.
@@ -617,250 +613,75 @@ template: !include templates.yaml
 
 Adapt these to fit your specific setup.
 
-# A Card for Your Dashboards as a complement
-As a complement, the following Lovelace code allows you to control each declared device.
-The steps to follow are:
-1. Using HACS, install the plugins named `streamline-card`, `expander-card`, and `mushroom-template` if you haven't already.
-2. Install the templates for `streamline` at the top of your Lovelace code.
-3. Add one card per device managed by Solar Optimizer, referencing the `streamline` template.
+# Official Lovelace Card
+The integration bundles an official native card (`custom:solar-optimizer-card`) to centrally control and monitor all devices managed by the `Solar Optimizer` scheduler. The card is self-configuring: it automatically scans all `solar_optimizer_*` entities — no additional YAML parameters required.
 
-## Install the Plugins
-Read the plugin documentation [here](https://github.com/brunosabot/streamline-card) to familiarize yourself with this excellent plugin.
-Follow the installation procedure, which consists of adding a new GitHub repository of type `Dashboard` and installing the plugin.
+The card automatically adapts to your Home Assistant theme.
 
-In the "Downloaded" section, you should see your installed plugins:
+![Solar Optiizer Cad](images/solar-optimizer-card.png)
 
-![HACS Plugin](images/install-hacs-streamline.png)
+## Global Information
 
-Do the same for the `expander-card` and `mushroom-template` plugins.
+A **Solar Optimizer** header block displays real-time:
+- Smoothed solar production,
+- Net consumed power,
+- Battery SOC (if configured),
+- Total power allocated by the algorithm,
+- Current algorithm objective score.
 
-## Install the Templates
-To install the templates, go to your dashboard, enter edit mode, and click on the three dots in the menu at the top right:
+## Per-Device Information
 
-![dashboard edit](images/dashboard-edit.png)
+Each managed device is displayed in a **collapsible/expandable** block. A global chevron allows you to expand or collapse all blocks at once.
 
-Then:
+When **collapsed**, only essential information is shown: name, status, current power, and action buttons.
 
-![dashboard edit 2](images/dashboard-edit2.png)
+When **expanded**, the following details appear:
+- Next availability (date/time or "Available immediately"),
+- Next availability for a power change,
+- Usability indicator (whether the algorithm can use the device),
+- Waiting indicator,
+- Off-peak forced indicator,
+- Off-peak hours time,
+- Required power and current power,
+- Daily on-time / maximum on-time,
+- Battery SOC threshold (if configured).
 
-And then:
+## Activation History Bar
 
-![dashboard edit 3](images/dashboard-edit3.png)
+Each device has a **horizontal activation history bar**, always visible even when the block is collapsed. It mimics the native Home Assistant `binary_sensor` history bars:
+- Colored segments correspond to activation periods (state `on`).
+- Grey segments correspond to inactivity periods (state `off`).
+- The bar covers the last **N hours** (24h by default, configurable).
 
-You will now be in the manual edit mode of your Lovelace dashboard.
+The history window duration is configurable via the `history_hours` parameter:
 
-**Warning:** YAML is sensitive to formatting. Indentation must be strictly respected.
+| Parameter       | Type     | Default | Description                                       |
+| --------------- | -------- | ------- | ------------------------------------------------- |
+| `history_hours` | `number` | `24`    | Duration in hours of the displayed history window |
 
-Copy and paste the text below (click the copy button to grab everything safely) at the very beginning, one line, one column.
-
+Example:
 ```yaml
-# To be put on the top of your dashboard code
-streamline_templates:
-  managed_device_power:
-    default: null
-    card:
-      type: custom:expander-card
-      expanded: false
-      title-card-button-overlay: true
-      title-card:
-        type: custom:mushroom-template-card
-        primary: '{{ state_attr(''[[device]]'', ''device_name'') }}'
-        secondary: >-
-          [[secondary_infos]] ({{ state_attr('[[on_time_entity]]',
-          'on_time_hms') }} / {{ state_attr('[[on_time_entity]]',
-          'max_on_time_hms')}} )
-        icon: '[[icon]]'
-        badge_icon: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}mdi:power-sleep{% elif
-          is_state_attr('[[device]]','is_enabled', True) %}mdi:check{% else
-          %}mdi:cancel{% endif %}
-        badge_color: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}#003366{% elif is_state_attr('[[device]]', 'is_usable', True)
-          and is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
-          is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
-          is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
-          is_state_attr('[[device]]', 'is_usable', False) or
-          state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
-          %}blue{% endif %}
-        entity: '[[device]]'
-        icon_color: >-
-          {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
-          %}
-        tap_action:
-          action: toggle
-        hold_action:
-          action: more-info
-        double_tap_action:
-          action: none
-      cards:
-        - type: custom:mushroom-chips-card
-          chips:
-            - type: entity
-              entity: '[[enable_entity]]'
-              double_tap_action:
-                action: more-info
-              tap_action:
-                action: toggle
-              hold_action:
-                action: more-info
-              icon_color: green
-              content_info: name
-        - type: markdown
-          content: >-
-            **Prochaine dispo** : {{ ((as_timestamp(state_attr('[[device]]',
-            'next_date_available')) - as_timestamp(now())) / 60) | int }}
-            min<br> **Prochaine dispo puissance**: {{
-            ((as_timestamp(state_attr('[[device]]',
-            'next_date_available_power')) - as_timestamp(now())) / 60) | int }}
-            min<br> **Utilisable** : {{ state_attr('[[device]]', 'is_usable')
-            }}<br> **Est en attente**  : {{ state_attr('[[device]]',
-            'is_waiting') }}<br> **Est forcé en heures creuses**  : {{
-            state_attr('[[on_time_entity]]', 'should_be_forced_offpeak') }}<br>
-            **Heures creuses**  : {{ state_attr('[[on_time_entity]]',
-            'offpeak_time') }}<br> **Puissance requise** : {{
-            state_attr('[[device]]', 'requested_power') }} W<br> **Puissance
-            courante** : {{ state_attr('[[device]]', 'current_power') }} W
-          title: Infos
-        - type: history-graph
-          hours: 24
-          entities:
-            - entity: '[[device]]'
-            - entity: '[[enable_entity]]'
-            - entity: '[[power_entity]]'
-  managed_device:
-    default: null
-    card:
-      type: custom:expander-card
-      expanded: false
-      title-card-button-overlay: true
-      title-card:
-        type: custom:mushroom-template-card
-        primary: '{{ state_attr(''[[device]]'', ''device_name'') }}'
-        secondary: >-
-          [[secondary_infos]] (max. {{ state_attr('[[device]]', 'power_max') }}
-          W -  {{ state_attr('[[on_time_entity]]', 'on_time_hms')}} / {{
-          state_attr('[[on_time_entity]]', 'max_on_time_hms')}} )
-        icon: '[[icon]]'
-        badge_icon: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}mdi:power-sleep{% elif
-          is_state_attr('[[device]]','is_enabled', True) %}mdi:check{% else
-          %}mdi:cancel{% endif %}
-        badge_color: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}#003366{% elif is_state_attr('[[device]]', 'is_usable', True)
-          and is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
-          is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
-          is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
-          is_state_attr('[[device]]', 'is_usable', False) or
-          state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
-          %}blue{% endif %}
-        entity: '[[device]]'
-        icon_color: >-
-          {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
-          %}
-        tap_action:
-          action: toggle
-        hold_action:
-          action: more-info
-        double_tap_action:
-          action: none
-      cards:
-        - type: custom:mushroom-chips-card
-          chips:
-            - type: entity
-              entity: '[[enable_entity]]'
-              double_tap_action:
-                action: more-info
-              tap_action:
-                action: toggle
-              hold_action:
-                action: more-info
-              icon_color: green
-              content_info: name
-        - type: markdown
-          content: >-
-            **Prochaine dispo** : {{ ((as_timestamp(state_attr('[[device]]',
-            'next_date_available')) - as_timestamp(now())) / 60) | int }}
-            min<br> **Utilisable** : {{ state_attr('[[device]]', 'is_usable')
-            }}<br> **Est en attente**  : {{ state_attr('[[device]]',
-            'is_waiting') }}<br> **Est forcé en heures creuses**  : {{
-            state_attr('[[on_time_entity]]', 'should_be_forced_offpeak') }}<br>
-            **Heures creuses**  : {{ state_attr('[[on_time_entity]]',
-            'offpeak_time') }}<br> **Puissance requise** : {{
-            state_attr('[[device]]', 'requested_power') }} W<br> **Puissance
-            courante** : {{ state_attr('[[device]]', 'current_power') }} W
-        - type: history-graph
-          hours: 24
-          entities:
-            - entity: '[[device]]'
-            - entity: '[[enable_entity]]'
-            - entity: '[[power_entity]]'
+type: custom:solar-optimizer-card
+history_hours: 48
 ```
 
-You should now see a page that looks like this:
+## Available Actions
 
-![dashboard edit 4](images/dashboard-edit4.png)
+Each device block exposes two action buttons:
+1. **Enable/Disable**: enables or disables algorithm management for the device,
+2. **Manual Start/Stop**: starts or stops the device manually.
 
-Click "Save" and then "Finish." The templates are now installed; all that's left is to use them.
+A **priority selector** allows dynamically changing the device priority from the dashboard.
 
-## Add a Card for Each Device
+## How to Use the Official Card
 
-To use the templates installed in the previous step, follow these instructions:
-1. Edit a dashboard where you want to add the card.
-2. Click "Add a card" at the bottom right.
-3. Select the card named **Streamline Card** as shown below:
+Simply add a card of type `custom:solar-optimizer-card` into your Lovelace dashboard configuration:
 
-![dashboard edit 4](images/add-card-1.png)
+```yaml
+type: custom:solar-optimizer-card
+```
 
-4. Fill in the fields as follows:
-
-![dashboard edit 4](images/add-card-2.png)
-
-You should choose the `managed_device` template for a device without power modulation or `managed_device_power` otherwise.
-Then, enter the different attributes.
-
-A complete example for a **non-power** device:
-
-![dashboard edit 4](images/add-card-3.png)
-
-And for a **power-modulated** device:
-
-![dashboard edit 4](images/add-card-4.png)
-
-You will then get a component that allows you to interact with the device, which looks like this:
-
-![Lovelace devices](https://github.com/jmcollin78/solar_optimizer/blob/main/images/lovelace-eqts.png?raw=true)
-
-## Using the Card
-
-The card allows you to monitor the device’s usage status and interact with it. Open the card by pressing the "V," and you will see this:
-
-![use card 1](images/use-card-1.png)
-
-### Icon Color
-
-| Color  | Meaning    | Example                              |
-| ------ | ---------- | ------------------------------------ |
-| Gray   | Device off | ![use card 2](images/use-card-2.png) |
-| Yellow | Device on  | ![use card 3](images/use-card-3.png) |
-
-### Badge
-
-| Icon / Color | Meaning                                                | Example                                         |
-| ------------ | ------------------------------------------------------ | ----------------------------------------------- |
-| Green check  | Device off, waiting for power production               | ![use card 4](images/use-card-green-check.png)  |
-| Blue check   | Device off, unavailable (`check-usable` returns false) | ![use card 4](images/use-card-blue-check.png)   |
-| Orange check | Device off, waiting for delay between two activations  | ![use card 4](images/use-card-orange-check.png) |
-| Red cancel   | Device off, not allowed (`enable` is false)            | ![use card 4](images/use-card-red-cancel.png)   |
-| Blue moon    | Device on during off-peak hours                        | ![use card 4](images/use-card-blue-moon.png)    |
-
-### Actions on the Card
-
-- Click on the device card to force it **on or off**.
-- Click on the `Enable` button to allow or prevent the **Solar Optimizer algorithm** from using the device.
+The card is also fully registered in Home Assistant's card editor list under the name **Solar Optimizer Card**.
 
 # Contributions are welcome!
 

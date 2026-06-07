@@ -41,17 +41,17 @@
 - [Les actions](#les-actions)
   - [reset\_on\_time](#reset_on_time)
 - [Créer des modèles de capteur pour votre installation](#créer-des-modèles-de-capteur-pour-votre-installation)
-- [Une carte pour vos dashboards en complément](#une-carte-pour-vos-dashboards-en-complément)
-  - [Installez les plugins](#installez-les-plugins)
-  - [Installez les templates](#installez-les-templates)
-  - [Ajoutez une carte par équipements](#ajoutez-une-carte-par-équipements)
-  - [Utilisation de la carte](#utilisation-de-la-carte)
-    - [Couleur de l'icône](#couleur-de-licône)
-    - [Badge](#badge)
-    - [Action sur la carte](#action-sur-la-carte)
+- [Carte Lovelace officielle](#carte-lovelace-officielle)
+  - [Informations globales](#informations-globales)
+  - [Informations par équipement](#informations-par-équipement)
+  - [Barre d'historique d'activation](#barre-dhistorique-dactivation)
+  - [Actions disponibles](#actions-disponibles)
+  - [Utilisation de la carte officielle](#utilisation-de-la-carte-officielle)
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.7.0** :
+>   - ajout d'une carte Lovelace officielle native (`custom:solar-optimizer-card`) intégrée à l'intégration. Cf. [Carte Lovelace officielle](#carte-lovelace-officielle)
 > * **release 3.5.0** :
 >   - ajout d'une gestion de la priorité. Cf. [la gestion de la priorité](#la-gestion-de-la-priorité)
 > * **release 3.2.0** :
@@ -59,14 +59,6 @@
 > * **release 3.0.0** :
 >   - ajout d'une IHM de configuration des équipmements.
 >   - ⚠️ l'installation de la release 3.0.0 nécessite une procédure particulière. Voir la procédure ci-dessous [ici](#procédure-de-migration-dune-version-2x-vers-la-3x).
-> * **release 2.1.0** :
->    - ajout d'une durée minimale d'allumage en heure creuses. Permet de gérer les équipements qui doivent avoir un minimum d'allumage par jour comme les chauffes-eau ou les chargeurs (voitures, batteries, ……). Si l'ensoleillement n'a pas durée d'atteindre la durée requise, alors l'équipement s'allumera pendant les heures creuses. Vous pouvez en plus définir à quelle heure les compteurs d'allumage sont remis à zéro ce qui permet de profiter des toutes les heures creuses
-> * **release 2.0.0** :
->    - ajout d'un appareil (device) par équipement piloté pour regrouper les entités,
->    - ajout d'un compteur de temps d'allumage pour chaque appareil. Lorsque le switch commandé passe à 'Off', le compteur de temps est incrémenté du temps passé à 'On', en secondes. Ce compteur est remis à zéro tous les jours à minuit.
->    - ajout d'un maximum de temps à 'On' dans la configuration (en minutes). Lorsque cette durée est dépassée, l'équipement n'est plus utilisable par l'algorithme (is_usable = off) jusqu'au prochain reset. Cela offre la possibilité, de ne pas dépasser un temps d'allumage maximal par jour, même lorsque la puissance solaire est disponible.
->    - pour profiter de cette nouvelle info, n'oubliez pas de mettre à jour le decluterring template (en fin de ce fichier)
->    - cette release ouvre la porte a des évolutions plus conséquentes basé sur le temps d'allumage (avoir un minimum journalier par exemple) et prépare le terrain pour l'arrivée de la configuration via l'interface graphique.
 
 # Qu'est-ce que Solar Optimizer ?
 Cette intégration va vous permettre de maximiser l'utilisation de votre production solaire. Vous lui déléguez le contrôle de vos équipements dontl'activation peut être différée dans le temps (chauffe-eau, pompe de piscine, charge de véhicle électrique, lave-vaisselle, lave-linge, etc) et elle s'occupe de les lancer lorsque la puissance produite est suffisante.
@@ -186,22 +178,22 @@ Un équipement simple est un commande uniquement par un allumage / extinction (u
 
 Vous devez spécifier les attributs suivant :
 
-| attribut                  | valable pour                            | signification                                                                                                                                                                                                                                | exemple                                               | commentaire                                                                                                                                                                                                                                    |
-| ------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                    | tous                                    | Le nom de l'équipement.                                                                                                                                                                                                                      | VMC sous-sol                                          | Le nom est utilisé pour nommé les entités de cet équipement.                                                                                                                                                                                   |
-| `entity_id`               | tous                                    | l'entity id de l'équipement à commander                                                                                                                                                                                                      | switch.vmc_sous_sol                                   | Peut être un `switch`, un `input_boolean`, un `humidifier`, un `climate`, un `fan`, un `select` ou un `light`. Si l'entité n'est pas un `switch`, les champs `activation_service` et `deactivation_service` doivent être adaptés               |
-| `device_power` or `power_max`              | tous                                    | la puissance maximale consommée par l'équipement lorsqu'il est allumé en watts                                                                                                                                                               | 250                                                   | -                                                                                                                                                                                                                                              |
-| `check_usable_template`   | tous                                    | Un template qui vaut True si l'équipement pourra être utilisé par Solar Optimizer. Un template commence par {{ et doit se terminer par }}.                                                                                                   | {{ is_state('cover.porte_garage_garage', 'closed') }} | Dans l'exemple, Sonar Optimizer n'essayera pas de commander la "VMC sous-sol" si la porte du garage est ouverte. Laissez {{ True }} si vous ne vous servez pas de ce champ                                                                     |
-| `active_template`         | tous                                    | Un template qui vaut True si l'équipement si l'équipement est actif. Un template commence par {{ et doit se terminer par }}. Ce template n'est pas nécessaire si l'état allumé est 'on' (switch, light, humidifier)                          | {{ is_state('climate.clim_salon', 'cool') }}          | Dans l'exemple, l'équipement de type `climate` sera vu par Solar Optimizer comme actif si son état est `cool`. Laissez vide pour les équipements pour lesquels l'état par défaut 'on' / 'off' est valable (les switchs et input_boolean)       |
-| `duration_min`            | tous                                    | La durée en minute minimale d'activation                                                                                                                                                                                                     | 60                                                    | La VMC sous-sol s'allumera toujours pour une heure au minimum                                                                                                                                                                                  |
-| `duration_stop_min`       | tous                                    | La durée en minute minimale de desactivation. Vaut `duration_min` si elle n'est pas précisée                                                                                                                                                 | 15                                                    | La VMC sous-sol s'éteindra toujours pour 15 min au minimum                                                                                                                                                                                     |
-| `action_mode`             | tous                                    | le mode d'action pour allumer ou éteindre l'équipement. Peut être "action_call" ou "event" (*)                                                                                                                                               | action_call                                           | "action_call" indique que l'équipement s'allume et s'éteint via une action. Cf. ci-dessous. "event" indique qu'un évènement est envoyé lorsque l'état doit changer. Cf. (*)                                                                    |
-| `activation_service`      | uniquement si action_mode="action_call" | le service a appeler pour activer l'équipement sous la forme "domain/service[/parameter:value]". Ce template doit être adapté pour tous les équipements qui ne sont pas des switchs                                                          | switch/turn_on                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id". La syntaxe acceptée est la suivante : domain/action[/parameter:value]                                                                                           |
-| `deactivation_service`    | uniquement si action_mode="action_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service[/parameter:value]". Ce template doit être adapté pour tous les devices qui ne sont pas des switchs                                                           | switch/turn_off                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id". La syntaxe acceptée est la suivante : domain/action[/parameter:value]                                                                                      |
-| `battery_soc_threshold`   | tous                                    | le pourcentage minimal de charge de la batterie pour que l'équipement soit utilisable                                                                                                                                                        | 30                                                    | Dans cet exemple, l'équipement ne sera utilisable par l'algorithme si la batterie solaire n'est pas chargée à au moins 30%. Nécessite le renseignement de l'entité d'état de charge de la batterie dans les paramètres communs. Cf. ci-dessus. |
-| `max_on_time_per_day_min` | tous                                    | le nombre de minutes maximal en position allumé pour cet équipement. Au delà, l'équipement n'est plus utilisable par l'algorithme                                                                                                            | 10                                                    | L'équipement sera allumé au maximum 10 minutes par jour                                                                                                                                                                                        |
-| `min_on_time_per_day_min` | tous                                    | le nombre de minutes minimale en position allumé pour cet équipement. Si lors du démarrage des heures creuses, ce minimum n'est pas atteint alors l'équipement sera allumé à concurrence du début de journée ou du `max_on_time_per_day_min` | 5                                                     | L'équipement est sera allumé au minimum 5 minutes par jour ; soit pendant la production solaire, soit pendant les heures creuses                                                                                                               |
-| `offpeak_time`            | tous                                    | L'heure de début des heures creuses au format hh:mm                                                                                                                                                                                          | 22:00                                                 | L'équipement pourra être allumé à 22h00 si la production de la journée n'a pas été suffisante                                                                                                                                                  |
+| attribut                      | valable pour                            | signification                                                                                                                                                                                                                                | exemple                                               | commentaire                                                                                                                                                                                                                                    |
+| ----------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                        | tous                                    | Le nom de l'équipement.                                                                                                                                                                                                                      | VMC sous-sol                                          | Le nom est utilisé pour nommé les entités de cet équipement.                                                                                                                                                                                   |
+| `entity_id`                   | tous                                    | l'entity id de l'équipement à commander                                                                                                                                                                                                      | switch.vmc_sous_sol                                   | Peut être un `switch`, un `input_boolean`, un `humidifier`, un `climate`, un `fan`, un `select` ou un `light`. Si l'entité n'est pas un `switch`, les champs `activation_service` et `deactivation_service` doivent être adaptés               |
+| `device_power` or `power_max` | tous                                    | la puissance maximale consommée par l'équipement lorsqu'il est allumé en watts                                                                                                                                                               | 250                                                   | -                                                                                                                                                                                                                                              |
+| `check_usable_template`       | tous                                    | Un template qui vaut True si l'équipement pourra être utilisé par Solar Optimizer. Un template commence par {{ et doit se terminer par }}.                                                                                                   | {{ is_state('cover.porte_garage_garage', 'closed') }} | Dans l'exemple, Sonar Optimizer n'essayera pas de commander la "VMC sous-sol" si la porte du garage est ouverte. Laissez {{ True }} si vous ne vous servez pas de ce champ                                                                     |
+| `active_template`             | tous                                    | Un template qui vaut True si l'équipement si l'équipement est actif. Un template commence par {{ et doit se terminer par }}. Ce template n'est pas nécessaire si l'état allumé est 'on' (switch, light, humidifier)                          | {{ is_state('climate.clim_salon', 'cool') }}          | Dans l'exemple, l'équipement de type `climate` sera vu par Solar Optimizer comme actif si son état est `cool`. Laissez vide pour les équipements pour lesquels l'état par défaut 'on' / 'off' est valable (les switchs et input_boolean)       |
+| `duration_min`                | tous                                    | La durée en minute minimale d'activation                                                                                                                                                                                                     | 60                                                    | La VMC sous-sol s'allumera toujours pour une heure au minimum                                                                                                                                                                                  |
+| `duration_stop_min`           | tous                                    | La durée en minute minimale de desactivation. Vaut `duration_min` si elle n'est pas précisée                                                                                                                                                 | 15                                                    | La VMC sous-sol s'éteindra toujours pour 15 min au minimum                                                                                                                                                                                     |
+| `action_mode`                 | tous                                    | le mode d'action pour allumer ou éteindre l'équipement. Peut être "action_call" ou "event" (*)                                                                                                                                               | action_call                                           | "action_call" indique que l'équipement s'allume et s'éteint via une action. Cf. ci-dessous. "event" indique qu'un évènement est envoyé lorsque l'état doit changer. Cf. (*)                                                                    |
+| `activation_service`          | uniquement si action_mode="action_call" | le service a appeler pour activer l'équipement sous la forme "domain/service[/parameter:value]". Ce template doit être adapté pour tous les équipements qui ne sont pas des switchs                                                          | switch/turn_on                                        | l'activation déclenchera le service "switch/turn_on" sur l'entité "entity_id". La syntaxe acceptée est la suivante : domain/action[/parameter:value]                                                                                           |
+| `deactivation_service`        | uniquement si action_mode="action_call" | le service a appeler pour désactiver l'équipement sous la forme "domain/service[/parameter:value]". Ce template doit être adapté pour tous les devices qui ne sont pas des switchs                                                           | switch/turn_off                                       | la désactivation déclenchera le service "switch/turn_off" sur l'entité "entity_id". La syntaxe acceptée est la suivante : domain/action[/parameter:value]                                                                                      |
+| `battery_soc_threshold`       | tous                                    | le pourcentage minimal de charge de la batterie pour que l'équipement soit utilisable                                                                                                                                                        | 30                                                    | Dans cet exemple, l'équipement ne sera utilisable par l'algorithme si la batterie solaire n'est pas chargée à au moins 30%. Nécessite le renseignement de l'entité d'état de charge de la batterie dans les paramètres communs. Cf. ci-dessus. |
+| `max_on_time_per_day_min`     | tous                                    | le nombre de minutes maximal en position allumé pour cet équipement. Au delà, l'équipement n'est plus utilisable par l'algorithme                                                                                                            | 10                                                    | L'équipement sera allumé au maximum 10 minutes par jour                                                                                                                                                                                        |
+| `min_on_time_per_day_min`     | tous                                    | le nombre de minutes minimale en position allumé pour cet équipement. Si lors du démarrage des heures creuses, ce minimum n'est pas atteint alors l'équipement sera allumé à concurrence du début de journée ou du `max_on_time_per_day_min` | 5                                                     | L'équipement est sera allumé au minimum 5 minutes par jour ; soit pendant la production solaire, soit pendant les heures creuses                                                                                                               |
+| `offpeak_time`                | tous                                    | L'heure de début des heures creuses au format hh:mm                                                                                                                                                                                          | 22:00                                                 | L'équipement pourra être allumé à 22h00 si la production de la journée n'a pas été suffisante                                                                                                                                                  |
 
 ## Configurer un équipement avec une puissance variable
 Ce type d'équipement permet moduler la puissance consommée par l'équipement en fonction de la production solaire et de ce que décide l'algorithme. Vous avez ainsi une sorte de routeur solaire logiciel qui permet, par exemple, de moduler la charge d'une voiture électrique avec uniquement le surplus de production.
@@ -595,247 +587,75 @@ Fichier `templates.yaml` :
 
 A adapter à votre cas bien sûr.
 
-# Une carte pour vos dashboards en complément
-En complément, les codes Lovelace suivant permet de controller chaque équipement déclaré.
-Les étapes à suivre sont :
-1. Avec HACS, installez les plugins nommés `streamline-card`, `expander-card` et `mushroom-template` si vous ne les avez pas déjà,
-2. Installez les templates pour `streamline` en tête de votre code Lovelace,
-3. Installez une carte par équipement géré par Solar Optimizer qui référence le template `streammline``
+# Carte Lovelace officielle
+L'intégration distribue une carte officielle native pour piloter et visualiser de façon centralisée tous vos appareils gérés par le planificateur `Solar Optimizer`. La carte se configure automatiquement en scannant toutes les entités `solar_optimizer_*` : aucun paramètre YAML supplémentaire n'est requis.
 
-## Installez les plugins
-Lisez la documentation du plugin [ici](https://github.com/brunosabot/streamline-card) pour vous familiariser avec cet excellent plugin.
-Suivez la procédure d'installation qui consiste à installer un nouveau dépôt Github de type `Dashboard` et à installer le plugin.
+Cette carte s'adapte automatiquement à votre thème Home Assistant.
 
-Vous devez avoir dans la partie "Téléchargé" vos plugins de visibles :
+![Solar Optiizer Cad](images/solar-optimizer-card.png)
 
-![HACS Plugin](images/install-hacs-streamline.png)
+## Informations globales
 
-Faites de même avec les plugins `expander-card` et `mushroom-template`.
+Un bloc d'en-tête **Solar Optimizer** affiche en temps réel :
+- La production solaire lissée,
+- La puissance nette consommée,
+- Le SOC de la batterie (si configurée),
+- Le total de puissance alloué par l'algorithme,
+- L'objectif courant de l'algorithme.
 
-## Installez les templates
-Pour installer les templates vous devez aller sur votre dashboard, vous mettre en édition et cliquer sur les trois points dans le menu en haut à droite :
+## Informations par équipement
 
-![dahsboard edit](images/dashboard-edit.png)
+Chaque équipement géré est affiché dans un bloc **pliable/dépliable**. Un chevron global permet de tout plier ou déplier d'un seul clic.
 
-puis
+Lorsque le bloc est **plié**, seules les informations essentielles sont visibles : nom, statut, puissance courante et les boutons d'action.
 
-![dashboard edit 2](images/dashboard-edit2.png)
+Lorsque le bloc est **déplié**, les détails suivants apparaissent :
+- Prochaine disponibilité (date/heure ou « Disponible immédiatement »),
+- Prochaine disponibilité pour un changement de puissance,
+- Indicateur d'utilisabilité par l'algorithme,
+- Indicateur d'attente,
+- Indicateur de forçage en heures creuses,
+- Heure des heures creuses,
+- Puissance requise et puissance courante,
+- Temps de marche / temps maximum journalier,
+- Seuil de SOC batterie (si configuré).
 
-puis
+## Barre d'historique d'activation
 
-![dashboard edit 3](images/dashboard-edit3.png)
+Chaque équipement dispose d'une **barre horizontale d'historique d'activation**, toujours visible même lorsque le bloc est plié. Elle imite les barres natives des `binary_sensor` de Home Assistant :
+- Les segments colorés correspondent aux périodes d'activation (état `on`).
+- Les segments gris correspondent aux périodes d'inactivité (état `off`).
+- La barre couvre les **N dernières heures** (24h par défaut, configurable).
 
-Vous arrivez alors en édition manuelle de votre dashboard Lovelace.
+La durée de la fenêtre d'historique est configurable via le paramètre `history_hours` :
 
-Attention : le yaml est susceptible. L'indentation doit être scrupuleusement respectée.
+| Paramètre       | Type     | Valeur par défaut | Description                                         |
+| --------------- | -------- | ----------------- | --------------------------------------------------- |
+| `history_hours` | `number` | `24`              | Durée en heures de la fenêtre d'historique affichée |
 
-Copier/coller le texte ci-dessous (cliquez sur le bouton copier pour tout prendre sans risque) tout au début 1 ligne, 1 colonne.
-
+Exemple :
 ```yaml
-# A mettre en début de page sur le front
-streamline_templates:
-  managed_device_power:
-    default: null
-    card:
-      type: custom:expander-card
-      expanded: false
-      title-card-button-overlay: true
-      title-card:
-        type: custom:mushroom-template-card
-        primary: '{{ state_attr(''[[device]]'', ''device_name'') }}'
-        secondary: >-
-          [[secondary_infos]] ({{ state_attr('[[on_time_entity]]',
-          'on_time_hms') }} / {{ state_attr('[[on_time_entity]]',
-          'max_on_time_hms')}} )
-        icon: '[[icon]]'
-        badge_icon: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}mdi:power-sleep{% elif
-          is_state_attr('[[device]]','is_enabled', True) %}mdi:check{% else
-          %}mdi:cancel{% endif %}
-        badge_color: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}#003366{% elif is_state_attr('[[device]]', 'is_usable', True)
-          and is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
-          is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
-          is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
-          is_state_attr('[[device]]', 'is_usable', False) or
-          state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
-          %}blue{% endif %}
-        entity: '[[device]]'
-        icon_color: >-
-          {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
-          %}
-        tap_action:
-          action: toggle
-        hold_action:
-          action: more-info
-        double_tap_action:
-          action: none
-      cards:
-        - type: custom:mushroom-chips-card
-          chips:
-            - type: entity
-              entity: '[[enable_entity]]'
-              double_tap_action:
-                action: more-info
-              tap_action:
-                action: toggle
-              hold_action:
-                action: more-info
-              icon_color: green
-              content_info: name
-        - type: markdown
-          content: >-
-            **Prochaine dispo** : {{ ((as_timestamp(state_attr('[[device]]',
-            'next_date_available')) - as_timestamp(now())) / 60) | int }}
-            min<br> **Prochaine dispo puissance**: {{
-            ((as_timestamp(state_attr('[[device]]',
-            'next_date_available_power')) - as_timestamp(now())) / 60) | int }}
-            min<br> **Utilisable** : {{ state_attr('[[device]]', 'is_usable')
-            }}<br> **Est en attente**  : {{ state_attr('[[device]]',
-            'is_waiting') }}<br> **Est forcé en heures creuses**  : {{
-            state_attr('[[on_time_entity]]', 'should_be_forced_offpeak') }}<br>
-            **Heures creuses**  : {{ state_attr('[[on_time_entity]]',
-            'offpeak_time') }}<br> **Puissance requise** : {{
-            state_attr('[[device]]', 'requested_power') }} W<br> **Puissance
-            courante** : {{ state_attr('[[device]]', 'current_power') }} W
-          title: Infos
-        - type: history-graph
-          hours: 24
-          entities:
-            - entity: '[[device]]'
-            - entity: '[[enable_entity]]'
-            - entity: '[[power_entity]]'
-  managed_device:
-    default: null
-    card:
-      type: custom:expander-card
-      expanded: false
-      title-card-button-overlay: true
-      title-card:
-        type: custom:mushroom-template-card
-        primary: '{{ state_attr(''[[device]]'', ''device_name'') }}'
-        secondary: >-
-          [[secondary_infos]] (max. {{ state_attr('[[device]]', 'power_max') }}
-          W -  {{ state_attr('[[on_time_entity]]', 'on_time_hms')}} / {{
-          state_attr('[[on_time_entity]]', 'max_on_time_hms')}} )
-        icon: '[[icon]]'
-        badge_icon: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}mdi:power-sleep{% elif
-          is_state_attr('[[device]]','is_enabled', True) %}mdi:check{% else
-          %}mdi:cancel{% endif %}
-        badge_color: >-
-          {% if is_state_attr('[[on_time_entity]]','should_be_forced_offpeak',
-          True) %}#003366{% elif is_state_attr('[[device]]', 'is_usable', True)
-          and is_state_attr('[[device]]', 'is_enabled', True) %}green {% elif
-          is_state_attr('[[device]]', 'is_enabled', False) %}red {% elif
-          is_state_attr('[[device]]','is_waiting', True) %}orange {% elif
-          is_state_attr('[[device]]', 'is_usable', False) or
-          state_attr('[[device]]', 'is_usable') is none %}#A0B0FF{% else
-          %}blue{% endif %}
-        entity: '[[device]]'
-        icon_color: >-
-          {% if is_state('[[device]]', 'on')%}orange{% else %}lightgray{% endif
-          %}
-        tap_action:
-          action: toggle
-        hold_action:
-          action: more-info
-        double_tap_action:
-          action: none
-      cards:
-        - type: custom:mushroom-chips-card
-          chips:
-            - type: entity
-              entity: '[[enable_entity]]'
-              double_tap_action:
-                action: more-info
-              tap_action:
-                action: toggle
-              hold_action:
-                action: more-info
-              icon_color: green
-              content_info: name
-        - type: markdown
-          content: >-
-            **Prochaine dispo** : {{ ((as_timestamp(state_attr('[[device]]',
-            'next_date_available')) - as_timestamp(now())) / 60) | int }}
-            min<br> **Utilisable** : {{ state_attr('[[device]]', 'is_usable')
-            }}<br> **Est en attente**  : {{ state_attr('[[device]]',
-            'is_waiting') }}<br> **Est forcé en heures creuses**  : {{
-            state_attr('[[on_time_entity]]', 'should_be_forced_offpeak') }}<br>
-            **Heures creuses**  : {{ state_attr('[[on_time_entity]]',
-            'offpeak_time') }}<br> **Puissance requise** : {{
-            state_attr('[[device]]', 'requested_power') }} W<br> **Puissance
-            courante** : {{ state_attr('[[device]]', 'current_power') }} W
-        - type: history-graph
-          hours: 24
-          entities:
-            - entity: '[[device]]'
-            - entity: '[[enable_entity]]'
-            - entity: '[[power_entity]]'
+type: custom:solar-optimizer-card
+history_hours: 48
 ```
 
-Vous devez avoir une page qui ressemble à ça :
+## Actions disponibles
 
-![dashboard edit 4](images/dashboard-edit4.png)
+Chaque bloc équipement expose deux boutons d'action :
+1. **Enable/Disable** : active ou désactive la gestion de l'équipement par l'algorithme,
+2. **Start/Stop manuel** : démarre ou arrête l'équipement manuellement.
 
-Cliquez alors sur Enregistrer puis Terminer. Les templates sont maintenant installés, il ne reste plus qu'à les utiliser.
+Un sélecteur de **priorité** permet de modifier dynamiquement la priorité de l'équipement depuis le tableau de bord.
 
-## Ajoutez une carte par équipements
+## Utilisation de la carte officielle
 
-Pour utiliser les templates installés à l'étape précédente, vous devez :
-1. Editer un dashboard ou vous voulez ajouter la carte,
-2. cliquer sur 'Ajouter une carte' en bas à droite,
-3. sélectionner la carte nommée Streamline Card comme ceci :
+Il suffit d'ajouter une carte de type `custom:solar-optimizer-card` à votre tableau de bord Lovelace :
 
-![dashboard edit 4](images/add-card-1.png)
+```yaml
+type: custom:solar-optimizer-card
+```
 
-4. remplir les champs de la façon suivante :
-
-![dashboard edit 4](images/add-card-2.png)
-
-Vous devez choisir le template `managed_device` pour un équipement non muni d'une modulation de puissance ou `managed_device_power` sinon.
-Saisissez ensuite les différents attributs.
-Un exemple complet pour un équipement 'non power' :
-
-![dashboard edit 4](images/add-card-3.png)
-
-et pour un équipement avec modulation de puissance :
-
-![dashboard edit 4](images/add-card-4.png)
-
-Vous obtiendrez alors un composant permettant d'interagir avec l'équipement qui ressemble à ça :
-
-![Lovelace equipements](https://github.com/jmcollin78/solar_optimizer/blob/main/images/lovelace-eqts.png?raw=true)
-
-## Utilisation de la carte
-La carte ainsi obtenue permet de voir l'état d'utilisation de l'équipement et d'interagir avec lui. Ouvrez la carte en appuyant sur le 'V' et vous obtenez ça :
-
-![use card 1](images/use-card-1.png)
-
-### Couleur de l'icône
-
-| Couleur | Signification     | Exemple                              |
-| ------- | ----------------- | ------------------------------------ |
-| Gris    | Equipement éteint | ![use card 2](images/use-card-2.png) |
-| Jaune   | Equipement allumé | ![use card 3](images/use-card-3.png) |
-
-### Badge
-
-| Icone / Couleur  | Signification                                                      | Exemple                                         |
-| ---------------- | ------------------------------------------------------------------ | ----------------------------------------------- |
-| Coche verte      | Equipement éteint en attente de production                         | ![use card 4](images/use-card-green-check.png)  |
-| Coche bleue      | Equipement éteint non disponible (`check-usable` renvoie faux)     | ![use card 4](images/use-card-blue-check.png)   |
-| Coche orange     | Equipement éteint en attente du délai enttre 2                     | ![use card 4](images/use-card-orange-check.png) |
-| Annulation rouge | Equipement éteint non autorisé par l'utilisation `enable` est faux | ![use card 4](images/use-card-red-cancel.png)   |
-| Lune Bleu nuit   | Equipement allumé en heures creuses                                | ![use card 4](images/use-card-blue-moon.png)    |
-
-### Action sur la carte
-Cliquez sur la carte de l'équipement et ça forcera son allumage ou son extinction.
-Cliquez sur le bouton `Enable` et ça autorisera ou non l'utilisation de l'équipement par l'algorithme de Solar Optimizer.
+La carte est également directement sélectionnable sous le nom **Solar Optimizer Card** dans l'éditeur visuel de cartes de Home Assistant.
 
 # Les contributions sont les bienvenues !
 
