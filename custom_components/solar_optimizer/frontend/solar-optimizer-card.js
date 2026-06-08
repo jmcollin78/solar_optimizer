@@ -389,7 +389,9 @@ class SolarOptimizerCard extends HTMLElement {
       this.content = this.querySelector("#content");
     }
 
-    this.updateCard();
+    // Debounce pour éviter les rebuilds DOM pendant un clic (race condition avec HA)
+    if (this._updateTimer) clearTimeout(this._updateTimer);
+    this._updateTimer = setTimeout(() => this.updateCard(), 50);
   }
 
   updateCard() {
@@ -618,7 +620,7 @@ class SolarOptimizerCard extends HTMLElement {
             <span><strong style="color:var(--primary-text-color);">${currentPower} W</strong> / ${powerMax} W</span>
             ${powerMax > 0 ? `
               <div class="so-power-bar-container" style="flex:1; margin-top:0;">
-                <div class="so-power-bar" style="width: ${powerPercent}%"></div>
+                ${powerPercent > 0 ? `<div class="so-power-bar" style="width: ${powerPercent}%"></div>` : ''}
               </div>
             ` : ''}
           </div>
@@ -744,9 +746,26 @@ class SolarOptimizerCard extends HTMLElement {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const deviceId = btn.getAttribute("data-collapse-id");
-        this._collapsedDevices[deviceId] = !this._collapsedDevices[deviceId];
+        // FIX: évaluer l'état courant avant basculement (undefined !== false = true = collapsed)
+        const currentlyCollapsed = this._collapsedDevices[deviceId] !== false;
+        this._collapsedDevices[deviceId] = !currentlyCollapsed;
         try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch (e) { }
-        this.updateCard();
+        // Mise à jour en place du DOM pour éviter la race condition avec set hass()
+        const card = this.content.querySelector(`.so-device-card[data-device-id="${deviceId}"]`);
+        if (card) {
+          const details = card.querySelector('.so-device-details');
+          const willBeCollapsed = !currentlyCollapsed;
+          if (details) details.classList.toggle('hidden', willBeCollapsed);
+          btn.classList.toggle('collapsed', willBeCollapsed);
+          btn.setAttribute('title', willBeCollapsed ? t('expand') : t('collapse'));
+          // Mettre à jour le chevron global
+          const stillAllCollapsed = devicesSwitches.length > 0 && devicesSwitches.every(k => {
+            const id = k.replace("switch.solar_optimizer_", "");
+            return this._collapsedDevices[id] !== false;
+          });
+          const globalChevron = this.content.querySelector(".so-collapse-all");
+          if (globalChevron) globalChevron.style.transform = `rotate(${stillAllCollapsed ? '-90deg' : '0deg'})`;
+        }
       });
     });
 
@@ -755,12 +774,21 @@ class SolarOptimizerCard extends HTMLElement {
     if (globalBtn) {
       globalBtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        const targetCollapsed = !allCollapsed;
         devicesSwitches.forEach(k => {
           const id = k.replace("switch.solar_optimizer_", "");
-          this._collapsedDevices[id] = !allCollapsed;
+          this._collapsedDevices[id] = targetCollapsed;
         });
         try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch (e) { }
-        this.updateCard();
+        // Mise à jour en place du DOM
+        this.content.querySelectorAll('.so-device-card[data-device-id]').forEach(card => {
+          const deviceId = card.getAttribute('data-device-id');
+          const details = card.querySelector('.so-device-details');
+          const chevron = card.querySelector('.so-collapse-btn[data-collapse-id]');
+          if (details) details.classList.toggle('hidden', targetCollapsed);
+          if (chevron) chevron.classList.toggle('collapsed', targetCollapsed);
+        });
+        globalBtn.style.transform = `rotate(${targetCollapsed ? '-90deg' : '0deg'})`;
       });
     }
   }
@@ -894,7 +922,6 @@ class SolarOptimizerCard extends HTMLElement {
     const linePoints = sorted.map(s =>
       toPoint(new Date(s.last_changed).getTime(), s.attributes.current_power)
     );
-    // Étend jusqu'à endTime avec la dernière valeur connue
     const lastPower = sorted[sorted.length - 1].attributes.current_power;
     linePoints.push(toPoint(endTime.getTime(), lastPower));
 
@@ -994,7 +1021,7 @@ class SolarOptimizerCard extends HTMLElement {
   }
 }
 
-// Définir l'éditeur visuel de la carte pour Home Assistant
+
 class SolarOptimizerCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
