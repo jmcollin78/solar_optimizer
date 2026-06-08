@@ -466,7 +466,9 @@ class SolarOptimizerCard extends HTMLElement {
 
       const powerMin = attrs.power_min || 0;
       const powerMax = attrs.power_max || 0;
-      const currentPower = attrs.current_power || 0;
+      // Si l'équipement est éteint, on force la puissance affichée à 0
+      // pour éviter qu'une valeur résiduelle dans les attributs ne remplisse la barre
+      const currentPower = isActive ? (attrs.current_power || 0) : 0;
       const requestedPower = attrs.requested_power || 0;
 
       // Priorité
@@ -477,9 +479,10 @@ class SolarOptimizerCard extends HTMLElement {
         ? priorityStateObj.attributes.options
         : [];
 
-      // Calcul du pourcentage de la barre de puissance
+      // Calcul du pourcentage de la barre de puissance (clampé entre 0 et 100)
       const totalRange = powerMax - powerMin;
-      const powerPercent = totalRange > 0 ? Math.round(((currentPower - powerMin) / totalRange) * 100) : (currentPower > 0 ? 100 : 0);
+      const rawPercent = totalRange > 0 ? ((currentPower - powerMin) / totalRange) * 100 : (currentPower > 0 ? 100 : 0);
+      const powerPercent = Math.min(100, Math.max(0, Math.round(rawPercent)));
 
       let statusBadge = "";
       if (!isEnabled && isActive) {
@@ -742,7 +745,7 @@ class SolarOptimizerCard extends HTMLElement {
         e.stopPropagation();
         const deviceId = btn.getAttribute("data-collapse-id");
         this._collapsedDevices[deviceId] = !this._collapsedDevices[deviceId];
-        try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch(e) {}
+        try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch (e) { }
         this.updateCard();
       });
     });
@@ -756,7 +759,7 @@ class SolarOptimizerCard extends HTMLElement {
           const id = k.replace("switch.solar_optimizer_", "");
           this._collapsedDevices[id] = !allCollapsed;
         });
-        try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch(e) {}
+        try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch (e) { }
         this.updateCard();
       });
     }
