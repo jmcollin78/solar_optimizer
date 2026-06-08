@@ -48,6 +48,8 @@
 - [Official Lovelace Card](#official-lovelace-card)
   - [Global Information](#global-information)
   - [Per-Device Information](#per-device-information)
+  - [Device Status](#device-status)
+  - [Secondary Info](#secondary-info)
   - [Activation History Bar](#activation-history-bar)
   - [Available Actions](#available-actions)
   - [How to Use the Official Card](#how-to-use-the-official-card)
@@ -55,6 +57,10 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.8.0**:
+>   - **Device status clarification**: new `MANUAL` status (amber) when a device is physically active but SO management is disabled. The left border now always reflects the physical state (green = on, grey = off), independently of the SO control state. See [Device Status](#device-status)
+>   - **Secondary info**: new `secondary_info` option to display custom per-device information using templates. See [Secondary Info](#secondary-info)
+>   - **Collapsed by default**: all device blocks are collapsed on first load. The open/close state of each block is persisted in the browser `localStorage`.
 > * **release 3.7.0**:
 >   - added an official native Lovelace card (`custom:solar-optimizer-card`) bundled with the integration. See [Official Lovelace Card](#official-lovelace-card)
 > * **release 3.5.0**:
@@ -646,6 +652,39 @@ When **expanded**, the following details appear:
 - Daily on-time / maximum on-time,
 - Battery SOC threshold (if configured).
 
+## Device Status
+
+Each device block shows a status badge and a colored left border. The two signals are independent:
+
+| Left border | Meaning                                     |
+| ----------- | ------------------------------------------- |
+| 🟢 Green     | Device is **physically ON**                 |
+| 🟠 Orange    | Device is **waiting** for next availability |
+| ⬜ Grey      | Device is **physically OFF**                |
+
+| Badge        | Color  | Meaning                                                                      |
+| ------------ | ------ | ---------------------------------------------------------------------------- |
+| **ACTIVE**   | Green  | Managed by SO and physically on                                              |
+| **MANUAL**   | Amber  | Physically on but **SO management disabled** — user has taken manual control |
+| **WAITING**  | Orange | Managed by SO, waiting for next available slot                               |
+| **INACTIVE** | Grey   | Managed by SO and physically off                                             |
+| **DISABLED** | Grey   | SO management disabled and device is off                                     |
+
+The `MANUAL` status is the key signal: it means the device is consuming power but Solar Optimizer is not in control. The green border confirms the physical state regardless of the SO control state.
+
+## Secondary Info
+
+You can display custom per-device information (e.g. washing machine program, EV charger status) using the `secondary_info` option. The value supports simple templates with `states()` and `state_attr()`.
+
+```yaml
+type: custom:solar-optimizer-card
+secondary_info:
+  washing_machine: "Washing machine status: {{ states('sensor.washing_machine_program') }}"
+  ev_charger: "{{ state_attr('sensor.ev_charger', 'status') }}"
+```
+
+The key is the device ID (the part after `switch.solar_optimizer_`). The rendered value appears above the Usable / Waiting / Off-peak indicators when the block is expanded.
+
 ## Activation History Bar
 
 Each device has a **horizontal activation history bar**, always visible even when the block is collapsed. It mimics the native Home Assistant `binary_sensor` history bars:
@@ -680,6 +719,8 @@ Simply add a card of type `custom:solar-optimizer-card` into your Lovelace dashb
 ```yaml
 type: custom:solar-optimizer-card
 ```
+
+All blocks are **collapsed by default** on first load. The open/close state of each block is automatically saved in the browser's `localStorage` and restored on the next visit.
 
 The card is also fully registered in Home Assistant's card editor list under the name **Solar Optimizer Card**.
 
