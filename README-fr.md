@@ -40,6 +40,8 @@
 - [Les évènements](#les-évènements)
 - [Les actions](#les-actions)
   - [reset\_on\_time](#reset_on_time)
+  - [start\_device](#start_device)
+  - [stop\_device](#stop_device)
 - [Créer des modèles de capteur pour votre installation](#créer-des-modèles-de-capteur-pour-votre-installation)
 - [Carte Lovelace officielle](#carte-lovelace-officielle)
   - [Informations globales](#informations-globales)
@@ -52,6 +54,8 @@
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.8.1** :
+>   - **Activation forcée minutée** : nouveau sélecteur de durée (1h, 4h, 12h, 24h) à côté du bouton START. Lorsqu'une durée est sélectionnée, l'équipement est allumé en mode MANUEL pour la durée choisie puis s'éteint automatiquement et rend la main à SO. Le timer est persisté entre les redémarrages de HA. Cf. [start\_device](#start_device) et [stop\_device](#stop_device)
 > * **release 3.8.0** :
 >   - **Clarification des statuts** : nouveau statut `MANUEL` (ambre) lorsqu'un équipement est physiquement actif mais la gestion SO est désactivée. La bordure gauche reflète désormais toujours l'état physique (vert = allumé, gris = éteint), indépendamment de l'état de contrôle SO. Cf. [Statuts des équipements](#statuts-des-équipements)
 >   - **Informations secondaires** : nouvelle option `secondary_info` pour afficher des informations personnalisées par équipement via des templates. Cf. [Informations secondaires](#informations-secondaires)
@@ -557,6 +561,47 @@ data: {}
 
 Après avoir lancé l'action, le temps d'allumage est remis à 0 ce qui peut autoriser l'algorithme a reprendre l'appareil en considération.
 
+## start_device
+
+Cette action force l'activation d'un équipement pour une durée déterminée (ou sans limite si aucune durée n'est précisée).
+
+Comportement :
+- L'entité `enable` du managed device est mise sur `false` (SO ne contrôle plus l'équipement).
+- L'équipement est physiquement allumé.
+- Le badge de statut passe à **MANUEL**.
+- Un timer est démarré et persisté : si HA redémarre, le timer reprend avec la durée restante.
+- À l'expiration du timer, l'équipement est éteint et SO reprend le contrôle (`enable = true`).
+
+| Paramètre   | Obligatoire | Description                                                                                   |
+| ----------- | ----------- | --------------------------------------------------------------------------------------------- |
+| `device_id` | Oui         | L'identifiant unique du managed device (la partie après `switch.solar_optimizer_`)            |
+| `duration`  | Non         | Durée de l'activation en heures (1, 4, 12 ou 24). Si absent : activation sans limite de temps |
+
+En mode YAML :
+```yaml
+action: solar_optimizer.start_device
+data:
+  device_id: lave_linge
+  duration: 4
+```
+
+## stop_device
+
+Cette action stoppe l'activation forcée d'un équipement. Elle annule le timer en cours et éteint l'équipement.
+
+> **Note** : `stop_device` n'est pas symétrique de `start_device` sur le bouton Enable : éteindre le device ne remet pas `enable` à `true`. C'est voulu — l'utilisateur doit réactiver SO manuellement si besoin.
+
+| Paramètre   | Obligatoire | Description                                                                        |
+| ----------- | ----------- | ---------------------------------------------------------------------------------- |
+| `device_id` | Oui         | L'identifiant unique du managed device (la partie après `switch.solar_optimizer_`) |
+
+En mode YAML :
+```yaml
+action: solar_optimizer.stop_device
+data:
+  device_id: lave_linge
+```
+
 
 # Créer des modèles de capteur pour votre installation
 Votre installation peut nécessiter de créer des capteurs spécifiques qui doivent être configurer [ici](README-fr.md#configurer-lintégration-pour-la-première-fois). Les règles sur ces capteurs sont importantes et doivent être scrupuleusement respectées pour un bon fonctionnement de Solar Optimizer.
@@ -680,9 +725,10 @@ history_hours: 48
 
 ## Actions disponibles
 
-Chaque bloc équipement expose deux boutons d'action :
+Chaque bloc équipement expose les boutons et contrôles suivants :
 1. **Enable/Disable** : active ou désactive la gestion de l'équipement par l'algorithme,
-2. **Start/Stop manuel** : démarre ou arrête l'équipement manuellement.
+2. **Sélecteur de durée** : liste déroulante permettant de choisir une durée d'activation forcée avant d'appuyer sur **START** (1h, 4h, 12h, 24h). Lorsqu'une activation forcée est en cours, le sélecteur est remplacé par un badge affichant le **temps restant** (en heures ou en minutes si < 1h),
+3. **Start/Stop** : démarre ou arrête l'équipement manuellement. Si une durée est sélectionnée au moment du START, le service `start_device` est appelé et un timer est lancé. Le STOP annule le timer en cours.
 
 Un sélecteur de **priorité** permet de modifier dynamiquement la priorité de l'équipement depuis le tableau de bord.
 

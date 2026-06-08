@@ -21,6 +21,12 @@ const TRANSLATIONS = {
     onTime: 'Temps marche',
     resetTitle: 'Remettre à zéro le temps de marche',
     reset: 'Reset',
+    timedDurationSelect: 'Durée forcée',
+    timedRemaining: 'Reste',
+    timedDuration1h: '1h',
+    timedDuration4h: '4h',
+    timedDuration12h: '12h',
+    timedDuration24h: '24h',
     expand: 'Déplier',
     collapse: 'Plier',
     expandAll: 'Tout déplier',
@@ -65,6 +71,12 @@ const TRANSLATIONS = {
     onTime: 'On time',
     resetTitle: 'Reset on-time counter',
     reset: 'Reset',
+    timedDurationSelect: 'Forced duration',
+    timedRemaining: 'Remaining',
+    timedDuration1h: '1h',
+    timedDuration4h: '4h',
+    timedDuration12h: '12h',
+    timedDuration24h: '24h',
     expand: 'Expand',
     collapse: 'Collapse',
     expandAll: 'Expand all',
@@ -286,6 +298,26 @@ class SolarOptimizerCard extends HTMLElement {
             background-color: transparent;
             color: var(--secondary-text-color);
             border: 1px solid var(--divider-color, #ccc);
+          }
+          solar-optimizer-card .so-duration-select {
+            background: var(--card-background-color, #fff);
+            color: var(--primary-text-color);
+            border: 1px solid var(--divider-color, #ccc);
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 0.8em;
+            cursor: pointer;
+            max-width: 72px;
+          }
+          solar-optimizer-card .so-timed-remaining {
+            font-size: 0.78em;
+            font-weight: bold;
+            color: var(--warning-color, #ff9800);
+            border: 1px solid var(--warning-color, #ff9800);
+            border-radius: 4px;
+            padding: 2px 7px;
+            white-space: nowrap;
+            background: color-mix(in srgb, var(--warning-color, #ff9800) 12%, var(--card-background-color, #fff));
           }
           solar-optimizer-card .so-power-bar-container {
             background-color: var(--secondary-background-color, #f5f5f5);
@@ -552,12 +584,42 @@ class SolarOptimizerCard extends HTMLElement {
         ></ha-switch>
       `;
 
+      // Timed activation: forced_end_time depuis les attributs du switch
+      const forcedEndTimeStr = attrs.forced_end_time || null;
+      const forcedEndTime = forcedEndTimeStr ? new Date(forcedEndTimeStr) : null;
+      const isForcedActive = forcedEndTime && forcedEndTime > new Date();
+
+      // Calcul du temps restant (affiché si activation forcée en cours)
+      const formatRemaining = (endTime) => {
+        const diffMs = endTime - new Date();
+        if (diffMs <= 0) return '0 min';
+        const diffMin = Math.ceil(diffMs / 60000);
+        if (diffMin < 60) return `${diffMin} min`;
+        const h = Math.floor(diffMin / 60);
+        const m = diffMin % 60;
+        return m > 0 ? `${h}h ${m}min` : `${h}h`;
+      };
+
+      // Sélecteur de durée ou badge temps restant
+      const durationSelectorHtml = isForcedActive
+        ? `<span class="so-timed-remaining" title="${t('timedRemaining')}">${formatRemaining(forcedEndTime)}</span>`
+        : `<select class="so-duration-select device-duration-select" data-device-id="${deviceId}" title="${t('timedDurationSelect')}">
+            <option value="">—</option>
+            <option value="1">${t('timedDuration1h')}</option>
+            <option value="4">${t('timedDuration4h')}</option>
+            <option value="12">${t('timedDuration12h')}</option>
+            <option value="24">${t('timedDuration24h')}</option>
+          </select>`;
+
       // Bouton start/stop manuel
       const startStopHtml = `
+        ${durationSelectorHtml}
         <button
           class="so-btn ${isActive ? 'so-btn-stop' : 'so-btn-start'} device-startstop"
           data-entity-id="${switchKey}"
+          data-device-id="${deviceId}"
           data-is-active="${isActive}"
+          data-is-forced="${isForcedActive ? 'true' : 'false'}"
           title="${isActive ? t('stopManually') : t('startManually')}"
         >${isActive ? t('stop') : t('start')}</button>
       `;
@@ -727,9 +789,27 @@ class SolarOptimizerCard extends HTMLElement {
     this.content.querySelectorAll(".device-startstop").forEach(btn => {
       btn.addEventListener("click", () => {
         const entityId = btn.getAttribute("data-entity-id");
+        const deviceId = btn.getAttribute("data-device-id");
         const isActive = btn.getAttribute("data-is-active") === "true";
-        const service = isActive ? "turn_off" : "turn_on";
-        this._hass.callService("switch", service, { entity_id: entityId });
+        const isForced = btn.getAttribute("data-is-forced") === "true";
+
+        if (isActive) {
+          // STOP: si activation forcée active → service stop_device, sinon comportement standard
+          if (isForced) {
+            this._hass.callService("solar_optimizer", "stop_device", { device_id: deviceId });
+          } else {
+            this._hass.callService("switch", "turn_off", { entity_id: entityId });
+          }
+        } else {
+          // START: si une durée est sélectionnée → service start_device, sinon comportement standard
+          const durationSelect = this.content.querySelector(`.device-duration-select[data-device-id="${deviceId}"]`);
+          const duration = durationSelect ? durationSelect.value : "";
+          if (duration) {
+            this._hass.callService("solar_optimizer", "start_device", { device_id: deviceId, duration: parseInt(duration, 10) });
+          } else {
+            this._hass.callService("switch", "turn_on", { entity_id: entityId });
+          }
+        }
       });
     });
 
@@ -831,6 +911,20 @@ class SolarOptimizerCard extends HTMLElement {
     if (!this._fetchingPowerHistory) this._fetchingPowerHistory = new Set();
     if (!this._templateCache) this._templateCache = {};
     if (!this._fetchingTemplates) this._fetchingTemplates = new Set();
+
+    // Ticker toutes les 30s pour rafraîchir l'affichage du temps restant (timed activation)
+    if (!this._timedTicker) {
+      this._timedTicker = setInterval(() => {
+        if (this._hass) this.updateCard();
+      }, 30000);
+    }
+  }
+
+  disconnectedCallback() {
+    if (this._timedTicker) {
+      clearInterval(this._timedTicker);
+      this._timedTicker = null;
+    }
   }
 
   async _fetchHistory(entityId) {
@@ -1117,7 +1211,7 @@ customElements.define("solar-optimizer-card-editor", SolarOptimizerCardEditor);
 
 // Afficher un log au démarrage dans la console du navigateur avec la version de la carte
 console.info(
-  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.4.0 `,
+  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.5.0 `,
   "color: white; background: #4caf50; font-weight: bold;",
   "color: #4caf50; background: white; font-weight: bold; border: 1px solid #4caf50;"
 );

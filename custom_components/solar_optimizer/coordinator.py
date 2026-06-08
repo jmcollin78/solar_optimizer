@@ -142,6 +142,12 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         calculated_data = {}
 
+        # Check forced activation timers — stop and re-enable any device whose timer has expired
+        for device in self._devices:
+            expired = await device.expire_forced_activation()
+            if expired:
+                _LOGGER.info("Forced activation expired for %s — SO management re-enabled", device.name)
+
         # Add a device state attributes
         for _, device in enumerate(self._devices):
             # Initialize current power depending or reality
