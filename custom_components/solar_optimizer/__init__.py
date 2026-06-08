@@ -28,6 +28,8 @@ from .const import (
     CONFIG_VERSION,
     CONFIG_MINOR_VERSION,
     SERVICE_RESET_ON_TIME,
+    SERVICE_START_DEVICE,
+    SERVICE_STOP_DEVICE,
     validate_time_format,
     name_to_unique_id,
     CONF_NAME,
@@ -165,6 +167,39 @@ async def async_setup(
         SERVICE_RELOAD,
         _handle_reload,
     )
+
+    async def _handle_start_device(call):
+        """Handle solar_optimizer.start_device service call"""
+        coordinator = SolarOptimizerCoordinator.get_coordinator()
+        if coordinator is None:
+            _LOGGER.error("start_device: coordinator not found")
+            return
+        device_id = call.data.get("device_id")
+        duration = call.data.get("duration")
+        device = coordinator.get_device_by_unique_id(device_id)
+        if device is None:
+            _LOGGER.warning("start_device: device '%s' not found", device_id)
+            return
+        await device.start_forced(duration_hours=float(duration) if duration is not None else None)
+        hass.async_create_task(coordinator.async_refresh())
+
+    hass.services.async_register(DOMAIN, SERVICE_START_DEVICE, _handle_start_device)
+
+    async def _handle_stop_device(call):
+        """Handle solar_optimizer.stop_device service call"""
+        coordinator = SolarOptimizerCoordinator.get_coordinator()
+        if coordinator is None:
+            _LOGGER.error("stop_device: coordinator not found")
+            return
+        device_id = call.data.get("device_id")
+        device = coordinator.get_device_by_unique_id(device_id)
+        if device is None:
+            _LOGGER.warning("stop_device: device '%s' not found", device_id)
+            return
+        await device.stop_forced()
+        hass.async_create_task(coordinator.async_refresh())
+
+    hass.services.async_register(DOMAIN, SERVICE_STOP_DEVICE, _handle_stop_device)
 
     await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
 

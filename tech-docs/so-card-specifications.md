@@ -121,6 +121,79 @@ Chaque bloc représentant un équipement sera équipé des boutons d'actions sui
 1. Un bouton enable : un bouton permettant d'enable l'équipement,
 2. Un bouton start/stop : un bouton permettant d'activer/desactiver l'équipement manuellement.
 
+## La fonction "timed activation" (activation forcée minutée)
 
+Cette fonction permet à l'utilisateur de forcer l'activation d'un équipement pour une durée déterminée, indépendamment de l'algorithme Solar Optimizer.
+
+### Comportement général
+
+- Lors du déclenchement de l'activation forcée :
+  - l'entité `enable` du managed device est mise sur `false`,
+  - l'équipement est physiquement allumé,
+  - le badge de statut affiche **MANUEL** (conforme aux règles de statut existantes : `!isEnabled && isActive`).
+- L'appui sur le bouton **STOP** stoppe l'activation forcée, éteint l'équipement et annule le timer.
+- Lorsqu'une activation forcée est active, l'appui sur le bouton **Enable** ne relance pas le timer ; il remet simplement l'entité `enable` à `true` et l'activation forcée est annulée.
+
+### Sélecteur de durée
+
+Un sélecteur est affiché **à côté du bouton START**, dans la zone des actions de chaque équipement.
+
+**Durées disponibles :** `1h`, `4h`, `12h`, `24h`.
+
+Le sélecteur a deux états visuels distincts :
+
+| État                           | Affichage                                                                                           |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| **Aucune activation active**   | Liste déroulante (ou boutons discrets) permettant de choisir la durée avant d'appuyer sur **START** |
+| **Activation forcée en cours** | Affichage en lecture seule du **temps restant** — en heures si ≥ 1 h, en minutes si < 1 h           |
+
+Lorsqu'aucune durée n'est sélectionnée et que l'utilisateur appuie sur **START**, le démarrage forcé est effectué **sans limite de temps** (comportement actuel inchangé).
+
+### Service backend
+
+Un service Home Assistant dédié est exposé pour déclencher ou arrêter la fonction timed activation :
+
+```yaml
+# Déclenchement
+service: solar_optimizer.start_device
+data:
+  device_id: <identifiant du managed device>
+  duration: <durée en heures : 1, 4, 12 ou 24>
+
+# Arrêt
+service: solar_optimizer.stop_device
+data:
+  device_id: <identifiant du managed device>
+```
+
+### Persistance du timer
+
+- Le timer est géré **en backend** (côté intégration Python Solar Optimizer).
+- La date/heure de fin de l'activation forcée est **persistée** (via les attributs de l'entité ou un storage dédié) de sorte qu'un redémarrage de Home Assistant restaure le timer avec la valeur restante correcte.
+- L'entité expose un attribut `forced_end_time` (timestamp ISO 8601) que la carte lit pour calculer et afficher le temps restant.
+
+### Attribut exposé par le backend
+
+| Attribut          | Type                | Description                                                                    |
+| ----------------- | ------------------- | ------------------------------------------------------------------------------ |
+| `forced_end_time` | `string` (ISO 8601) | Heure de fin de l'activation forcée. `null` si aucune activation forcée active |
+
+### Exemple de rendu
+
+```
+[ ENABLE ]   [ 4h ▾ ]  [ START ]
+```
+
+Quand l'activation est en cours :
+
+```
+[ ENABLE ]   [ 3h 27min ]  [ STOP ]
+```
+
+Quand moins d'une heure reste :
+
+```
+[ ENABLE ]   [ 43 min ]  [ STOP ]
+```
 
 

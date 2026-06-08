@@ -2,7 +2,7 @@
 
 # pylint: disable=protected-access
 
-# from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 from datetime import datetime, timedelta, time
 
 
@@ -299,8 +299,10 @@ async def test_nominal_use_min_on_time(
     #
     # 5. at 01:00 it should be possible to force offpeak
     #
-    with patch(
-        "custom_components.solar_optimizer.managed_device.ManagedDevice.is_usable",
+    with patch.object(
+        type(device_a),
+        "is_usable",
+        new_callable=PropertyMock,
         return_value=True,
     ):
         now = datetime(2024, 11, 11, 1, 00, 00).replace(tzinfo=get_tz(hass))
@@ -441,8 +443,10 @@ async def test_nominal_use_offpeak_without_min(
     #
     # 5. at 01:00 it should be not possible to force offpeak
     #
-    with patch(
-        "custom_components.solar_optimizer.managed_device.ManagedDevice.is_usable",
+    with patch.object(
+        type(device_a),
+        "is_usable",
+        new_callable=PropertyMock,
         return_value=True,
     ):
         now = datetime(2024, 11, 10, 1, 00, 00).replace(tzinfo=get_tz(hass))

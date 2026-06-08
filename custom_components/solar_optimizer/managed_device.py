@@ -216,6 +216,8 @@ class ManagedDevice:
 
         self._enable = True
 
+        self._forced_end_time: datetime | None = None
+
         # Some checks
         # min_on_time_per_day_sec requires an offpeak_time
         if self.min_on_time_per_day_sec > 0 and self._offpeak_time is None:
@@ -294,7 +296,44 @@ class ManagedDevice:
 
     async def deactivate(self):
         """Use this method to deactivate this ManagedDevice"""
+        if self._forced_end_time is not None:
+            _LOGGER.info("%s - deactivate: clearing active forced_end_time timer", self.name)
+            self._forced_end_time = None
+            # Notifie le switch HA pour qu'il mette à jour l'attribut forced_end_time
+            self.publish_enable_state_change()
         return await self._apply_action(ACTION_DEACTIVATE, 0)
+
+    async def start_forced(self, duration_hours: float | None = None) -> None:
+        """Force the activation of this device for an optional duration (in hours).
+        Sets enable=False and activates the device. The forced_end_time is set if duration is given."""
+        self.set_enable(False)
+        if duration_hours is not None:
+            self._forced_end_time = self.now + timedelta(hours=float(duration_hours))
+            _LOGGER.info("%s - start_forced with duration=%.1fh, end_time=%s", self.name, duration_hours, self._forced_end_time)
+        else:
+            self._forced_end_time = None
+            _LOGGER.info("%s - start_forced without duration limit", self.name)
+        await self.activate()
+
+    async def stop_forced(self) -> None:
+        """Stop the forced activation of this device. Clears the timer and deactivates."""
+        _LOGGER.info("%s - stop_forced", self.name)
+        self._forced_end_time = None
+        await self.deactivate()
+        # Notifie le switch HA pour qu'il mette à jour ses attributs (forced_end_time → null)
+        self.publish_enable_state_change()
+
+    async def expire_forced_activation(self) -> bool:
+        """Called periodically to check if the forced timer has expired.
+        If so, deactivates the device and re-enables SO management.
+        Returns True if the timer expired and the device was stopped."""
+        if self._forced_end_time is None or self.now < self._forced_end_time:
+            return False
+        _LOGGER.info("%s - Forced activation timer expired, stopping and re-enabling SO management", self.name)
+        self._forced_end_time = None
+        await self.deactivate()
+        self.set_enable(True)
+        return True
 
     async def change_requested_power(self, requested_power, current_power=None):
         """Use this method to change the requested power of this ManagedDevice"""
@@ -323,8 +362,8 @@ class ManagedDevice:
             self._name,
             self._next_date_available_power,
         )
-        """Lors d'un changement de puissance, si _next_date_available ne respect pas 
-        le temps min de puissance, on le remet à jour pour assusrer un temps min à la 
+        """Lors d'un changement de puissance, si _next_date_available ne respect pas
+        le temps min de puissance, on le remet à jour pour assusrer un temps min à la
         nouvelle puissance avant de pouvoir autoriser une coupure"""
         if self._next_date_available <= self._next_date_available_power:
             self._next_date_available = self._next_date_available_power
@@ -392,6 +431,10 @@ class ManagedDevice:
         self._enable = enable
         self.publish_enable_state_change()
 
+    def set_forced_end_time(self, end_time: datetime | None) -> None:
+        """Restore the forced_end_time (used at HA restart)"""
+        self._forced_end_time = end_time
+
     def set_on_time(self, on_time_sec: int):
         """Set the time the underlying device was on per day"""
         _LOGGER.info("%s - Set on_time=%s", self.name, on_time_sec)
@@ -405,6 +448,11 @@ class ManagedDevice:
     def is_enabled(self) -> bool:
         """return true if the managed device is enabled for solar optimisation"""
         return self._enable
+
+    @property
+    def forced_end_time(self) -> "datetime | None":
+        """Returns the end time of the forced activation, or None if no forced activation"""
+        return self._forced_end_time
 
     @property
     def is_active(self) -> bool:
@@ -607,6 +655,7 @@ class ManagedDevice:
                 "is_active": self.is_active,
                 "is_usable": self.is_usable,
                 "is_waiting": self.is_waiting,
+                "forced_end_time": self._forced_end_time.isoformat() if self._forced_end_time else None,
             },
         )
 

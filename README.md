@@ -43,6 +43,9 @@
 - [Actions](#actions)
   - [reset\_on\_time](#reset_on_time)
 - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
+  - [start\_device](#start_device)
+  - [stop\_device](#stop_device)
+- [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation-1)
     - [File `configuration.yaml`:](#file-configurationyaml)
     - [File `templates.yaml`:](#file-templatesyaml)
 - [Official Lovelace Card](#official-lovelace-card)
@@ -57,6 +60,8 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.8.1**:
+>   - **Timed forced activation**: new duration selector (1h, 4h, 12h, 24h) next to the START button. When a duration is selected, the device is switched on in MANUAL mode for the chosen duration, then automatically turns off and returns control to SO. The timer is persisted across HA restarts. See [start\_device](#start_device) and [stop\_device](#stop_device)
 > * **release 3.8.0**:
 >   - **Device status clarification**: new `MANUAL` status (amber) when a device is physically active but SO management is disabled. The left border now always reflects the physical state (green = on, grey = off), independently of the SO control state. See [Device Status](#device-status)
 >   - **Secondary info**: new `secondary_info` option to display custom per-device information using templates. See [Secondary Info](#secondary-info)
@@ -584,6 +589,50 @@ data: {}
 
 # Creating Sensor Templates for Your Installation
 
+## start_device
+
+This action forces the activation of a managed device for a given duration (or indefinitely if no duration is specified).
+
+Behavior:
+- The device's `enable` entity is set to `false` (SO no longer controls the device).
+- The device is physically turned on.
+- The status badge switches to **MANUAL**.
+- A timer is started and persisted: if HA restarts, the timer resumes with the remaining duration.
+- When the timer expires, the device is turned off and SO regains control (`enable = true`).
+
+| Parameter   | Required | Description                                                                     |
+| ----------- | -------- | ------------------------------------------------------------------------------- |
+| `device_id` | Yes      | The unique ID of the managed device (the part after `switch.solar_optimizer_`)  |
+| `duration`  | No       | Duration of the activation in hours (1, 4, 12 or 24). If omitted: no time limit |
+
+In YAML mode:
+```yaml
+action: solar_optimizer.start_device
+data:
+  device_id: washing_machine
+  duration: 4
+```
+
+## stop_device
+
+This action stops the forced activation of a managed device. It cancels the running timer and turns the device off.
+
+> **Note**: `stop_device` is not symmetric with `start_device` regarding the Enable button: stopping the device does not set `enable` back to `true`. This is intentional — the user must manually re-enable SO if needed.
+
+| Parameter   | Required | Description                                                                    |
+| ----------- | -------- | ------------------------------------------------------------------------------ |
+| `device_id` | Yes      | The unique ID of the managed device (the part after `switch.solar_optimizer_`) |
+
+In YAML mode:
+```yaml
+action: solar_optimizer.stop_device
+data:
+  device_id: washing_machine
+```
+
+
+# Creating Sensor Templates for Your Installation
+
 Your setup may require the creation of specific sensors that need to be configured [here](README-en.md#configure-the-integration-for-the-first-time). The rules for these sensors are crucial and must be strictly followed to ensure the proper functioning of Solar Optimizer.
 
 Below are my sensor templates (applicable only for an Enphase installation):
@@ -706,9 +755,10 @@ history_hours: 48
 
 ## Available Actions
 
-Each device block exposes two action buttons:
+Each device block exposes the following buttons and controls:
 1. **Enable/Disable**: enables or disables algorithm management for the device,
-2. **Manual Start/Stop**: starts or stops the device manually.
+2. **Duration selector**: a dropdown to choose a forced activation duration before pressing **START** (1h, 4h, 12h, 24h). When a forced activation is running, the selector is replaced by a badge showing the **remaining time** (in hours, or in minutes if less than 1h),
+3. **Start/Stop**: starts or stops the device manually. If a duration is selected at the time of START, the `start_device` service is called and a timer is launched. STOP cancels the running timer.
 
 A **priority selector** allows dynamically changing the device priority from the dashboard.
 

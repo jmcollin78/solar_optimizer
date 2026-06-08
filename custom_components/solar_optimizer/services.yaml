@@ -8,3 +8,44 @@ reset_on_time:
     target:
         entity:
             integration: solar_optimizer
+
+start_device:
+    name: Start device
+    description: >
+        Force the activation of a managed device for a given duration.
+        Sets enable=false, turns the device on, and optionally starts a countdown timer.
+        When the timer expires, the device is stopped and SO management is re-enabled automatically.
+    fields:
+        device_id:
+            name: Device ID
+            description: >
+                The unique ID of the managed device (the part after switch.solar_optimizer_, e.g. lave_linge).
+            required: true
+            selector:
+                text:
+        duration:
+            name: Duration (hours)
+            description: >
+                Duration of the forced activation in hours (e.g. 1, 4, 12, 24).
+                If omitted, the activation is unlimited until stop_device is called.
+            required: false
+            selector:
+                number:
+                    min: 1
+                    max: 24
+                    step: 1
+                    mode: box
+
+stop_device:
+    name: Stop device
+    description: >
+        Stop the forced activation of a managed device.
+        Clears the countdown timer and turns the device off.
+    fields:
+        device_id:
+            name: Device ID
+            description: >
+                The unique ID of the managed device (the part after switch.solar_optimizer_, e.g. lave_linge).
+            required: true
+            selector:
+                text:

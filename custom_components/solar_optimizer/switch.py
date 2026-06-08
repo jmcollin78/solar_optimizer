@@ -56,7 +56,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
+class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
     """The entity holding the algorithm calculation"""
 
     _entity_component_unrecorded_attributes = (
@@ -105,6 +105,21 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
     async def async_added_to_hass(self) -> None:
         """The entity have been added to hass, listen to state change of the underlying entity"""
         await super().async_added_to_hass()
+
+        # Restauration de forced_end_time depuis le dernier état persisté (redémarrage HA)
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.attributes.get("forced_end_time"):
+            try:
+                end_time = datetime.fromisoformat(last_state.attributes["forced_end_time"])
+                current_tz = get_tz(self._hass)
+                now = datetime.now(current_tz)
+                if end_time > now:
+                    self._device.set_forced_end_time(end_time)
+                    _LOGGER.info("Restored forced_end_time=%s for %s", end_time, self._device.name)
+                else:
+                    _LOGGER.info("forced_end_time=%s for %s has already expired, not restoring", end_time, self._device.name)
+            except (ValueError, TypeError) as err:
+                _LOGGER.warning("Could not restore forced_end_time for %s: %s", self._device.name, err)
 
         # Arme l'écoute de la première entité
         listener_cancel = async_track_state_change_event(
@@ -206,6 +221,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
             "battery_soc_threshold": device.battery_soc_threshold,
             "battery_soc": device.battery_soc,
             "device_name": device.name,
+            "forced_end_time": device.forced_end_time.astimezone(current_tz).isoformat() if device.forced_end_time else None,
         }
 
     @callback
@@ -265,6 +281,13 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
         if self._attr_is_on:
             _LOGGER.debug("Will deactivate %s", self._attr_name)
+            # Si une activation forcée est en cours, annule son timer
+            if device.forced_end_time is not None:
+                _LOGGER.info(
+                    "%s - Device turned off: cancelling active forced_end_time timer",
+                    device.name,
+                )
+                device.set_forced_end_time(None)
             await device.deactivate()
             self._attr_is_on = False
             self.update_custom_attributes(device)
@@ -335,6 +358,35 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
 
         # this breaks the start of integration
         self.update_device_enabled()
+
+        # Écoute les changements d'état enable émis par set_enable() (ex: start_forced)
+        self.async_on_remove(
+            self._hass.bus.async_listen(
+                event_type=EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
+                listener=self._on_enable_state_change,
+            )
+        )
+
+    @callback
+    async def _on_enable_state_change(self, event: Event) -> None:
+        """Synchronise l'état du bouton Enable quand set_enable() est appelé en dehors du bouton."""
+        if not event.data:
+            return
+        device_unique_id = event.data.get("device_unique_id")
+        if device_unique_id != name_to_unique_id(self._device.name):
+            return
+
+        new_is_enabled: bool = event.data.get("is_enabled", True)
+        if self._attr_is_on == new_is_enabled:
+            return
+
+        _LOGGER.info(
+            "ManagedDeviceEnable %s: syncing Enable state to %s via event",
+            self._device.name,
+            new_is_enabled,
+        )
+        self._attr_is_on = new_is_enabled
+        self.async_write_ha_state()
 
     @callback
     async def async_turn_on(self, **kwargs: Any) -> None:

@@ -37,6 +37,8 @@ INTEGRATION_MODEL = "Solar Optimizer"
 DEVICE_MANUFACTURER = "JM. COLLIN"
 
 SERVICE_RESET_ON_TIME = "reset_on_time"
+SERVICE_START_DEVICE = "start_device"
+SERVICE_STOP_DEVICE = "stop_device"
 
 TIME_REGEX = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
 CONFIG_VERSION = 2
