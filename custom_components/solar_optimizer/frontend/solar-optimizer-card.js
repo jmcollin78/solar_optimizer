@@ -4,6 +4,7 @@ const TRANSLATIONS = {
     active: 'Actif',
     waiting: 'Attente',
     inactive: 'Inactif',
+    manual: 'Manuel',
     usable: 'Utilisable',
     waitingIndicator: 'En attente',
     offpeakForced: 'HC forcées',
@@ -39,6 +40,7 @@ const TRANSLATIONS = {
     editorAutoConfig: 'Cette carte est configurée de façon automatique.',
     editorDesc: 'Elle scanne et agrège automatiquement les mesures de l\'algorithme ainsi que tous vos commutateurs et entités de priorité commençant par <code>solar_optimizer</code>.',
     editorNote: '<strong>Note :</strong> Aucun paramètre optionnel ou configuration YAML supplémentaire n\'est nécessaire pour le fonctionnement de cette carte !',
+    editorSecondaryInfoDesc: 'Affichez des informations personnalisées par appareil (supporte <code>states()</code> et <code>state_attr()</code>) :',
     cardDescription: 'Carte interactive pour contrôler et suivre les appareils gérés par le planificateur de charges Solar Optimizer.',
   },
   en: {
@@ -46,6 +48,7 @@ const TRANSLATIONS = {
     active: 'Active',
     waiting: 'Waiting',
     inactive: 'Inactive',
+    manual: 'Manual',
     usable: 'Usable',
     waitingIndicator: 'Waiting',
     offpeakForced: 'Off-peak forced',
@@ -81,6 +84,7 @@ const TRANSLATIONS = {
     editorAutoConfig: 'This card is automatically configured.',
     editorDesc: 'It automatically scans and aggregates algorithm measurements and all your switches and priority entities starting with <code>solar_optimizer</code>.',
     editorNote: '<strong>Note:</strong> No optional parameters or additional YAML configuration are needed for this card to work!',
+    editorSecondaryInfoDesc: 'Display custom info per device (supports <code>states()</code> and <code>state_attr()</code>):',
     cardDescription: 'Interactive card to control and monitor devices managed by the Solar Optimizer load scheduler.',
   }
 };
@@ -162,7 +166,6 @@ class SolarOptimizerCard extends HTMLElement {
             background-color: color-mix(in srgb, var(--warning-color, #ff9800) 5%, var(--card-background-color, #fff));
           }
           solar-optimizer-card .so-device-card-disabled {
-            border-left-color: var(--disabled-text-color, #9e9e9e);
             background-color: color-mix(in srgb, var(--disabled-text-color, #9e9e9e) 5%, var(--card-background-color, #fff));
           }
           solar-optimizer-card .so-device-card-inactive {
@@ -205,6 +208,10 @@ class SolarOptimizerCard extends HTMLElement {
           }
           solar-optimizer-card .so-badge-waiting {
             background-color: var(--warning-color, #ff9800);
+            color: white;
+          }
+          solar-optimizer-card .so-badge-manual {
+            background-color: #f59e0b;
             color: white;
           }
           solar-optimizer-card .so-indicators {
@@ -364,6 +371,16 @@ class SolarOptimizerCard extends HTMLElement {
             border-radius: 4px;
             overflow: hidden;
           }
+          solar-optimizer-card .so-secondary-info {
+            font-size: 0.82em;
+            color: var(--secondary-text-color);
+            background-color: var(--secondary-background-color, #f5f5f5);
+            border-radius: 6px;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
         </style>
         <ha-card header="Solar Optimizer">
           <div class="so-card-body" id="content" style="display:block;width:100%;box-sizing:border-box;padding:16px;"></div>
@@ -421,7 +438,7 @@ class SolarOptimizerCard extends HTMLElement {
     // État global : tous pliés ?
     const allCollapsed = devicesSwitches.length > 0 && devicesSwitches.every(k => {
       const id = k.replace("switch.solar_optimizer_", "");
-      return this._collapsedDevices[id] === true;
+      return this._collapsedDevices[id] !== false;
     });
 
     let devicesHtml = "";
@@ -465,7 +482,9 @@ class SolarOptimizerCard extends HTMLElement {
       const powerPercent = totalRange > 0 ? Math.round(((currentPower - powerMin) / totalRange) * 100) : (currentPower > 0 ? 100 : 0);
 
       let statusBadge = "";
-      if (!isEnabled) {
+      if (!isEnabled && isActive) {
+        statusBadge = `<span class="so-badge so-badge-manual">${t('manual')}</span>`;
+      } else if (!isEnabled) {
         statusBadge = `<span class="so-badge so-badge-inactive">${t('disabled')}</span>`;
       } else if (isActive) {
         statusBadge = `<span class="so-badge so-badge-active">${t('active')}</span>`;
@@ -474,6 +493,16 @@ class SolarOptimizerCard extends HTMLElement {
       } else {
         statusBadge = `<span class="so-badge so-badge-inactive">${t('inactive')}</span>`;
       }
+
+      // Informations secondaires configurées par l'utilisateur
+      const secondaryInfoTemplate = this._config?.secondary_info?.[deviceId] || null;
+      const secondaryInfoValue = secondaryInfoTemplate ? this._evaluateTemplate(secondaryInfoTemplate) : null;
+      const secondaryInfoHtml = secondaryInfoValue
+        ? `<div class="so-secondary-info">
+            <ha-icon icon="mdi:information-outline" style="--mdi-icon-size: 14px; flex-shrink:0;"></ha-icon>
+            <span>${secondaryInfoValue}</span>
+          </div>`
+        : '';
 
       // Indicateurs booléens
       const indicatorsHtml = `
@@ -560,12 +589,12 @@ class SolarOptimizerCard extends HTMLElement {
         </div>
       `;
 
-      const isCollapsed = this._collapsedDevices[deviceId] === true;
+      const isCollapsed = this._collapsedDevices[deviceId] !== false;
       const chevronClass = isCollapsed ? 'so-collapse-btn collapsed' : 'so-collapse-btn';
-      const cardStateClass = !isEnabled ? 'so-device-card-disabled'
-        : isActive ? 'so-device-card-active'
-          : isWaiting ? 'so-device-card-waiting'
-            : 'so-device-card-inactive';
+      const physicalClass = isActive ? 'so-device-card-active'
+        : isWaiting ? 'so-device-card-waiting'
+          : 'so-device-card-inactive';
+      const cardStateClass = !isEnabled ? `${physicalClass} so-device-card-disabled` : physicalClass;
 
       devicesHtml += `
         <div class="so-device-card ${cardStateClass}" data-device-id="${deviceId}">
@@ -591,6 +620,7 @@ class SolarOptimizerCard extends HTMLElement {
             ` : ''}
           </div>
           <div class="so-device-details${isCollapsed ? ' hidden' : ''}">
+            ${secondaryInfoHtml}
             ${indicatorsHtml}
             <div class="so-device-meta">
               <div>${t('requiredPower')}: <strong>${requestedPower} W</strong></div>
@@ -712,6 +742,7 @@ class SolarOptimizerCard extends HTMLElement {
         e.stopPropagation();
         const deviceId = btn.getAttribute("data-collapse-id");
         this._collapsedDevices[deviceId] = !this._collapsedDevices[deviceId];
+        try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch(e) {}
         this.updateCard();
       });
     });
@@ -725,6 +756,7 @@ class SolarOptimizerCard extends HTMLElement {
           const id = k.replace("switch.solar_optimizer_", "");
           this._collapsedDevices[id] = !allCollapsed;
         });
+        try { localStorage.setItem('solar-optimizer-card-collapsed', JSON.stringify(this._collapsedDevices)); } catch(e) {}
         this.updateCard();
       });
     }
@@ -754,7 +786,14 @@ class SolarOptimizerCard extends HTMLElement {
 
   setConfig(config) {
     this._config = config;
-    if (!this._collapsedDevices) this._collapsedDevices = {};
+    if (!this._collapsedDevices) {
+      try {
+        const saved = localStorage.getItem('solar-optimizer-card-collapsed');
+        this._collapsedDevices = saved ? JSON.parse(saved) : {};
+      } catch (e) {
+        this._collapsedDevices = {};
+      }
+    }
     if (!this._historyCache) this._historyCache = {};
     if (!this._fetchingHistory) this._fetchingHistory = new Set();
     if (!this._powerHistoryCache) this._powerHistoryCache = {};
@@ -869,6 +908,17 @@ class SolarOptimizerCard extends HTMLElement {
       </div>`;
   }
 
+  _evaluateTemplate(template) {
+    if (!template || !this._hass) return null;
+    return template
+      .replace(/\{\{\s*states\(['"]([^'"]+)['"]\)\s*\}\}/g, (_, entityId) => {
+        return this._hass.states[entityId]?.state ?? 'unknown';
+      })
+      .replace(/\{\{\s*state_attr\(['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\)\s*\}\}/g, (_, entityId, attr) => {
+        return this._hass.states[entityId]?.attributes?.[attr] ?? 'unknown';
+      });
+  }
+
   _renderHistoryBar(entityId, t) {
     const CACHE_TTL = 5 * 60 * 1000;
     if (!this._historyCache) this._historyCache = {};
@@ -977,6 +1027,12 @@ class SolarOptimizerCardEditor extends HTMLElement {
           <input type="number" id="so-history-hours-input" min="1" max="168" value="${historyHours}"
             style="width: 72px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--divider-color, #ccc); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 0.9em;">
         </div>
+        <div style="margin-top: 16px;">
+          <p style="font-size: 0.9em; color: var(--primary-text-color); margin-bottom: 4px;">${t('editorSecondaryInfoDesc')}</p>
+          <pre style="font-size: 0.78em; background: var(--secondary-background-color, #f5f5f5); padding: 8px; border-radius: 4px; overflow-x: auto; color: var(--primary-text-color); margin: 0;">secondary_info:
+  device_id: "{{ states('sensor.my_entity') }}"
+  device_id2: "{{ state_attr('sensor.my_entity', 'attribute') }}"</pre>
+        </div>
       </div>
     `;
 
@@ -998,7 +1054,7 @@ customElements.define("solar-optimizer-card-editor", SolarOptimizerCardEditor);
 
 // Afficher un log au démarrage dans la console du navigateur avec la version de la carte
 console.info(
-  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.3.0 `,
+  `%c  SOLAR-OPTIMIZER-CARD  %c Version 1.4.0 `,
   "color: white; background: #4caf50; font-weight: bold;",
   "color: #4caf50; background: white; font-weight: bold; border: 1px solid #4caf50;"
 );

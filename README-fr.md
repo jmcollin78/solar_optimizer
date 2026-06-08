@@ -44,12 +44,18 @@
 - [Carte Lovelace officielle](#carte-lovelace-officielle)
   - [Informations globales](#informations-globales)
   - [Informations par équipement](#informations-par-équipement)
+  - [Statuts des équipements](#statuts-des-équipements)
+  - [Informations secondaires](#informations-secondaires)
   - [Barre d'historique d'activation](#barre-dhistorique-dactivation)
   - [Actions disponibles](#actions-disponibles)
   - [Utilisation de la carte officielle](#utilisation-de-la-carte-officielle)
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.8.0** :
+>   - **Clarification des statuts** : nouveau statut `MANUEL` (ambre) lorsqu'un équipement est physiquement actif mais la gestion SO est désactivée. La bordure gauche reflète désormais toujours l'état physique (vert = allumé, gris = éteint), indépendamment de l'état de contrôle SO. Cf. [Statuts des équipements](#statuts-des-équipements)
+>   - **Informations secondaires** : nouvelle option `secondary_info` pour afficher des informations personnalisées par équipement via des templates. Cf. [Informations secondaires](#informations-secondaires)
+>   - **Blocs fermés par défaut** : tous les blocs équipement sont fermés au premier chargement. L'état ouvert/fermé de chaque bloc est persisté dans le `localStorage` du navigateur.
 > * **release 3.7.0** :
 >   - ajout d'une carte Lovelace officielle native (`custom:solar-optimizer-card`) intégrée à l'intégration. Cf. [Carte Lovelace officielle](#carte-lovelace-officielle)
 > * **release 3.5.0** :
@@ -620,6 +626,39 @@ Lorsque le bloc est **déplié**, les détails suivants apparaissent :
 - Temps de marche / temps maximum journalier,
 - Seuil de SOC batterie (si configuré).
 
+## Statuts des équipements
+
+Chaque bloc équipement affiche un badge de statut et une bordure gauche colorée. Ces deux signaux sont **indépendants** :
+
+| Bordure gauche | Signification                                         |
+| -------------- | ----------------------------------------------------- |
+| 🟢 Verte        | L'équipement est **physiquement allumé**              |
+| 🟠 Orange       | L'équipement est **en attente** d'une prochaine dispo |
+| ⬜ Grise        | L'équipement est **physiquement éteint**              |
+
+| Badge         | Couleur | Signification                                                                       |
+| ------------- | ------- | ----------------------------------------------------------------------------------- |
+| **ACTIF**     | Vert    | Géré par SO et physiquement allumé                                                  |
+| **MANUEL**    | Ambre   | Physiquement allumé mais **gestion SO désactivée** — l'utilisateur a repris la main |
+| **ATTENTE**   | Orange  | Géré par SO, en attente d'un prochain créneau                                       |
+| **INACTIF**   | Gris    | Géré par SO et physiquement éteint                                                  |
+| **DÉSACTIVÉ** | Gris    | Gestion SO désactivée et équipement éteint                                          |
+
+Le statut `MANUEL` est le signal clé : l'équipement consomme mais Solar Optimizer n'est pas aux commandes. La bordure verte confirme l'état physique quelle que soit la configuration de contrôle SO.
+
+## Informations secondaires
+
+L'option `secondary_info` permet d'afficher des informations personnalisées par équipement (état d'un programme de lave-linge, statut d'un chargeur VE…). La valeur supporte des templates simples avec `states()` et `state_attr()`.
+
+```yaml
+type: custom:solar-optimizer-card
+secondary_info:
+  lave_linge: "Etat du lave-linge : {{ states('sensor.lave_linge_programme') }}"
+  borne_ve: "{{ state_attr('sensor.borne_ve', 'status') }}"
+```
+
+La clé est l'identifiant de l'équipement (la partie après `switch.solar_optimizer_`). La valeur rendue s'affiche au-dessus des indicateurs Utilisable / En attente / HC forcées lorsque le bloc est déplié.
+
 ## Barre d'historique d'activation
 
 Chaque équipement dispose d'une **barre horizontale d'historique d'activation**, toujours visible même lorsque le bloc est plié. Elle imite les barres natives des `binary_sensor` de Home Assistant :
@@ -654,6 +693,8 @@ Il suffit d'ajouter une carte de type `custom:solar-optimizer-card` à votre tab
 ```yaml
 type: custom:solar-optimizer-card
 ```
+
+Tous les blocs sont **fermés par défaut** au premier chargement. L'état ouvert/fermé de chaque bloc est automatiquement sauvegardé dans le `localStorage` du navigateur et restauré à la prochaine visite.
 
 La carte est également directement sélectionnable sous le nom **Solar Optimizer Card** dans l'éditeur visuel de cartes de Home Assistant.
 

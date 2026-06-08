@@ -39,6 +39,60 @@ Chaque info doit être affichée avec un icone qui la représente le mieux.
 Le bloc pour chaque équipement est pliable et dépliable. Lorsqu'il est plié, seuls les infos de nom, état, puissance courante / puissance max, bouton start/stop et bouton enable sont visibles.
 Un chevron global permet de tout plier / déplier.
 
+**Comportement par défaut** : tous les blocs sont fermés au premier chargement de la carte. L'état ouvert/fermé de chaque bloc est persisté dans le `localStorage` du navigateur sous la clé `solar-optimizer-card-collapsed` et restauré automatiquement à la prochaine visite.
+
+## Les statuts d'un équipement
+
+Chaque bloc équipement affiche un badge de statut et une bordure gauche colorée. Ces deux signaux sont **indépendants** :
+
+### Bordure gauche — état physique
+
+| Couleur                    | Signification                                                 |
+| -------------------------- | ------------------------------------------------------------- |
+| Verte (`--success-color`)  | L'équipement est **physiquement allumé**                      |
+| Orange (`--warning-color`) | L'équipement est **en attente** d'une prochaine disponibilité |
+| Grise (`--divider-color`)  | L'équipement est **physiquement éteint**                      |
+
+La bordure gauche reflète **toujours** l'état physique réel du switch, indépendamment de l'état de contrôle SO. En cas de gestion SO désactivée (`!isEnabled`), un fond gris clair est superposé via la classe `so-device-card-disabled`, mais la couleur de la bordure reste celle de l'état physique.
+
+### Badge de statut — état de contrôle SO
+
+| Badge         | Couleur           | Condition                              | Signification                                                                   |
+| ------------- | ----------------- | -------------------------------------- | ------------------------------------------------------------------------------- |
+| **ACTIF**     | Vert              | `isEnabled && isActive`                | Géré par SO et physiquement allumé                                              |
+| **MANUEL**    | Ambre (`#f59e0b`) | `!isEnabled && isActive`               | Physiquement allumé mais gestion SO désactivée — l'utilisateur a repris la main |
+| **ATTENTE**   | Orange            | `isEnabled && !isActive && isWaiting`  | Géré par SO, en attente d'un prochain créneau                                   |
+| **INACTIF**   | Gris              | `isEnabled && !isActive && !isWaiting` | Géré par SO et physiquement éteint                                              |
+| **DÉSACTIVÉ** | Gris              | `!isEnabled && !isActive`              | Gestion SO désactivée et équipement éteint                                      |
+
+Le statut `MANUEL` est le signal critique : il indique que l'équipement consomme de l'énergie mais que Solar Optimizer n'en a pas le contrôle.
+
+## Les informations secondaires
+
+Chaque bloc équipement peut afficher une ligne d'information personnalisée, configurée via l'option `secondary_info`. Cette information est rendue **au-dessus** des indicateurs Utilisable / En attente / HC forcées, uniquement lorsque le bloc est déplié.
+
+La valeur est un template évalué côté client supportant :
+- `{{ states('entity_id') }}` → état de l'entité
+- `{{ state_attr('entity_id', 'attribute') }}` → valeur d'un attribut
+
+### Option de configuration
+
+| Paramètre        | Type     | Valeur par défaut | Description                   |
+| ---------------- | -------- | ----------------- | ----------------------------- |
+| `secondary_info` | `object` | `null`            | Map de `device_id → template` |
+
+La clé est l'identifiant de l'équipement (partie après `switch.solar_optimizer_`).
+
+Exemple YAML :
+```yaml
+type: custom:solar-optimizer-card
+secondary_info:
+  lave_linge: "{{ states('sensor.lave_linge_programme') }}"
+  borne_ve: "{{ state_attr('sensor.borne_ve', 'status') }}"
+```
+
+Si la clé n'est pas renseignée pour un équipement, rien n'est affiché.
+
 ## La barre d'historique d'activation
 
 Chaque équipement dispose d'une barre horizontale d'historique d'activation, **toujours visible** (même lorsque la carte est pliée), placée juste en dessous de la barre de puissance.
@@ -52,9 +106,9 @@ Chaque équipement dispose d'une barre horizontale d'historique d'activation, **
 
 ### Option de configuration
 
-| Paramètre | Type | Valeur par défaut | Description |
-|---|---|---|---|
-| `history_hours` | `number` | `24` | Durée en heures de la fenêtre d'historique affichée |
+| Paramètre       | Type     | Valeur par défaut | Description                                         |
+| --------------- | -------- | ----------------- | --------------------------------------------------- |
+| `history_hours` | `number` | `24`              | Durée en heures de la fenêtre d'historique affichée |
 
 Exemple YAML :
 ```yaml
