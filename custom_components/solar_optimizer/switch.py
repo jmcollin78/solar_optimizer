@@ -106,7 +106,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
         """The entity have been added to hass, listen to state change of the underlying entity"""
         await super().async_added_to_hass()
 
-        # Restore forced_end_time from last saved state (persistence across HA restarts)
+        # Restauration de forced_end_time depuis le dernier état persisté (redémarrage HA)
         last_state = await self.async_get_last_state()
         if last_state and last_state.attributes.get("forced_end_time"):
             try:
@@ -115,15 +115,9 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
                 now = datetime.now(current_tz)
                 if end_time > now:
                     self._device.set_forced_end_time(end_time)
-                    _LOGGER.info(
-                        "Restored forced_end_time=%s for %s", end_time, self._device.name
-                    )
+                    _LOGGER.info("Restored forced_end_time=%s for %s", end_time, self._device.name)
                 else:
-                    _LOGGER.info(
-                        "Forced_end_time=%s for %s has already expired, not restoring",
-                        end_time,
-                        self._device.name,
-                    )
+                    _LOGGER.info("forced_end_time=%s for %s has already expired, not restoring", end_time, self._device.name)
             except (ValueError, TypeError) as err:
                 _LOGGER.warning("Could not restore forced_end_time for %s: %s", self._device.name, err)
 

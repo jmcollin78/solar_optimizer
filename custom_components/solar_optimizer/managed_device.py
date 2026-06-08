@@ -655,6 +655,7 @@ class ManagedDevice:
                 "is_active": self.is_active,
                 "is_usable": self.is_usable,
                 "is_waiting": self.is_waiting,
+                "forced_end_time": self._forced_end_time.isoformat() if self._forced_end_time else None,
             },
         )
 
