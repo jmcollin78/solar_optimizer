@@ -829,6 +829,8 @@ class SolarOptimizerCard extends HTMLElement {
     if (!this._fetchingHistory) this._fetchingHistory = new Set();
     if (!this._powerHistoryCache) this._powerHistoryCache = {};
     if (!this._fetchingPowerHistory) this._fetchingPowerHistory = new Set();
+    if (!this._templateCache) this._templateCache = {};
+    if (!this._fetchingTemplates) this._fetchingTemplates = new Set();
   }
 
   async _fetchHistory(entityId) {
@@ -939,6 +941,37 @@ class SolarOptimizerCard extends HTMLElement {
   }
 
   _evaluateTemplate(template) {
+    if (!template || !this._hass) return null;
+
+    if (!this._templateCache) this._templateCache = {};
+    if (!this._fetchingTemplates) this._fetchingTemplates = new Set();
+
+    const CACHE_TTL = 5 * 1000; // 5 secondes
+    const cached = this._templateCache[template];
+
+    if (!cached || (Date.now() - cached.fetchedAt > CACHE_TTL)) {
+      if (!this._fetchingTemplates.has(template)) {
+        this._fetchingTemplates.add(template);
+        this._hass.callApi('POST', 'template', { template })
+          .then(result => {
+            this._templateCache[template] = { value: String(result).trim(), fetchedAt: Date.now() };
+            this._fetchingTemplates.delete(template);
+            if (this._updateTimer) clearTimeout(this._updateTimer);
+            this._updateTimer = setTimeout(() => this.updateCard(), 50);
+          })
+          .catch(() => {
+            // Fallback sur l'évaluation regex client-side si l'API échoue
+            const fallback = this._evaluateTemplateSimple(template);
+            this._templateCache[template] = { value: fallback, fetchedAt: Date.now() };
+            this._fetchingTemplates.delete(template);
+          });
+      }
+    }
+
+    return cached ? cached.value : null;
+  }
+
+  _evaluateTemplateSimple(template) {
     if (!template || !this._hass) return null;
     return template
       .replace(/\{\{\s*states\(['"]([^'"]+)['"]\)\s*\}\}/g, (_, entityId) => {
