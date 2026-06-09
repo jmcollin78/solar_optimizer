@@ -419,6 +419,20 @@ class SolarOptimizerCard extends HTMLElement {
         </ha-card>
       `;
       this.content = this.querySelector("#content");
+
+      // Garde contre les rebuilds DOM pendant une interaction utilisateur (select ouvert, champ saisi…)
+      // Les listeners sont attachés UNE seule fois sur this.content qui survit aux rebuilds innerHTML.
+      this.content.addEventListener('focusin', (e) => {
+        if (e.target.matches('select, input')) this._userInteracting = true;
+      });
+      this.content.addEventListener('focusout', (e) => {
+        if (e.target.matches('select, input')) {
+          this._userInteracting = false;
+          // Relancer un rebuild différé maintenant que l'interaction est terminée
+          if (this._updateTimer) clearTimeout(this._updateTimer);
+          this._updateTimer = setTimeout(() => this.updateCard(), 100);
+        }
+      });
     }
 
     // Debounce pour éviter les rebuilds DOM pendant un clic (race condition avec HA)
@@ -428,6 +442,9 @@ class SolarOptimizerCard extends HTMLElement {
 
   updateCard() {
     if (!this._hass || !this.content) return;
+
+    // Ne pas reconstruire le DOM si l'utilisateur interagit (select ouvert, input en cours de saisie)
+    if (this._userInteracting) return;
 
     if (!this._collapsedDevices) this._collapsedDevices = {};
 
@@ -603,14 +620,15 @@ class SolarOptimizerCard extends HTMLElement {
       };
 
       // Sélecteur de durée ou badge temps restant
+      const storedDuration = (this._selectedDurations && this._selectedDurations[deviceId]) || "";
       const durationSelectorHtml = isForcedActive
         ? `<span class="so-timed-remaining" title="${t('timedRemaining')}">${formatRemaining(forcedEndTime)}</span>`
         : `<select class="so-duration-select device-duration-select" data-device-id="${deviceId}" title="${t('timedDurationSelect')}">
             <option value="">—</option>
-            <option value="1">${t('timedDuration1h')}</option>
-            <option value="4">${t('timedDuration4h')}</option>
-            <option value="12">${t('timedDuration12h')}</option>
-            <option value="24">${t('timedDuration24h')}</option>
+            <option value="1" ${storedDuration === "1" ? "selected" : ""}>${t('timedDuration1h')}</option>
+            <option value="4" ${storedDuration === "4" ? "selected" : ""}>${t('timedDuration4h')}</option>
+            <option value="12" ${storedDuration === "12" ? "selected" : ""}>${t('timedDuration12h')}</option>
+            <option value="24" ${storedDuration === "24" ? "selected" : ""}>${t('timedDuration24h')}</option>
           </select>`;
 
       // Bouton start/stop manuel
@@ -765,6 +783,15 @@ class SolarOptimizerCard extends HTMLElement {
       if (stateObj) sw.checked = stateObj.state === "on";
     });
 
+    // Attacher les écouteurs pour mémoriser la durée sélectionnée (évite la perte lors des re-renders)
+    this.content.querySelectorAll(".device-duration-select").forEach(select => {
+      select.addEventListener("change", (e) => {
+        const deviceId = e.target.getAttribute("data-device-id");
+        if (!this._selectedDurations) this._selectedDurations = {};
+        this._selectedDurations[deviceId] = e.target.value;
+      });
+    });
+
     // Attacher les écouteurs pour les dropdowns de priorité
     this.content.querySelectorAll(".so-priority-select").forEach(select => {
       select.addEventListener("change", (e) => {
@@ -808,6 +835,7 @@ class SolarOptimizerCard extends HTMLElement {
           const duration = durationSelect ? durationSelect.value : "";
           if (duration) {
             this._hass.callService("solar_optimizer", "start_device", { device_id: deviceId, duration: parseInt(duration, 10) });
+            if (this._selectedDurations) this._selectedDurations[deviceId] = "";
           } else {
             this._hass.callService("switch", "turn_on", { entity_id: entityId });
           }
@@ -913,6 +941,7 @@ class SolarOptimizerCard extends HTMLElement {
     if (!this._fetchingPowerHistory) this._fetchingPowerHistory = new Set();
     if (!this._templateCache) this._templateCache = {};
     if (!this._fetchingTemplates) this._fetchingTemplates = new Set();
+    if (!this._selectedDurations) this._selectedDurations = {};
 
     // Ticker toutes les 30s pour rafraîchir l'affichage du temps restant (timed activation)
     if (!this._timedTicker) {
