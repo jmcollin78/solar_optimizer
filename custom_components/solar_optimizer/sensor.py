@@ -157,7 +157,7 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
 
     @property
     def state_class(self) -> SensorStateClass | None:
-        if self.device_class == SensorDeviceClass.POWER:
+        if self.device_class in (SensorDeviceClass.POWER, SensorDeviceClass.BATTERY):
             return SensorStateClass.MEASUREMENT
         else:
             return SensorStateClass.TOTAL
