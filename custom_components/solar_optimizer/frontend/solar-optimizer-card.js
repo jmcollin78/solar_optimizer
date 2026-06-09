@@ -498,7 +498,8 @@ class SolarOptimizerCard extends HTMLElement {
       const shouldBeOForcedOffpeak = sensorAttrs.should_be_forced_offpeak === true;
       const offpeakTime = sensorAttrs.offpeak_time || null;
 
-      const powerMin = attrs.power_min || 0;
+      // -1 est la sentinelle backend signifiant "puissance non configurable" : on le traite comme 0
+      const powerMin = (attrs.power_min != null && attrs.power_min >= 0) ? attrs.power_min : 0;
       const powerMax = attrs.power_max || 0;
       // Si l'équipement est éteint, on force la puissance affichée à 0
       // pour éviter qu'une valeur résiduelle dans les attributs ne remplisse la barre
@@ -514,9 +515,10 @@ class SolarOptimizerCard extends HTMLElement {
         : [];
 
       // Calcul du pourcentage de la barre de puissance (clampé entre 0 et 100)
+      // Si currentPower est 0, on force la barre à 0 même si power_min est négatif
       const totalRange = powerMax - powerMin;
-      const rawPercent = totalRange > 0 ? ((currentPower - powerMin) / totalRange) * 100 : (currentPower > 0 ? 100 : 0);
-      const powerPercent = Math.min(100, Math.max(0, Math.round(rawPercent)));
+      const rawPercent = (currentPower > 0 && totalRange > 0) ? ((currentPower - powerMin) / totalRange) * 100 : (currentPower > 0 ? 100 : 0);
+      const powerPercent = currentPower <= 0 ? 0 : Math.min(100, Math.max(0, Math.round(rawPercent)));
 
       let statusBadge = "";
       if (!isEnabled && isActive) {
