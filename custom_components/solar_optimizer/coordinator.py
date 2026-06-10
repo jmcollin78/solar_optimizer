@@ -23,9 +23,18 @@ from homeassistant.util.unit_conversion import (
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN, DEFAULT_RAZ_TIME
+from .const import (
+    DEFAULT_REFRESH_PERIOD_SEC,
+    name_to_unique_id,
+    SOLAR_OPTIMIZER_DOMAIN,
+    DEFAULT_RAZ_TIME,
+    CONF_ALGORITHM_TYPE,
+    ALGORITHM_GREEDY_PRIORITY,
+    CONF_ALLOWED_POWER_OVERAGE_PERCENT,
+)
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
+from .greedy_priority_algo import GreedyPriorityAlgorithm
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +77,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._battery_soc_entity_id: str = None
         self._battery_charge_power_entity_id: str = None
         self._raz_time: time = None
+        self._allowed_power_overage_percent: float = 0.0
 
         self._central_config_done = False
         self._priority_weight_entity = None
@@ -127,6 +137,17 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
         ).time()
+
+        self._allowed_power_overage_percent = float(
+            config.data.get(CONF_ALLOWED_POWER_OVERAGE_PERCENT) or 0
+        )
+
+        if config.data.get(CONF_ALGORITHM_TYPE) == ALGORITHM_GREEDY_PRIORITY:
+            self._algo = GreedyPriorityAlgorithm()
+            _LOGGER.info("Solar Optimizer using Greedy Priority algorithm")
+        else:
+            _LOGGER.info("Solar Optimizer using Simulated Annealing algorithm")
+
         self._central_config_done = True
 
     async def on_ha_started(self, _) -> None:
@@ -198,12 +219,16 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         calculated_data["priority_weight"] = self.priority_weight
 
         #
-        # Call Algorithm Recuit simulé
+        # Call optimization algorithm
         #
-        best_solution, best_objective, total_power = self._algo.recuit_simule(
+        allowed_power_overage = (
+            calculated_data["power_production"] * self._allowed_power_overage_percent / 100.0
+        )
+        best_solution, best_objective, total_power = self._algo.optimize(
             self._devices,
             calculated_data["power_consumption"] + calculated_data["battery_charge_power"],
             calculated_data["power_production"],
+            allowed_power_overage,
             calculated_data["sell_cost"],
             calculated_data["buy_cost"],
             calculated_data["sell_tax_percent"],

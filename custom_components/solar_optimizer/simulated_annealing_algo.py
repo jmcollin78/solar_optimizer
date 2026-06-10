@@ -26,6 +26,7 @@ class SimulatedAnnealingAlgorithm:
     _taxe_revente: float = 10  # pourcentage
     _consommation_net: float
     _production_solaire: float
+    _allowed_power_overage: float = 0.0
 
     def __init__(
         self,
@@ -47,11 +48,12 @@ class SimulatedAnnealingAlgorithm:
             self._nombre_iterations,
         )
 
-    def recuit_simule(
+    def optimize(
         self,
         devices: list[ManagedDevice],
         power_consumption: float,
         solar_power_production: float,
+        allowed_power_overage: float,
         sell_cost: float,
         buy_cost: float,
         sell_tax_percent: float,
@@ -88,7 +90,7 @@ class SimulatedAnnealingAlgorithm:
             return [], -1, -1
 
         _LOGGER.debug(
-            "Calling recuit_simule with power_consumption=%.2f, solar_power_production=%.2f sell_cost=%.2f, buy_cost=%.2f, tax=%.2f%% devices=%s",
+            "Calling optimize with power_consumption=%.2f, solar_power_production=%.2f sell_cost=%.2f, buy_cost=%.2f, tax=%.2f%% devices=%s",
             power_consumption,
             solar_power_production,
             sell_cost,
@@ -102,6 +104,7 @@ class SimulatedAnnealingAlgorithm:
         self._consommation_net = power_consumption
         self._production_solaire = solar_power_production
         self._priority_weight = priority_weight / 100.0  # to get percentage
+        self._allowed_power_overage = allowed_power_overage
 
         # fix #131 - costs cannot be negative or 0
         if self._cout_achat <= 0 or self._cout_revente <= 0:
@@ -238,7 +241,9 @@ class SimulatedAnnealingAlgorithm:
         coef_import = (self._cout_achat) / (self._cout_achat + cout_revente_impose)
         coef_rejets = (cout_revente_impose) / (self._cout_achat + cout_revente_impose)
 
-        consumption_coef = coef_import * new_import + coef_rejets * new_rejets
+        # Imports within the allowed overage are treated as free (same tolerance as greedy)
+        effective_import = max(0.0, new_import - self._allowed_power_overage)
+        consumption_coef = coef_import * effective_import + coef_rejets * new_rejets
         # calculate the priority coef as the sum of the priority of all devices
         # in the solution
         if puissance_totale_eqt > 0:

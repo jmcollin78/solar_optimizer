@@ -158,8 +158,10 @@ class ManagedDevice:
             else 0
         )
         self._can_change_power = self._power_min >= 0
-        self._convert_power_divide_factor = int(
-            device_config.get("convert_power_divide_factor") or 1
+        self._convert_power_divide_factor = (
+            int(device_config.get("convert_power_divide_factor") or 1)
+            if self._can_change_power
+            else 1
         )
 
         self._current_power = self._requested_power = 0
@@ -383,6 +385,21 @@ class ManagedDevice:
             return
 
         if not self._can_change_power:
+            if self._power_entity_id:
+                power_entity_state = self._hass.states.get(self._power_entity_id)
+                if power_entity_state and power_entity_state.state not in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
+                    try:
+                        self._current_power = round(
+                            float(power_entity_state.state) * self._convert_power_divide_factor
+                        )
+                        _LOGGER.debug(
+                            "Set current_power to %s for device %s from power sensor (not can_change_power)",
+                            self._current_power,
+                            self._name,
+                        )
+                        return
+                    except (ValueError, TypeError):
+                        pass
             self._current_power = self.power_max
             _LOGGER.debug(
                 "Set current_power to %s for device %s cause active and not can_change_power",
