@@ -208,7 +208,6 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         self._device = device
         self._coordinator = coordinator
         self._last_datetime_on = None
-        self._old_state = None
 
     async def async_added_to_hass(self) -> None:
         """The entity have been added to hass, listen to state change of the underlying entity"""
@@ -305,28 +304,37 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             _LOGGER.debug("No available state. Event is ignored")
             return
 
-        need_save = False
-        # We search for the date of the event
-        new_state = self._device.is_active  # new_state.state == STATE_ON
-        # old_state = old_state is not None and old_state.state == STATE_ON
-        if new_state and not self._old_state:
-            _LOGGER.debug("The managed device becomes on - store the last_datetime_on")
-            self._last_datetime_on = now
-            need_save = True
+        self._refresh_on_time()
 
-        if not new_state:
-            if self._old_state and self._last_datetime_on is not None:
-                _LOGGER.debug("The managed device becomes off - increment the delta time")
-                self._attr_native_value += round((now - self._last_datetime_on).total_seconds())
-            self._last_datetime_on = None
-            need_save = True
+    def _refresh_on_time(self) -> None:
+        """Account the on time using the current value of the device is_active.
 
-        # On sauvegarde le nouvel état
-        if need_save:
-            self._old_state = new_state
-            self.update_custom_attributes()
-            self.async_write_ha_state()
-            self._device.set_on_time(self._attr_native_value)
+        The is_active status comes from check_active_template, which may depend on
+        entities other than the underlying one (typically a power sensor). Such
+        entities are often updated a few seconds after the underlying switch changes
+        state, so is_active cannot be trusted to flip exactly at the underlying state
+        change event. Instead of detecting on/off transitions, we accumulate the time
+        elapsed since the last check if the device was active at that last check,
+        then start a new interval only if the device is active now. This is called
+        on each underlying state change and every minute, so a delayed is_active
+        change is caught at worst one minute later and the counter can never be
+        inverted (counting off time instead of on time).
+        """
+        now = self._device.now
+        active = self._device.is_active
+
+        if self._last_datetime_on is None and not active:
+            return
+
+        if self._last_datetime_on is not None:
+            _LOGGER.debug("%s - increment on_time since %s", self, self._last_datetime_on)
+            self._attr_native_value += max(0, round((now - self._last_datetime_on).total_seconds()))
+
+        self._last_datetime_on = now if active else None
+
+        self.update_custom_attributes()
+        self.async_write_ha_state()
+        self._device.set_on_time(self._attr_native_value)
 
     @callback
     async def _on_midnight(self, _=None) -> None:
@@ -350,15 +358,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         now = self._device.now
         _LOGGER.debug("Call of _on_update_on_time at %s", now)
 
-        if self._last_datetime_on is not None and self._device.is_active:
-            self._attr_native_value += round(
-                (now - self._last_datetime_on).total_seconds()
-            )
-            self._last_datetime_on = now
-            self.update_custom_attributes()
-            self.async_write_ha_state()
-
-            self._device.set_on_time(self._attr_native_value)
+        self._refresh_on_time()
 
     def update_custom_attributes(self):
         """Add some custom attributes to the entity"""

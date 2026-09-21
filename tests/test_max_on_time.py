@@ -190,3 +190,114 @@ async def test_max_on_time_calculation(
 
     assert device_on_time_sensor.last_datetime_on is None
     assert device_on_time_sensor.state == 12 * 60
+
+
+async def test_on_time_with_delayed_active_template(
+    hass: HomeAssistant, init_solar_optimizer_central_config
+):
+    """on_time must count real on time when check_active_template relies on an
+    entity (a power sensor) which is updated a few seconds after the underlying
+    switch. Before the fix, is_active was evaluated only at the underlying state
+    change event, so on/off transitions were inverted and the sensor counted the
+    off time instead (e.g. 06:00 -> 10:30 = 4h30 added when the switch turns on)."""
+
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        title="Water heater",
+        unique_id="waterHeaterUniqueId",
+        data={
+            CONF_NAME: "Water heater",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_water_heater",
+            CONF_POWER_MAX: 2000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_CHECK_ACTIVE_TEMPLATE: "{{ states('input_number.fake_water_heater_power')|float(0) > 100 }}",
+            CONF_DURATION_MIN: 10,
+            CONF_DURATION_STOP_MIN: 10,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_BATTERY_SOC_THRESHOLD: 0,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 180,
+        },
+    )
+
+    device = await create_managed_device(hass, entry_a, "water_heater")
+    assert device is not None
+
+    fake_switch = await create_test_input_boolean(hass, device.entity_id, "fake water heater")
+    fake_power = await create_test_input_number(
+        hass, "input_number.fake_water_heater_power", "fake water heater power"
+    )
+    assert fake_switch is not None
+    assert fake_power is not None
+
+    on_time_sensor = search_entity(
+        hass, "sensor.on_time_today_solar_optimizer_water_heater", SENSOR_DOMAIN
+    )
+    assert on_time_sensor is not None
+    assert on_time_sensor.state == 0
+
+    async def set_power(value: float):
+        await fake_power.async_set_value(value)
+        await hass.async_block_till_done()
+
+    async def tick(at):
+        device._set_now(at)
+        await on_time_sensor._on_update_on_time()
+        await hass.async_block_till_done()
+
+    now = device.now
+
+    # 1. Switch on: the power sensor is not updated yet -> not active, nothing counted
+    device._set_now(now)
+    await fake_switch.async_turn_on()
+    await hass.async_block_till_done()
+    assert device.is_active is False
+    assert on_time_sensor.last_datetime_on is None
+    assert on_time_sensor.state == 0
+
+    # 2. The power sensor catches up 5s later, the next periodic tick starts counting
+    await set_power(2000)
+    now = now + timedelta(seconds=30)
+    await tick(now)
+    assert on_time_sensor.last_datetime_on == now
+    assert on_time_sensor.state == 0
+
+    # 3. The device runs 10 minutes
+    now = now + timedelta(minutes=10)
+    await tick(now)
+    assert on_time_sensor.state == 600
+
+    # 4. Switch off: the power sensor still reads 2000W at the event
+    now = now + timedelta(seconds=20)
+    device._set_now(now)
+    await fake_switch.async_turn_off()
+    await hass.async_block_till_done()
+    assert on_time_sensor.state == 620
+
+    # 5. The power sensor drops, the next tick stops counting
+    await set_power(0)
+    now = now + timedelta(seconds=40)
+    await tick(now)
+    assert on_time_sensor.last_datetime_on is None
+    assert on_time_sensor.state == 660
+
+    # 6. Daily reset, then the device stays off for 4 hours
+    await on_time_sensor._on_midnight()
+    await hass.async_block_till_done()
+    assert on_time_sensor.state == 0
+    assert on_time_sensor.last_datetime_on is None
+
+    for _ in range(4 * 60):
+        now = now + timedelta(minutes=1)
+        await tick(now)
+    assert on_time_sensor.state == 0
+
+    # 7. Switch on again, power still 0 at the event: the off period must not be counted
+    now = now + timedelta(seconds=10)
+    device._set_now(now)
+    await fake_switch.async_turn_on()
+    await hass.async_block_till_done()
+    assert on_time_sensor.state == 0
+    assert device.check_usable() is True
