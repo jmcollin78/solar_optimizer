@@ -8,7 +8,11 @@
     "appPort": ["9123:8123"],
     "postCreateCommand": "./container dev-setup",
 
-    "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"],
+    "mounts": [
+        "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+        // The common agents directory
+        "source=/Users/jmcollin/.copilot/agents,target=/home/vscode/.copilot/agents,type=bind"
+    ],
 
     "customizations": {
         "vscode": {
