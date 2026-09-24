@@ -1,6 +1,7 @@
 """ Nominal Unit test module"""
 # from unittest.mock import patch
 from datetime import datetime, time
+from unittest.mock import patch
 
 from homeassistant.setup import async_setup_component
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
@@ -445,3 +446,66 @@ async def test_negative_or_null_costs(hass: HomeAssistant, init_solar_optimizer_
         assert calculated_data["best_solution"][0]["name"] == "Test Device"
         assert calculated_data["best_solution"][0]["state"] is True
         assert calculated_data["best_objective"] == best_objective
+
+
+@pytest.mark.parametrize(
+    "consumption_state",
+    [
+        "unknown",
+        "unavailable",
+        None,  # entity not present in states
+    ],
+)
+async def test_power_consumption_not_valued(hass: HomeAssistant, init_solar_optimizer_central_config, consumption_state):
+    """Test that a not valued (unknown/unavailable/missing) power consumption
+    doesn't raise a TypeError but gracefully disables the calculation.
+    See https://github.com/jmcollin78/solar_optimizer issue: TypeError unsupported
+    operand type(s) for +: 'NoneType' and 'int' in coordinator."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Test Device",
+        unique_id="testDeviceUniqueId",
+        data={
+            CONF_NAME: "Test Device",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device",
+            CONF_POWER_MAX: 1000,
+            CONF_DURATION_MIN: 0.3,
+            CONF_DURATION_STOP_MIN: 0.1,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        },
+    )
+
+    device = await create_managed_device(hass, entry, "test_device")
+    assert device is not None
+
+    side_effects_dict = {
+        "sensor.fake_power_production": State("sensor.fake_power_production", 5000),
+        "sensor.fake_battery_charge_power": State("sensor.fake_battery_charge_power", 0),
+        "input_number.fake_sell_cost": State("input_number.fake_sell_cost", 1),
+        "input_number.fake_buy_cost": State("input_number.fake_buy_cost", 1),
+        "input_number.fake_sell_tax_percent": State("input_number.fake_sell_tax_percent", 0),
+    }
+    # None means the consumption entity state is not set at all (returns unknown.entity_id default),
+    # otherwise set the given raw state string
+    if consumption_state is not None:
+        side_effects_dict["sensor.fake_power_consumption"] = State("sensor.fake_power_consumption", consumption_state)
+
+    side_effects = SideEffects(
+        side_effects_dict,
+        State("unknown.entity_id", "unknown"),
+    )
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+
+    # fmt:off
+    with patch("homeassistant.core.StateMachine.get", side_effect=side_effects.get_side_effects()), patch("homeassistant.core.ServiceRegistry.async_call") as mock_service_call:
+    # fmt:on
+        # Should not raise TypeError — the calculation is simply abandoned
+        calculated_data = await coordinator._async_update_data()
+        await hass.async_block_till_done()
+        assert calculated_data is None
+        # no service call should have been done (device not activated)
+        assert not mock_service_call.called

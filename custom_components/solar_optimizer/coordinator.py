@@ -161,6 +161,12 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             )
             return None
 
+        power_consumption = get_safe_float(self.hass, self._power_consumption_entity_id, "W")
+        if power_consumption is None:
+            _LOGGER.warning("Power consumption is not valued. Solar Optimizer will be disabled")
+            return None
+        calculated_data["power_consumption"] = power_consumption
+
         if not self._smooth_production:
             calculated_data["power_production"] = power_production
         else:
@@ -170,10 +176,6 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             calculated_data["power_production"] = self._last_production
 
         calculated_data["power_production_brut"] = power_production
-
-        calculated_data["power_consumption"] = get_safe_float(
-            self.hass, self._power_consumption_entity_id, "W"
-        )
 
         calculated_data["sell_cost"] = get_safe_float(
             self.hass, self._sell_cost_entity_id
