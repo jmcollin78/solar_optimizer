@@ -60,6 +60,15 @@ central_config_schema = vol.Schema(
             selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN, INPUT_NUMBER_DOMAIN])
         ),
         vol.Optional(CONF_RAZ_TIME, default=DEFAULT_RAZ_TIME): str,
+        vol.Optional(CONF_ALLOWED_POWER_OVERAGE_PERCENT, default=0): selector.NumberSelector(
+            selector.NumberSelectorConfig(min=0, max=100, step=1, mode=selector.NumberSelectorMode.SLIDER, unit_of_measurement="%")
+        ),
+        vol.Optional(CONF_ALGORITHM_TYPE, default=ALGORITHM_SIMULATED_ANNEALING): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=ALGORITHM_TYPES,
+                mode=selector.SelectSelectorMode.LIST,
+            )
+        ),
     }
 )
 
@@ -109,6 +118,7 @@ power_managed_device_schema = vol.Schema(
             domain=[
                 INPUT_NUMBER_DOMAIN,
                 NUMBER_DOMAIN,
+                SENSOR_DOMAIN,
                 FAN_DOMAIN,
                 LIGHT_DOMAIN,
             ]
