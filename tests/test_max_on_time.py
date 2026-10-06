@@ -114,9 +114,10 @@ async def test_max_on_time_calculation(
     #
     # 2. Activate the underlying switch
     #
-    await fake_input_bool.async_turn_on()
+    # Freeze now before turning on: the state listener may run during async_turn_on
     now = device.now
     device._set_now(now)
+    await fake_input_bool.async_turn_on()
 
     await hass.async_block_till_done()
 
@@ -239,7 +240,7 @@ async def test_on_time_with_delayed_active_template(
     assert on_time_sensor.state == 0
 
     async def set_power(value: float):
-        await fake_power.async_set_value(value)
+        await hass.services.async_call("input_number", "set_value", {"entity_id": fake_power.entity_id, "value": value}, blocking=True)
         await hass.async_block_till_done()
 
     async def tick(at):

@@ -1,0 +1,290 @@
+{
+    "title": "Solar Optimizer",
+    "config": {
+        "flow_title": "Configuración de Solar Optimizer",
+        "step": {
+            "user": {
+                "title": "Tipo de configuración",
+                "description": "Indique el tipo de configuración",
+                "data": {
+                    "device_type": "Tipo de dispositivo"
+                },
+                "data_description": {
+                    "device_type": "Dispositivo simple encendido/apagado o dispositivo con gestión de potencia variable"
+                }
+            },
+            "device_central": {
+                "title": "Parámetros comunes",
+                "description": "Indique los parámetros comunes",
+                "data": {
+                    "refresh_period_sec": "Período de actualización",
+                    "power_consumption_entity_id": "Consumo neto de potencia",
+                    "power_production_entity_id": "Producción solar",
+                    "subscribe_to_events": "Recalcular con cada nuevo valor de producción/consumo",
+                    "sell_cost_entity_id": "Precio de venta de la energía",
+                    "buy_cost_entity_id": "Precio de compra de la energía",
+                    "sell_tax_percent_entity_id": "Porcentaje de impuesto a la venta",
+                    "smooth_production": "Suavizar la producción solar",
+                    "battery_soc_entity_id": "Estado de carga de la batería",
+                    "battery_charge_power_entity_id": "Potencia de carga de la batería",
+                    "raz_time": "Hora de reinicio de contadores"
+                },
+                "data_description": {
+                    "refresh_period_sec": "Aunque no haya datos nuevos, recalcular al menos con este período en segundos. Atención: en cada período se hacen cálculos pesados, vigile la carga de CPU y no actualice con demasiada frecuencia",
+                    "power_consumption_entity_id": "El entity_id del sensor de consumo neto. Debe ser negativo cuando se exporta energía a la red.",
+                    "power_production_entity_id": "El entity_id del sensor de producción solar.",
+                    "subscribe_to_events": "Suscribirse a los eventos para recalcular apenas haya datos nuevos. Vigile la carga de CPU.",
+                    "sell_cost_entity_id": "El entity_id con el precio actual de venta de la energía.",
+                    "buy_cost_entity_id": "El entity_id con el precio actual de compra de la energía.",
+                    "sell_tax_percent_entity_id": "El porcentaje de impuesto sobre la reventa de energía (0 a 100)",
+                    "smooth_production": "Si está marcado, la producción solar se suaviza para evitar variaciones bruscas",
+                    "battery_soc_entity_id": "El entity_id del estado de carga de la batería en %. Déjelo vacío si no tiene batería",
+                    "battery_charge_power_entity_id": "El entity_id de la potencia neta de carga de la batería en W. Debe ser negativa cuando la batería carga y positiva cuando descarga. Déjelo vacío si no usa batería solar.",
+                    "raz_time": "Hora de reinicio de los contadores de tiempo encendido. Debe ser antes de la primera exposición al sol, pero no demasiado temprano para dejar tiempo a la activación nocturna"
+                }
+            },
+            "device": {
+                "title": "Parámetros del dispositivo",
+                "description": "Indique los parámetros del dispositivo",
+                "data": {
+                    "name": "Nombre del dispositivo",
+                    "entity_id": "Entidad del dispositivo",
+                    "power_max": "Potencia del dispositivo",
+                    "measured_power_entity_id": "Sensor de potencia medida",
+                    "check_usable_template": "Plantilla de disponibilidad",
+                    "check_active_template": "Plantilla de actividad",
+                    "duration_min": "Duración mínima encendido",
+                    "duration_stop_min": "Duración mínima apagado",
+                    "action_mode": "Modo de acción",
+                    "activation_service": "Servicio de activación",
+                    "deactivation_service": "Servicio de desactivación",
+                    "battery_soc_threshold": "Umbral de carga de batería",
+                    "max_on_time_per_day_min": "Tiempo máximo encendido por día",
+                    "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "offpeak_time": "Hora de inicio de tarifa reducida"
+                },
+                "data_description": {
+                    "name": "El nombre del dispositivo",
+                    "entity_id": "El entity_id del dispositivo",
+                    "power_max": "La potencia del dispositivo encendido. Puede ser un número o una plantilla",
+                    "measured_power_entity_id": "Opcional. Sensor que mide el consumo real del dispositivo en W o kW (p. ej. un enchufe inteligente). Solo se usa para mostrar el consumo real en la tarjeta: el algoritmo sigue usando la potencia configurada como presupuesto.",
+                    "check_usable_template": "La plantilla que indica si el dispositivo se puede usar. Ejemplo `True` o `states('sensor.mi_sensor') | float > 10` (no olvide las llaves dobles)",
+                    "check_active_template": "La plantilla que indica si el dispositivo está activo. Déjela vacía para dispositivos tipo switch o similares. Ejemplo `is_state_attr('sensor.mi_sensor', 'hvac_mode', 'heat')` (con llaves dobles)",
+                    "duration_min": "La duración mínima encendido, en minutos",
+                    "duration_stop_min": "La duración mínima apagado, en minutos",
+                    "action_mode": "El modo de acción del dispositivo: `service` para llamar a un servicio que lo encienda o apague, o `event` para enviar un evento",
+                    "activation_service": "El servicio para activar el dispositivo. Ejemplo `switch/turn_on` o `climate/set_hvac_mode/hvac_mode:cool`",
+                    "deactivation_service": "El servicio para desactivar el dispositivo. Ejemplo `switch/turn_off` o `climate/set_hvac_mode/hvac_mode:off`. Déjelo vacío si el dispositivo se apaga solo",
+                    "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
+                    "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
+                    "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
+                }
+            },
+            "powered_device": {
+                "title": "Parámetros del dispositivo de potencia variable",
+                "description": "Indique los parámetros del dispositivo de potencia variable",
+                "data": {
+                    "name": "Nombre del dispositivo",
+                    "entity_id": "Entidad del dispositivo",
+                    "power_max": "Potencia máxima del dispositivo",
+                    "power_min": "Potencia mínima del dispositivo",
+                    "power_step": "Paso de potencia del dispositivo",
+                    "check_usable_template": "Plantilla de disponibilidad",
+                    "check_active_template": "Plantilla de actividad",
+                    "duration_min": "Duración mínima encendido",
+                    "duration_stop_min": "Duración mínima apagado",
+                    "action_mode": "Modo de acción",
+                    "activation_service": "Servicio de activación",
+                    "deactivation_service": "Servicio de desactivación",
+                    "power_entity_id": "Entidad de potencia",
+                    "measured_power_entity_id": "Sensor de potencia medida",
+                    "duration_power_min": "Duración de cambio de potencia",
+                    "change_power_service": "Servicio de cambio de potencia",
+                    "convert_power_divide_factor": "Factor de división",
+                    "battery_soc_threshold": "Umbral de carga de batería",
+                    "max_on_time_per_day_min": "Tiempo máximo encendido por día",
+                    "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "offpeak_time": "Hora de inicio de tarifa reducida"
+                },
+                "data_description": {
+                    "name": "El nombre del dispositivo",
+                    "entity_id": "El entity_id del dispositivo",
+                    "power_max": "La potencia del dispositivo encendido. Puede ser un número o una plantilla",
+                    "power_min": "El consumo mínimo del dispositivo encendido",
+                    "power_step": "El paso de potencia del dispositivo",
+                    "check_usable_template": "La plantilla que indica si el dispositivo se puede usar. Ejemplo `True` o `states('sensor.mi_sensor') | float > 10` (no olvide las llaves dobles)",
+                    "check_active_template": "La plantilla que indica si el dispositivo está activo. Déjela vacía para dispositivos tipo switch o similares. Ejemplo `is_state_attr('sensor.mi_sensor', 'hvac_mode', 'heat')` (con llaves dobles)",
+                    "duration_min": "La duración mínima encendido, en minutos",
+                    "duration_stop_min": "La duración mínima apagado, en minutos",
+                    "action_mode": "El modo de acción del dispositivo: `service` para llamar a un servicio que lo encienda o apague, o `event` para enviar un evento",
+                    "activation_service": "El servicio para activar el dispositivo. Ejemplo `switch/turn_on` o `climate/set_hvac_mode/hvac_mode:cool`",
+                    "deactivation_service": "El servicio para desactivar el dispositivo. Ejemplo `switch/turn_off` o `climate/set_hvac_mode/hvac_mode:off`",
+                    "power_entity_id": "La entidad que controla la potencia",
+                    "measured_power_entity_id": "Opcional. Sensor que mide el consumo real del dispositivo en W o kW (p. ej. un enchufe inteligente). Solo se usa para mostrar el consumo real en la tarjeta: el algoritmo sigue usando la potencia configurada como presupuesto.",
+                    "duration_power_min": "La duración mínima de cada cambio de potencia, en minutos",
+                    "change_power_service": "El servicio para cambiar la potencia. Ejemplo `number/set_value`",
+                    "convert_power_divide_factor": "El factor de división para convertir la potencia a las unidades del dispositivo. Para convertir W a amperes, el divisor debería ser 220",
+                    "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
+                    "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
+                    "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
+                }
+            }
+        },
+        "error": {
+            "format_time_invalid": "El formato de la hora debe ser HH:MM"
+        }
+    },
+    "options": {
+        "flow_title": "Opciones de Solar Optimizer",
+        "step": {
+            "user": {
+                "title": "Tipo de configuración",
+                "description": "Indique el tipo de configuración",
+                "data": {
+                    "device_type": "Tipo de dispositivo"
+                },
+                "data_description": {
+                    "device_type": "Configuración común o configuración de un dispositivo"
+                }
+            },
+            "device_central": {
+                "title": "Parámetros comunes",
+                "description": "Indique los parámetros comunes",
+                "data": {
+                    "refresh_period_sec": "Período de actualización",
+                    "power_consumption_entity_id": "Consumo neto de potencia",
+                    "power_production_entity_id": "Producción solar",
+                    "subscribe_to_events": "Recalcular con cada nuevo valor de producción/consumo",
+                    "sell_cost_entity_id": "Precio de venta de la energía",
+                    "buy_cost_entity_id": "Precio de compra de la energía",
+                    "sell_tax_percent_entity_id": "Porcentaje de impuesto a la venta",
+                    "smooth_production": "Suavizar la producción solar",
+                    "battery_soc_entity_id": "Estado de carga de la batería",
+                    "battery_charge_power_entity_id": "Potencia de carga de la batería",
+                    "raz_time": "Hora de reinicio de contadores"
+                },
+                "data_description": {
+                    "refresh_period_sec": "Aunque no haya datos nuevos, recalcular al menos con este período en segundos. Atención: en cada período se hacen cálculos pesados, vigile la carga de CPU y no actualice con demasiada frecuencia",
+                    "power_consumption_entity_id": "El entity_id del sensor de consumo neto. Debe ser negativo cuando se exporta energía a la red.",
+                    "power_production_entity_id": "El entity_id del sensor de producción solar.",
+                    "subscribe_to_events": "Suscribirse a los eventos para recalcular apenas haya datos nuevos. Vigile la carga de CPU.",
+                    "sell_cost_entity_id": "El entity_id con el precio actual de venta de la energía.",
+                    "buy_cost_entity_id": "El entity_id con el precio actual de compra de la energía.",
+                    "sell_tax_percent_entity_id": "El porcentaje de impuesto sobre la reventa de energía (0 a 100)",
+                    "smooth_production": "Si está marcado, la producción solar se suaviza para evitar variaciones bruscas",
+                    "battery_soc_entity_id": "El entity_id del estado de carga de la batería en %. Déjelo vacío si no tiene batería",
+                    "battery_charge_power_entity_id": "El entity_id de la potencia neta de carga de la batería en W. Debe ser negativa cuando la batería carga y positiva cuando descarga. Déjelo vacío si no usa batería solar.",
+                    "raz_time": "Hora de reinicio de los contadores de tiempo encendido. Debe ser antes de la primera exposición al sol, pero no demasiado temprano para dejar tiempo a la activación nocturna"
+                }
+            },
+            "device": {
+                "title": "Parámetros del dispositivo",
+                "description": "Indique los parámetros del dispositivo",
+                "data": {
+                    "name": "Nombre del dispositivo",
+                    "entity_id": "Entidad del dispositivo",
+                    "power_max": "Potencia del dispositivo",
+                    "measured_power_entity_id": "Sensor de potencia medida",
+                    "check_usable_template": "Plantilla de disponibilidad",
+                    "check_active_template": "Plantilla de actividad",
+                    "duration_min": "Duración mínima encendido",
+                    "duration_stop_min": "Duración mínima apagado",
+                    "action_mode": "Modo de acción",
+                    "activation_service": "Servicio de activación",
+                    "deactivation_service": "Servicio de desactivación",
+                    "battery_soc_threshold": "Umbral de carga de batería",
+                    "max_on_time_per_day_min": "Tiempo máximo encendido por día",
+                    "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "offpeak_time": "Hora de inicio de tarifa reducida"
+                },
+                "data_description": {
+                    "name": "El nombre del dispositivo",
+                    "entity_id": "El entity_id del dispositivo",
+                    "power_max": "La potencia del dispositivo encendido. Puede ser un número o una plantilla",
+                    "measured_power_entity_id": "Opcional. Sensor que mide el consumo real del dispositivo en W o kW (p. ej. un enchufe inteligente). Solo se usa para mostrar el consumo real en la tarjeta: el algoritmo sigue usando la potencia configurada como presupuesto.",
+                    "check_usable_template": "La plantilla que indica si el dispositivo se puede usar. Ejemplo `True` o `states('sensor.mi_sensor') | float > 10` (no olvide las llaves dobles)",
+                    "check_active_template": "La plantilla que indica si el dispositivo está activo. Déjela vacía para dispositivos tipo switch o similares. Ejemplo `is_state_attr('sensor.mi_sensor', 'hvac_mode', 'heat')` (con llaves dobles)",
+                    "duration_min": "La duración mínima encendido, en minutos",
+                    "duration_stop_min": "La duración mínima apagado, en minutos",
+                    "action_mode": "El modo de acción del dispositivo: `service` para llamar a un servicio que lo encienda o apague, o `event` para enviar un evento",
+                    "activation_service": "El servicio para activar el dispositivo. Ejemplo `switch/turn_on` o `climate/set_hvac_mode/hvac_mode:cool`",
+                    "deactivation_service": "El servicio para desactivar el dispositivo. Ejemplo `switch/turn_off` o `climate/set_hvac_mode/hvac_mode:off`. Déjelo vacío si el dispositivo se apaga solo",
+                    "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
+                    "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
+                    "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
+                }
+            },
+            "powered_device": {
+                "title": "Parámetros del dispositivo de potencia variable",
+                "description": "Indique los parámetros del dispositivo de potencia variable",
+                "data": {
+                    "name": "Nombre del dispositivo",
+                    "entity_id": "Entidad del dispositivo",
+                    "power_max": "Potencia máxima del dispositivo",
+                    "power_min": "Potencia mínima del dispositivo",
+                    "power_step": "Paso de potencia del dispositivo",
+                    "check_usable_template": "Plantilla de disponibilidad",
+                    "check_active_template": "Plantilla de actividad",
+                    "duration_min": "Duración mínima encendido",
+                    "duration_stop_min": "Duración mínima apagado",
+                    "action_mode": "Modo de acción",
+                    "activation_service": "Servicio de activación",
+                    "deactivation_service": "Servicio de desactivación",
+                    "power_entity_id": "Entidad de potencia",
+                    "measured_power_entity_id": "Sensor de potencia medida",
+                    "duration_power_min": "Duración de cambio de potencia",
+                    "change_power_service": "Servicio de cambio de potencia",
+                    "convert_power_divide_factor": "Factor de división",
+                    "battery_soc_threshold": "Umbral de carga de batería",
+                    "max_on_time_per_day_min": "Tiempo máximo encendido por día",
+                    "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "offpeak_time": "Hora de inicio de tarifa reducida"
+                },
+                "data_description": {
+                    "name": "El nombre del dispositivo",
+                    "entity_id": "El entity_id del dispositivo",
+                    "power_max": "La potencia del dispositivo encendido. Puede ser un número o una plantilla",
+                    "power_min": "El consumo mínimo del dispositivo encendido",
+                    "power_step": "El paso de potencia del dispositivo",
+                    "check_usable_template": "La plantilla que indica si el dispositivo se puede usar. Ejemplo `True` o `states('sensor.mi_sensor') | float > 10` (no olvide las llaves dobles)",
+                    "check_active_template": "La plantilla que indica si el dispositivo está activo. Déjela vacía para dispositivos tipo switch o similares. Ejemplo `is_state_attr('sensor.mi_sensor', 'hvac_mode', 'heat')` (con llaves dobles)",
+                    "duration_min": "La duración mínima encendido, en minutos",
+                    "duration_stop_min": "La duración mínima apagado, en minutos",
+                    "action_mode": "El modo de acción del dispositivo: `service` para llamar a un servicio que lo encienda o apague, o `event` para enviar un evento",
+                    "activation_service": "El servicio para activar el dispositivo. Ejemplo `switch/turn_on` o `climate/set_hvac_mode/hvac_mode:cool`",
+                    "deactivation_service": "El servicio para desactivar el dispositivo. Ejemplo `switch/turn_off` o `climate/set_hvac_mode/hvac_mode:off`",
+                    "power_entity_id": "La entidad que controla la potencia",
+                    "measured_power_entity_id": "Opcional. Sensor que mide el consumo real del dispositivo en W o kW (p. ej. un enchufe inteligente). Solo se usa para mostrar el consumo real en la tarjeta: el algoritmo sigue usando la potencia configurada como presupuesto.",
+                    "duration_power_min": "La duración mínima de cada cambio de potencia, en minutos",
+                    "change_power_service": "El servicio para cambiar la potencia. Ejemplo `number/set_value`",
+                    "convert_power_divide_factor": "El factor de división para convertir la potencia a las unidades del dispositivo. Para convertir W a amperes, el divisor debería ser 220",
+                    "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
+                    "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
+                    "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
+                }
+            }
+        },
+        "error": {
+            "format_time_invalid": "El formato de la hora debe ser HH:MM"
+        }
+    },
+    "selector": {
+        "device_type": {
+            "options": {
+                "central_config": "Configuración común",
+                "device_type": "Dispositivo encendido/apagado",
+                "powered_device_type": "Dispositivo de potencia variable"
+            }
+        },
+        "action_mode": {
+            "options": {
+                "action_call": "Llamada a acción",
+                "event": "Evento"
+            }
+        }
+    }
+}

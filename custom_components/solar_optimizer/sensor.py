@@ -149,7 +149,11 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def device_class(self) -> SensorDeviceClass | None:
         if self.idx == "best_objective":
-            return SensorDeviceClass.MONETARY
+            # best_objective is a dimensionless score of the simulated annealing
+            # objective function (import/export cost coefficients blended with the
+            # priority weight), not an amount of money. Tagging it MONETARY/"€" was
+            # misleading regardless of the user's actual currency.
+            return None
         elif self.idx == "battery_soc":
             return SensorDeviceClass.BATTERY
         else:
@@ -157,6 +161,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
 
     @property
     def state_class(self) -> SensorStateClass | None:
+        if self.idx == "best_objective":
+            return SensorStateClass.MEASUREMENT
         if self.device_class in (SensorDeviceClass.POWER, SensorDeviceClass.BATTERY):
             return SensorStateClass.MEASUREMENT
         else:
@@ -165,7 +171,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str | None:
         if self.idx == "best_objective":
-            return "€"
+            # Dimensionless optimizer score, not a currency amount (see device_class above)
+            return None
         elif self.idx == "battery_soc":
             return "%"
         else:
@@ -274,6 +281,12 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             old_value = old_state.attributes.get("last_datetime_on")
             if old_value is not None:
                 self._last_datetime_on = datetime.fromisoformat(old_value)
+
+        # Sync the restored value into the ManagedDevice right away. Without this, the
+        # device's internal on_time_sec stays at 0 (its __init__ default) until the first
+        # underlying state change or the first 1-minute tick, which can let a device that
+        # already reached its daily max be allowed on again for that window after a restart.
+        self._device.set_on_time(self._attr_native_value)
 
         self.update_custom_attributes()
         self.async_write_ha_state()

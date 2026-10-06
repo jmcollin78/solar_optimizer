@@ -49,6 +49,7 @@
 - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
   - [start\_device](#start_device)
   - [stop\_device](#stop_device)
+  - [clear\_override](#clear_override)
 - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation-1)
     - [File `configuration.yaml`:](#file-configurationyaml)
     - [File `templates.yaml`:](#file-templatesyaml)
@@ -217,6 +218,7 @@ You need to specify the following attributes:
 | `battery_soc_threshold`       | All                                 | The minimum battery charge percentage required for the device to be usable.                                                                                                                                                            | 30                                               | In this example, the device will not be used by the algorithm if the solar battery is not charged to at least 30%. Requires the battery charge state entity to be configured in the common parameters. See above. |
 | `max_on_time_per_day_min`     | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
 | `min_on_time_per_day_min`     | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
+| `measured_power_entity_id`    | All (optional)                      | A sensor measuring the real power consumption of the device, in W or kW (e.g. a smart plug).                                                                                                                                          | sensor.washing_machine_power                     | Display only: the card shows the measured power in the power bar and the power graph, with the configured power as a dashed reference line. The algorithm keeps using `power_max` as its budget.                  |
 | `offpeak_time`                | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
 
 ### Defining the Active Template
@@ -472,6 +474,12 @@ Each controlled device has the following entities:
 
 4. A dropdown list named **"Priority"** which defines the priority level of this device. Possible values range from 'Very low' to 'Very high'. See [priority management](#priority-management).
 
+5. A **binary sensor** named `binary_sensor.solar_optimizer_override_<name>`:
+   - **"On"** when a **manual override** is active: the device was turned on or off outside of Solar Optimizer (by hand, from the card's switch, or by another automation). While the override is active, the algorithm leaves the device alone instead of reverting the change at the next cycle.
+   - Attributes `override_since` and `override_baseline_state` (the state Solar Optimizer had requested before the override).
+   - The override is released when the device returns to the state Solar Optimizer had requested, at `raz_time`, when the Enable switch is turned back on, or with the [clear\_override](#clear_override) action.
+   - Actions performed by Solar Optimizer carry a context linked to `switch.solar_optimizer_<name>`, so they can be traced in the history/logbook.
+
 ![Simple Device Entities](images/entities-simple-device.png)
 
 ### Switch Attributes
@@ -486,6 +494,7 @@ The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Dev
 | `is_usable`                 | `true` if the algorithm **can** use the device.                                             |
 | `can_change_power`          | `true` if the device's power **can** be adjusted.                                           |
 | `current_power`             | The **current power consumption** of the device.                                            |
+| `measured_power_entity_id`  | The sensor measuring the **real** consumption, if configured (used by the card only).       |
 | `requested_power`           | The power level requested by **Solar Optimizer**.                                           |
 | `duration_sec`              | The total **activation duration** in seconds.                                               |
 | `duration_power_sec`        | The duration of the **last power change** in seconds.                                       |
@@ -670,6 +679,21 @@ This action stops the forced activation of a managed device. It cancels the runn
 In YAML mode:
 ```yaml
 action: solar_optimizer.stop_device
+data:
+  device_id: washing_machine
+```
+
+## clear_override
+
+This action releases a pending manual override (see `binary_sensor.solar_optimizer_override_<name>` in [Devices and Their Entities](#devices-and-their-entities)) and gives control of the device back to Solar Optimizer immediately, without waiting for `raz_time` or for the device to return to the requested state.
+
+| Parameter   | Required | Description                                                                    |
+| ----------- | -------- | ------------------------------------------------------------------------------ |
+| `device_id` | Yes      | The unique ID of the managed device (the part after `switch.solar_optimizer_`) |
+
+In YAML mode:
+```yaml
+action: solar_optimizer.clear_override
 data:
   device_id: washing_machine
 ```

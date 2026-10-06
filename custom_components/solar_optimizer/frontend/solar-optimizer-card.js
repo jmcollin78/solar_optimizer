@@ -98,7 +98,63 @@ const TRANSLATIONS = {
     editorNote: '<strong>Note:</strong> No optional parameters or additional YAML configuration are needed for this card to work!',
     editorSecondaryInfoDesc: 'Display custom info per device (supports <code>states()</code> and <code>state_attr()</code>):',
     cardDescription: 'Interactive card to control and monitor devices managed by the Solar Optimizer load scheduler.',
+  },
+  es: {
+    disabled: 'Desactivado',
+    active: 'Activo',
+    waiting: 'En espera',
+    inactive: 'Inactivo',
+    manual: 'Manual',
+    usable: 'Disponible',
+    waitingIndicator: 'En espera',
+    offpeakForced: 'Tarifa reducida forzada',
+    priority: 'Prioridad',
+    enableTitle: 'Activar/desactivar la gestión por el algoritmo',
+    stopManually: 'Detener manualmente',
+    startManually: 'Iniciar manualmente',
+    stop: 'Detener',
+    start: 'Iniciar',
+    nextAvailable: 'Próxima disponibilidad',
+    powerAvailable: 'Cambio de potencia disponible',
+    offpeakHours: 'Tarifa reducida',
+    batterySocThreshold: 'Umbral de batería',
+    onTime: 'Tiempo encendido',
+    resetTitle: 'Reiniciar el contador de tiempo encendido',
+    reset: 'Reiniciar',
+    timedDurationSelect: 'Duración forzada',
+    timedRemaining: 'Restante',
+    timedDuration1h: '1h',
+    timedDuration4h: '4h',
+    timedDuration12h: '12h',
+    timedDuration24h: '24h',
+    expand: 'Expandir',
+    collapse: 'Contraer',
+    expandAll: 'Expandir todo',
+    collapseAll: 'Contraer todo',
+    managedDevices: 'Dispositivos gestionados',
+    noDevices: 'No se encontró ningún dispositivo gestionado.',
+    requiredPower: 'Potencia solicitada',
+    smoothedProduction: 'Producción suavizada',
+    netConsumption: 'Consumo neto',
+    batterySoc: 'Carga de batería',
+    totalOptimized: 'Total optimizado',
+    algoObjective: 'Objetivo del algoritmo',
+    availableNow: 'Disponible ahora',
+    historyBar: 'Historial de activación',
+    powerHistory: 'Potencia',
+    editorHistoryHours: 'Duración del historial (horas)',
+    editorAutoConfig: 'Esta tarjeta se configura automáticamente.',
+    editorDesc: 'Detecta y agrupa automáticamente las medidas del algoritmo y todos los switches y entidades de prioridad que empiezan con <code>solar_optimizer</code>.',
+    editorNote: '<strong>Nota:</strong> ¡No hace falta ningún parámetro opcional ni configuración YAML adicional para que esta tarjeta funcione!',
+    editorSecondaryInfoDesc: 'Mostrar información personalizada por dispositivo (admite <code>states()</code> y <code>state_attr()</code>):',
+    cardDescription: 'Tarjeta interactiva para controlar y seguir los dispositivos gestionados por el planificador de cargas Solar Optimizer.',
   }
+};
+
+// Traduction selon la langue de HA (fr, es, sinon en), avec repli sur l'anglais par clé
+const translator = (lang) => {
+  const table = TRANSLATIONS[(lang || 'en').slice(0, 2).toLowerCase()] || TRANSLATIONS.en;
+  return (key) => table[key] || TRANSLATIONS.en[key] || key;
 };
 
 class SolarOptimizerCard extends HTMLElement {
@@ -356,6 +412,16 @@ class SolarOptimizerCard extends HTMLElement {
             height: 100%;
             transition: width 0.3s ease;
           }
+          solar-optimizer-card .so-power-bar-over {
+            background-color: var(--warning-color, #ff9800);
+          }
+          solar-optimizer-card .so-power-bar-budget {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--primary-text-color);
+          }
           solar-optimizer-card .so-priority-control {
             display: flex;
             align-items: center;
@@ -561,8 +627,7 @@ class SolarOptimizerCard extends HTMLElement {
     if (!this._collapsedDevices) this._collapsedDevices = {};
 
     const lang = this._hass.locale?.language;
-    const isFr = lang && lang.toLowerCase().startsWith('fr');
-    const t = (key) => TRANSLATIONS[isFr ? 'fr' : 'en'][key] || key;
+    const t = translator(lang);
 
     // Formate une date ISO en heure locale avec secondes
     // Si la date est dans le passé, retourne le texte de disponibilité immédiate
@@ -632,7 +697,13 @@ class SolarOptimizerCard extends HTMLElement {
       const powerMax = attrs.power_max || 0;
       // Si l'équipement est éteint, on force la puissance affichée à 0
       // pour éviter qu'une valeur résiduelle dans les attributs ne remplisse la barre
-      const currentPower = isActive ? (attrs.current_power || 0) : 0;
+      // Capteur de puissance mesurée (optionnel, affichage seulement) : prioritaire sur l'estimation
+      const measuredId = attrs.measured_power_entity_id || null;
+      const measuredPower = measuredId ? this._powerW(this._hass.states[measuredId]) : null;
+      // Sans mesure : budget configuré (power_max) pour un on/off, puissance courante pour un variable
+      const plannedPower = attrs.can_change_power ? (attrs.current_power || 0) : powerMax;
+      const currentPower = measuredPower != null ? Math.round(measuredPower) : (isActive ? plannedPower : 0);
+      const overBudget = powerMax > 0 && currentPower > powerMax;
       const requestedPower = attrs.requested_power || 0;
 
       // Priorité
@@ -648,6 +719,8 @@ class SolarOptimizerCard extends HTMLElement {
       const totalRange = powerMax - powerMin;
       const rawPercent = (currentPower > 0 && totalRange > 0) ? ((currentPower - powerMin) / totalRange) * 100 : (currentPower > 0 ? 100 : 0);
       const powerPercent = currentPower <= 0 ? 0 : Math.min(100, Math.max(0, Math.round(rawPercent)));
+      // Au-delà du budget : barre pleine orange + repère à la position du budget
+      const budgetMarkPercent = overBudget ? Math.round(((powerMax - powerMin) / (currentPower - powerMin)) * 100) : null;
 
       let statusBadge = "";
       if (!isEnabled && isActive) {
@@ -811,10 +884,11 @@ class SolarOptimizerCard extends HTMLElement {
             </div>
           </div>
           <div class="so-device-power-row">
-            <span><strong style="color:var(--primary-text-color);">${currentPower} W</strong> / ${powerMax} W</span>
+            <span><strong style="color:${overBudget ? 'var(--warning-color, #ff9800)' : 'var(--primary-text-color)'};">${currentPower} W</strong> / ${powerMax} W</span>
             ${powerMax > 0 ? `
               <div class="so-power-bar-container">
-                ${powerPercent > 0 ? `<div class="so-power-bar" style="width: ${powerPercent}%"></div>` : ''}
+                ${powerPercent > 0 ? `<div class="so-power-bar${overBudget ? ' so-power-bar-over' : ''}" style="width: ${powerPercent}%"></div>` : ''}
+                ${overBudget ? `<div class="so-power-bar-budget" style="left: ${budgetMarkPercent}%"></div>` : ''}
               </div>
             ` : ''}
           </div>
@@ -828,7 +902,7 @@ class SolarOptimizerCard extends HTMLElement {
             <div class="so-device-detail-footer">
               <div class="so-device-detail-history">
                 ${this._renderHistoryBar(switchKey, t)}
-                ${attrs.can_change_power ? this._renderPowerHistoryGraph(switchKey, powerMax, t) : ''}
+                ${(attrs.can_change_power || measuredId) ? this._renderPowerHistoryGraph(measuredId || switchKey, powerMax, t, !!measuredId) : ''}
               </div>
               <div class="so-device-detail-controls">
                 <button
@@ -872,7 +946,7 @@ class SolarOptimizerCard extends HTMLElement {
         <div class="so-stat-box">
           <ha-icon icon="mdi:bullseye-arrow" style="color:var(--primary-color);margin-bottom:4px;"></ha-icon>
           <span class="so-stat-title">${t('algoObjective')}</span>
-          <span class="so-stat-value">${!isNaN(parseFloat(bestObjective)) ? parseFloat(bestObjective).toFixed(2) + " €" : bestObjective}</span>
+          <span class="so-stat-value">${!isNaN(parseFloat(bestObjective)) ? parseFloat(bestObjective).toFixed(3) : bestObjective}</span>
         </div>
       </div>
       <div style="display:block;">
@@ -1118,14 +1192,23 @@ class SolarOptimizerCard extends HTMLElement {
     this.updateCard();
   }
 
-  _renderPowerHistoryGraph(entityId, powerMax, t) {
+  // Valeur en W d'un état de capteur (gère kW), null si indisponible
+  _powerW(stateObj, attrs) {
+    if (!stateObj) return null;
+    const v = parseFloat(stateObj.state);
+    if (isNaN(v)) return null;
+    const unit = (attrs || stateObj.attributes || {}).unit_of_measurement;
+    return unit === 'kW' ? v * 1000 : v;
+  }
+
+  _renderPowerHistoryGraph(entityId, powerMax, t, measured = false) {
     const CACHE_TTL = 5 * 60 * 1000;
     if (!this._powerHistoryCache) this._powerHistoryCache = {};
     if (!this._fetchingPowerHistory) this._fetchingPowerHistory = new Set();
     const historyHours = (this._config && this._config.history_hours) ? this._config.history_hours : 24;
     const cached = this._powerHistoryCache[entityId];
     const label = `${t('powerHistory')} – ${historyHours}h`;
-    const pMax = powerMax > 0 ? powerMax : 1;
+    let pMax = powerMax > 0 ? powerMax : 1;
 
     const emptyGraph = `
       <div class="so-history-bar-wrapper" style="margin-top:4px;">
@@ -1146,11 +1229,19 @@ class SolarOptimizerCard extends HTMLElement {
     const { data, startTime, endTime } = cached;
     const totalMs = endTime.getTime() - startTime.getTime();
 
-    const sorted = [...(data || [])]
+    // Mesuré : valeur = état du capteur ; sinon attribut current_power du switch
+    let lastAttrs = {};
+    const points = [...(data || [])]
       .sort((a, b) => new Date(a.last_changed) - new Date(b.last_changed))
-      .filter(s => s.attributes && s.attributes.current_power != null);
+      .map(s => {
+        if (s.attributes) lastAttrs = s.attributes;
+        const p = measured ? this._powerW(s, lastAttrs) : (s.attributes ? parseFloat(s.attributes.current_power) : NaN);
+        return { tMs: new Date(s.last_changed).getTime(), p };
+      })
+      .filter(pt => pt.p != null && !isNaN(pt.p));
 
-    if (sorted.length === 0) return emptyGraph;
+    if (points.length === 0) return emptyGraph;
+    pMax = Math.max(pMax, ...points.map(pt => pt.p));
 
     const toPoint = (tMs, power) => {
       const x = ((tMs - startTime.getTime()) / totalMs) * 100;
@@ -1158,11 +1249,13 @@ class SolarOptimizerCard extends HTMLElement {
       return `${x.toFixed(2)},${y.toFixed(2)}`;
     };
 
-    const linePoints = sorted.map(s =>
-      toPoint(new Date(s.last_changed).getTime(), s.attributes.current_power)
-    );
-    const lastPower = sorted[sorted.length - 1].attributes.current_power;
-    linePoints.push(toPoint(endTime.getTime(), lastPower));
+    const linePoints = points.map(pt => toPoint(pt.tMs, pt.p));
+    linePoints.push(toPoint(endTime.getTime(), points[points.length - 1].p));
+    // Ligne pointillée = puissance configurée (budget de l'algorithme), pour comparer au réel
+    const budgetY = (30 - (powerMax / pMax) * 28).toFixed(2);
+    const budgetLine = (measured && powerMax > 0)
+      ? `<line x1="0" y1="${budgetY}" x2="100" y2="${budgetY}" stroke="var(--secondary-text-color)" stroke-width="1" stroke-dasharray="3,3" vector-effect="non-scaling-stroke" />`
+      : '';
 
     const polylinePoints = linePoints.join(' ');
     const polygonPoints = `0,30 ${linePoints.join(' ')} 100,30`;
@@ -1172,6 +1265,7 @@ class SolarOptimizerCard extends HTMLElement {
         <svg class="so-power-history-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
           <polygon points="${polygonPoints}" fill="var(--primary-color)" fill-opacity="0.2" />
           <polyline points="${polylinePoints}" fill="none" stroke="var(--primary-color)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+          ${budgetLine}
         </svg>
         <div class="so-history-bar-label">${label}</div>
       </div>`;
@@ -1308,8 +1402,7 @@ class SolarOptimizerCardEditor extends HTMLElement {
 
   _render() {
     const lang = this._hass?.locale?.language || navigator.language || 'en';
-    const isFr = lang.toLowerCase().startsWith('fr');
-    const t = (key) => TRANSLATIONS[isFr ? 'fr' : 'en'][key] || key;
+    const t = translator(lang);
     const historyHours = (this._config && this._config.history_hours) ? this._config.history_hours : 24;
 
     this.innerHTML = `

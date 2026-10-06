@@ -207,6 +207,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             "is_usable": device.is_usable,
             "can_change_power": device.can_change_power,
             "current_power": device.current_power,
+            "measured_power_entity_id": device.measured_power_entity_id,
             "requested_power": device.requested_power,
             "duration_sec": device.duration_sec,
             "duration_power_sec": device.duration_power_sec,
@@ -241,6 +242,10 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
 
         self._attr_is_on = device.is_active
         self.update_custom_attributes(device)
+        # Trace this state write back to the action Solar Optimizer just applied (if
+        # any), so history/logbook can attribute the underlying entity's change to us.
+        if device.last_context is not None:
+            self.async_set_context(device.last_context)
         self.async_write_ha_state()
 
     def turn_on(self, **kwargs: Any) -> None:
@@ -257,7 +262,15 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             return
 
         if not self._attr_is_on:
+            # Capture what Solar Optimizer had last requested *before* this manual
+            # action, so the override can be recognized as resolved once the device
+            # returns to that state (activate() below overwrites last_commanded_state).
+            previous_commanded_state = device.last_commanded_state
             await device.activate()
+            # The user (or an automation) turned the device on directly through this
+            # switch, bypassing the algorithm's own decision: treat it as a manual
+            # override so the next coordinator refresh doesn't turn it back off.
+            device.trigger_manual_override(baseline=previous_commanded_state)
             self._attr_is_on = True
             self.update_custom_attributes(device)
             self.async_write_ha_state()
@@ -288,6 +301,12 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
                     device.name,
                 )
                 device.set_forced_end_time(None)
+            else:
+                # Not stopping an explicit forced session: the user (or an automation)
+                # is overriding the algorithm's own live decision directly through this
+                # switch, bypassing the underlying entity entirely. Capture the baseline
+                # before deactivate() below overwrites last_commanded_state.
+                device.trigger_manual_override(baseline=device.last_commanded_state)
             await device.deactivate()
             self._attr_is_on = False
             self.update_custom_attributes(device)

@@ -49,3 +49,18 @@ stop_device:
             required: true
             selector:
                 text:
+
+clear_override:
+    name: Clear manual override
+    description: >
+        Clear a pending manual override for a managed device and resume Solar Optimizer
+        management immediately, without waiting for the daily reset time or for the
+        device to be brought back to the state Solar Optimizer had requested.
+    fields:
+        device_id:
+            name: Device ID
+            description: >
+                The unique ID of the managed device (the part after switch.solar_optimizer_, e.g. lave_linge).
+            required: true
+            selector:
+                text:
