@@ -611,6 +611,18 @@ class SolarOptimizerCard extends HTMLElement {
           this._updateTimer = setTimeout(() => this.updateCard(), 100);
         }
       });
+
+      // Pas de rebuild entre l'appui et le relâchement d'un bouton : si le bouton est
+      // remplacé pendant le clic, le navigateur n'émet pas l'événement click.
+      this.content.addEventListener('pointerdown', () => { this._pointerDown = true; });
+      const pointerReleased = () => {
+        if (!this._pointerDown) return;
+        this._pointerDown = false;
+        if (this._updateTimer) clearTimeout(this._updateTimer);
+        this._updateTimer = setTimeout(() => this.updateCard(), 100);
+      };
+      window.addEventListener('pointerup', pointerReleased);
+      window.addEventListener('pointercancel', pointerReleased);
     }
 
     // Debounce pour éviter les rebuilds DOM pendant un clic (race condition avec HA)
@@ -622,7 +634,7 @@ class SolarOptimizerCard extends HTMLElement {
     if (!this._hass || !this.content) return;
 
     // Ne pas reconstruire le DOM si l'utilisateur interagit (select ouvert, input en cours de saisie)
-    if (this._userInteracting) return;
+    if (this._userInteracting || this._pointerDown) return;
 
     if (!this._collapsedDevices) this._collapsedDevices = {};
 
@@ -921,7 +933,7 @@ class SolarOptimizerCard extends HTMLElement {
       `;
     });
 
-    this.content.innerHTML = `
+    const html = `
       <div class="so-grid-stats">
         <div class="so-stat-box">
           <ha-icon icon="mdi:solar-power-variant" style="color:var(--warning-color,#ff9800);margin-bottom:4px;"></ha-icon>
@@ -962,12 +974,23 @@ class SolarOptimizerCard extends HTMLElement {
       </div>
     `;
 
-    // Fixer l'état checked des ha-switch enable
+    // HA appelle set hass() à chaque changement d'état de n'importe quelle entité :
+    // ne pas reconstruire le DOM (ni ré-attacher les écouteurs) si rien n'a changé
+    const rebuilt = html !== this._lastHtml;
+    if (rebuilt) {
+      this._lastHtml = html;
+      this.content.innerHTML = html;
+    }
+
+    // Fixer l'état checked des ha-switch enable (aussi sans rebuild : un toggle local peut diverger de l'état réel)
     this.content.querySelectorAll("ha-switch.device-toggle").forEach(sw => {
       const entityId = sw.getAttribute("data-entity-id");
       const stateObj = this._hass.states[entityId];
       if (stateObj) sw.checked = stateObj.state === "on";
     });
+
+    // Les écouteurs sont déjà attachés aux éléments existants
+    if (!rebuilt) return;
 
     // Attacher les écouteurs pour mémoriser la durée sélectionnée (évite la perte lors des re-renders)
     this.content.querySelectorAll(".device-duration-select").forEach(select => {
