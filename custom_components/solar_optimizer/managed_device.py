@@ -26,6 +26,7 @@ from .const import (
     EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
     EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
     EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
+    EVENT_TYPE_SOLAR_OPTIMIZER_ACTION,
 )
 
 ACTION_ACTIVATE = "Activate"
@@ -308,6 +309,7 @@ class ManagedDevice:
                 entity_id = self._power_entity_id
                 self.reset_next_date_available_power()
 
+            self._announce_action(action_type, method, entity_id, requested_power, context)
             await do_service_action(
                 self._hass,
                 entity_id,
@@ -319,6 +321,7 @@ class ManagedDevice:
                 context,
             )
         elif self._action_mode == CONF_ACTION_MODE_EVENT:
+            self._announce_action(action_type, None, self._entity_id, self._requested_power, context)
             do_event_action(
                 self._hass,
                 self._entity_id,
@@ -334,6 +337,23 @@ class ManagedDevice:
             )
 
         self._current_power = self._requested_power
+
+    def _announce_action(self, action_type: str, service: str | None, entity_id: str, requested_power, context: Context):
+        """Fire the solar_optimizer_action event before applying an action. Being the first
+        event of the Context, it becomes its origin and the logbook describes the change of
+        the device as triggered by Solar Optimizer. service is the configured service of the
+        device (None in event mode)."""
+        self._hass.bus.async_fire(
+            EVENT_TYPE_SOLAR_OPTIMIZER_ACTION,
+            {
+                "device_name": self._name,
+                "entity_id": entity_id,
+                "action": action_type,
+                "service": service,
+                "requested_power": requested_power,
+            },
+            context=context,
+        )
 
     async def activate(self, requested_power=None):
         """Use this method to activate this ManagedDevice"""
