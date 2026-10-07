@@ -487,6 +487,11 @@ class ManagedDevice:
             self._override_active = False
             self._override_since = None
             self._override_baseline_state = None
+        # Resuming control: the real state becomes the new reference. Whatever happened
+        # while SO was not managing the device is not an override, otherwise the stale
+        # last command re-triggers one right away (and loops at every re-enable).
+        if enable:
+            self._last_commanded_state = self.is_active
         self.publish_enable_state_change()
 
     def trigger_manual_override(self, baseline: bool | None = None) -> None:

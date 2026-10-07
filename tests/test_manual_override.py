@@ -345,3 +345,47 @@ async def test_activate_sets_last_context(hass, init_solar_optimizer_central_con
     await device.deactivate()
     assert isinstance(device.last_context, Context)
     assert device.last_context.id != first_context.id
+
+
+# ---------------------------------------------------------------------------
+# Resuming control must not re-trigger an override from a stale command
+# ---------------------------------------------------------------------------
+
+async def test_device_changed_while_disabled_is_not_an_override(hass, init_solar_optimizer_central_config):
+    """SO turned the device on, then management was disabled and the device turned off
+    by itself. Re-enabling (e.g. an automation at 4:00) must take the real state as the
+    new reference instead of flagging the stale 'on' command as an override."""
+    device, fake_bool = await _setup_device(hass)
+    await device.activate()
+    device._set_now(device.now + timedelta(seconds=20))
+
+    enable_switch = search_entity(hass, "switch.enable_solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    await enable_switch.async_turn_off()
+    await fake_bool.async_turn_off()
+    await hass.async_block_till_done()
+
+    await enable_switch.async_turn_on()
+    await hass.async_block_till_done()
+    device.check_for_manual_override()
+
+    assert device.override_active is False
+    assert device.is_enabled is True
+
+
+async def test_override_cleared_at_raz_time_is_not_retriggered(hass, init_solar_optimizer_central_config):
+    """An override whose device stays off is cleared at raz_time: the next periodic check
+    must not flag it again (it used to loop Enable ON/OFF and stay overridden forever)."""
+    device, fake_bool = await _setup_device(hass)
+    await device.activate()
+    device._set_now(device.now + timedelta(seconds=20))
+    await fake_bool.async_turn_off()
+    await hass.async_block_till_done()
+    device.check_for_manual_override()
+    assert device.override_active is True
+
+    coordinator: SolarOptimizerCoordinator = SolarOptimizerCoordinator.get_coordinator()
+    await coordinator._async_on_raz_time()
+    device.check_for_manual_override()
+
+    assert device.override_active is False
+    assert device.is_enabled is True
