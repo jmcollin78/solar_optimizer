@@ -8,6 +8,9 @@
 
 from unittest.mock import patch, AsyncMock
 
+import pytest
+from pytest_homeassistant_custom_component.common import mock_restore_cache, mock_restore_cache_with_extra_data
+
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN, SensorDeviceClass
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from homeassistant.core import State
@@ -180,3 +183,34 @@ async def test_on_off_device_already_on_at_startup_reports_power_max(
     assert device.can_change_power is False
     assert device.is_active is True
     assert device.current_power == 1000
+
+
+@pytest.mark.parametrize(
+    "state, unit, extra_data",
+    [
+        # 1h45 shown in hours (the case of the issue): stored state is 1.75
+        ("1.75", "h", None),
+        ("105", "min", None),
+        ("6300", "s", None),
+        # after the update, the native value in seconds is stored by RestoreSensor
+        ("1.75", "h", {"native_value": 6300, "native_unit_of_measurement": "s"}),
+    ],
+)
+async def test_on_time_restored_whatever_the_display_unit(hass: HomeAssistant, init_solar_optimizer_central_config, state, unit, extra_data):
+    """The on_time is restored in seconds even when the sensor is displayed in minutes
+    or hours (it used to read 1.75 h as 1.75 s and lose the daily on time at restart)"""
+    stored = State("sensor.on_time_today_solar_optimizer_equipement_a", state, {"unit_of_measurement": unit})
+    if extra_data:
+        mock_restore_cache_with_extra_data(hass, ((stored, extra_data),))
+    else:
+        mock_restore_cache(hass, (stored,))
+
+    entry_a = MockConfigEntry(domain=DOMAIN, title="Equipement A", unique_id="eqtAUniqueId", data=DEVICE_A_DATA)
+    device = await create_managed_device(hass, entry_a, "equipement_a")
+    await hass.async_block_till_done()
+
+    on_time_sensor = search_entity(hass, "sensor.on_time_today_solar_optimizer_equipement_a", SENSOR_DOMAIN)
+    assert on_time_sensor.native_value == 6300
+    assert device._on_time_sec == 6300
+    # what is stored for the next restart is in seconds, whatever the display unit
+    assert on_time_sensor.extra_restore_state_data.as_dict() == {"native_value": 6300, "native_unit_of_measurement": "s"}
