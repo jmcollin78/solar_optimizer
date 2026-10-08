@@ -243,6 +243,10 @@ class ManagedDevice:
         self._override_active: bool = False
         self._override_since: datetime | None = None
         self._override_baseline_state: bool | None = None
+        # Off by default: SO puts back the device as it decides, like it always did.
+        # On: a manual change of the device is respected as an override (see the
+        # "Respect manual changes" switch).
+        self._respect_manual_changes: bool = False
         self._last_context: Context | None = None
 
         # Some checks
@@ -565,12 +569,29 @@ class ManagedDevice:
             return True
         return False
 
+    def set_respect_manual_changes(self, respect: bool) -> None:
+        """Turn on/off the manual override feature for this device. Turning it off
+        releases a pending override so SO manages the device again."""
+        _LOGGER.info("%s - Set respect_manual_changes=%s", self.name, respect)
+        self._respect_manual_changes = respect
+        if not respect:
+            self.clear_override()
+
+    @property
+    def respect_manual_changes(self) -> bool:
+        """True if a manual change of the device is respected as an override"""
+        return self._respect_manual_changes
+
     def check_for_manual_override(self) -> None:
         """Called periodically by the coordinator to detect a manual override: the
         underlying entity changed state without Solar Optimizer having commanded it.
         Does nothing for a device already disabled (whatever the reason, including an
         already active override or an explicit forced activation) or still waiting out
-        its own last command's debounce delay."""
+        its own last command's debounce delay. Does nothing (and releases a pending
+        override) when manual changes are not respected for this device."""
+        if not self._respect_manual_changes:
+            self.clear_override()
+            return
         if self.clear_override_if_resolved():
             return
         if not self._enable or self._forced_end_time is not None or self.is_waiting:

@@ -52,6 +52,7 @@ async def async_setup_entry(
     entities.append(entity)
     entity = ManagedDeviceEnable(hass, device)
     entities.append(entity)
+    entities.append(ManagedDeviceRespectManualChanges(device))
 
     async_add_entities(entities)
 
@@ -270,7 +271,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             # The user (or an automation) turned the device on directly through this
             # switch, bypassing the algorithm's own decision: treat it as a manual
             # override so the next coordinator refresh doesn't turn it back off.
-            device.trigger_manual_override(baseline=previous_commanded_state)
+            if device.respect_manual_changes:
+                device.trigger_manual_override(baseline=previous_commanded_state)
             self._attr_is_on = True
             self.update_custom_attributes(device)
             self.async_write_ha_state()
@@ -301,7 +303,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
                     device.name,
                 )
                 device.set_forced_end_time(None)
-            else:
+            elif device.respect_manual_changes:
                 # Not stopping an explicit forced session: the user (or an automation)
                 # is overriding the algorithm's own live decision directly through this
                 # switch, bypassing the underlying entity entirely. Capture the baseline
@@ -438,3 +440,45 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
         self._attr_is_on = True
         self.async_write_ha_state()
         self.update_device_enabled()
+
+
+class ManagedDeviceRespectManualChanges(SwitchEntity, RestoreEntity):
+    """Off by default: SO puts back the device as it decides. On: a manual change of the
+    device (or of the SO switch) is respected as an override until it is released."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "respect_manual_changes"
+    _attr_icon = "mdi:hand-back-right"
+
+    def __init__(self, device: ManagedDevice):
+        name = name_to_unique_id(device.name)
+        self._device = device
+        self.entity_id = f"{SWITCH_DOMAIN}.respect_manual_changes_solar_optimizer_{name}"
+        self._attr_unique_id = "solar_optimizer_respect_manual_changes_" + name
+        self._attr_is_on = False
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._device.name)},
+            name="Solar Optimizer-" + self._device.name,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        self._attr_is_on = last_state is not None and last_state.state == STATE_ON
+        self._device.set_respect_manual_changes(self._attr_is_on)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self._attr_is_on = True
+        self._device.set_respect_manual_changes(True)
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._attr_is_on = False
+        self._device.set_respect_manual_changes(False)
+        self.async_write_ha_state()

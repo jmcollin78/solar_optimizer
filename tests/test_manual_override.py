@@ -17,6 +17,7 @@ from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAI
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 
 from custom_components.solar_optimizer.const import get_tz
+from pytest_homeassistant_custom_component.common import mock_restore_cache
 from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
@@ -36,7 +37,7 @@ DEVICE_A_DATA = {
 }
 
 
-async def _setup_device(hass):
+async def _setup_device(hass, respect_manual_changes=True):
     entry_a = MockConfigEntry(
         domain=DOMAIN,
         title="Equipement A",
@@ -50,6 +51,9 @@ async def _setup_device(hass):
     # Reset the debounce timer so is_waiting doesn't get in the way of the tests below
     device.reset_next_date_available("Activate")
     device._next_date_available = device.now - timedelta(minutes=5)
+    # The override feature is off by default ("Respect manual changes" switch)
+    if respect_manual_changes:
+        device.set_respect_manual_changes(True)
     return device, fake_bool
 
 
@@ -389,3 +393,65 @@ async def test_override_cleared_at_raz_time_is_not_retriggered(hass, init_solar_
 
     assert device.override_active is False
     assert device.is_enabled is True
+
+
+# ---------------------------------------------------------------------------
+# "Respect manual changes" switch: off by default = original behavior
+# ---------------------------------------------------------------------------
+
+async def test_respect_manual_changes_is_off_by_default(hass, init_solar_optimizer_central_config):
+    """The switch exists, is off, and so is the feature on the device"""
+    device, _ = await _setup_device(hass, respect_manual_changes=False)
+    respect_switch = search_entity(hass, "switch.respect_manual_changes_solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    assert respect_switch.state == "off"
+    assert device.respect_manual_changes is False
+    assert hass.states.get(respect_switch.entity_id).attributes["friendly_name"].endswith("Respect manual changes")
+
+
+async def test_device_change_not_respected_when_off(hass, init_solar_optimizer_central_config):
+    """Switch off: a change of the device is not an override, SO keeps managing it"""
+    device, fake_bool = await _setup_device(hass, respect_manual_changes=False)
+    await device.activate()
+    device._set_now(device.now + timedelta(seconds=20))
+    await fake_bool.async_turn_off()
+    await hass.async_block_till_done()
+
+    device.check_for_manual_override()
+
+    assert device.override_active is False
+    assert device.is_enabled is True
+
+
+async def test_active_switch_not_respected_when_off(hass, init_solar_optimizer_central_config):
+    """Switch off: turning the SO switch on only turns the device on, like originally"""
+    device, _ = await _setup_device(hass, respect_manual_changes=False)
+    active_switch = search_entity(hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    await active_switch.async_turn_on()
+    await hass.async_block_till_done()
+
+    assert device.is_active is True
+    assert device.override_active is False
+    assert device.is_enabled is True
+
+
+async def test_turning_respect_off_releases_override(hass, init_solar_optimizer_central_config):
+    """Turning the switch off while an override is pending gives the device back to SO"""
+    device, _ = await _setup_device(hass)
+    device.trigger_manual_override()
+    assert device.is_enabled is False
+
+    respect_switch = search_entity(hass, "switch.respect_manual_changes_solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    await respect_switch.async_turn_on()
+    await respect_switch.async_turn_off()
+    await hass.async_block_till_done()
+
+    assert device.override_active is False
+    assert device.is_enabled is True
+
+
+async def test_respect_manual_changes_restored_at_restart(hass, init_solar_optimizer_central_config):
+    """The switch keeps its state across restarts"""
+    mock_restore_cache(hass, (State("switch.respect_manual_changes_solar_optimizer_equipement_a", "on"),))
+    device, _ = await _setup_device(hass, respect_manual_changes=False)
+    assert device.respect_manual_changes is True
+

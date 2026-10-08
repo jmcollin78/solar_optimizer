@@ -475,10 +475,16 @@ Each controlled device has the following entities:
 4. A dropdown list named **"Priority"** which defines the priority level of this device. Possible values range from 'Very low' to 'Very high'. See [priority management](#priority-management).
 
 5. A **binary sensor** named `binary_sensor.solar_optimizer_override_<name>`:
+   - Only used when **Respect manual changes** is on (see 6).
    - **"On"** when a **manual override** is active: the device was turned on or off outside of Solar Optimizer (by hand, from the card's switch, or by another automation). While the override is active, the algorithm leaves the device alone instead of reverting the change at the next cycle.
    - Attributes `override_since` and `override_baseline_state` (the state Solar Optimizer had requested before the override).
    - The override is released when the device returns to the state Solar Optimizer had requested, at `raz_time`, when the Enable switch is turned back on, or with the [clear\_override](#clear_override) action.
    - Actions performed by Solar Optimizer are attributed in the logbook: the change of the device shows Solar Optimizer as its origin, with the action and the configured service (e.g. "turned on Pool pump (switch.turn_on)").
+
+6. A **switch** named `switch.respect_manual_changes_solar_optimizer_<name>` (**Respect manual changes**), **off by default**:
+   - **Off**: Solar Optimizer puts the device back as it decides at the next cycle, even if it was changed by hand (e.g. an EV that starts charging when plugged in is stopped until the conditions are met). Use the START/STOP buttons of the card to override it.
+   - **On**: a change of the device made anywhere (its own switch, a dashboard, a voice assistant, the physical button) or of `switch.solar_optimizer_<name>` is respected as a manual override (see 5).
+   - Turning it off releases a pending override.
 
 ![Simple Device Entities](images/entities-simple-device.png)
 

@@ -302,5 +302,12 @@
                 "event": "Evènement"
             }
         }
+    },
+    "entity": {
+        "switch": {
+            "respect_manual_changes": {
+                "name": "Respecter les changements manuels"
+            }
+        }
     }
 }

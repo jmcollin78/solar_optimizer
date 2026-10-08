@@ -286,5 +286,12 @@
                 "event": "Evento"
             }
         }
+    },
+    "entity": {
+        "switch": {
+            "respect_manual_changes": {
+                "name": "Respetar cambios manuales"
+            }
+        }
     }
 }
