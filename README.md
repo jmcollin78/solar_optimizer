@@ -829,6 +829,12 @@ history_hours: 48
 
 ## Available Actions
 
+The **Respect manual changes** switch of each device (see [Devices and Their Entities](#devices-and-their-entities)) can be shown in the expanded block of each device with the `show_respect_manual_changes` option (hidden by default), also available as a checkbox in the card editor:
+
+| Parameter                     | Type      | Default | Description                                                   |
+| ----------------------------- | --------- | ------- | ------------------------------------------------------------- |
+| `show_respect_manual_changes` | `boolean` | `false` | Show the "Respect manual changes" switch in each device block |
+
 Each device block exposes the following buttons and controls:
 1. **Enable/Disable**: enables or disables algorithm management for the device,
 2. **Duration selector**: a dropdown to choose a forced activation duration before pressing **START** (1h, 4h, 12h, 24h). When a forced activation is running, the selector is replaced by a badge showing the **remaining time** (in hours, or in minutes if less than 1h),

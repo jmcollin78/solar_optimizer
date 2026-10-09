@@ -789,6 +789,12 @@ history_hours: 48
 
 ## Actions disponibles
 
+Le switch **Respecter les changements manuels** de chaque équipement (cf. [Les appareils](#les-appareils)) peut être affiché dans le bloc déplié de chaque équipement avec l'option `show_respect_manual_changes` (masqué par défaut), aussi disponible comme case à cocher dans l'éditeur de la carte :
+
+| Paramètre                     | Type      | Valeur par défaut | Description                                                                 |
+| ----------------------------- | --------- | ----------------- | --------------------------------------------------------------------------- |
+| `show_respect_manual_changes` | `boolean` | `false`           | Affiche le switch « Respecter les changements manuels » dans chaque équipement |
+
 Chaque bloc équipement expose les boutons et contrôles suivants :
 1. **Enable/Disable** : active ou désactive la gestion de l'équipement par l'algorithme,
 2. **Sélecteur de durée** : liste déroulante permettant de choisir une durée d'activation forcée avant d'appuyer sur **START** (1h, 4h, 12h, 24h). Lorsqu'une activation forcée est en cours, le sélecteur est remplacé par un badge affichant le **temps restant** (en heures ou en minutes si < 1h),
