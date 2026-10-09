@@ -13,6 +13,7 @@
   - [Anti-flickering](#anti-flickering)
   - [Usability](#usability)
   - [Device Prioritization](#device-prioritization)
+  - [Respect manual changes](#respect-manual-changes)
   - [Setting Purchase and Resale Costs](#setting-purchase-and-resale-costs)
 - [Installation](#installation)
   - [Migration Procedure from Version 2.x to 3.x](#migration-procedure-from-version-2x-to-3x)
@@ -113,6 +114,15 @@ These 5 rules allow the algorithm to only order what is really useful at a time 
 
 ## Device Prioritization
 Priority management is described [here](#priority-management).
+
+## Respect manual changes
+By default, Solar Optimizer is in charge of the devices it manages: if a device is turned on or off outside of it (by hand, from another dashboard, a voice assistant, another automation...), Solar Optimizer puts it back as it decided at the next cycle. For example, an EV that starts charging when it is plugged in is stopped until the conditions are met. To force a device, use the START/STOP buttons of the [card](#official-lovelace-card).
+
+Each device has a **Respect manual changes** switch (`switch.respect_manual_changes_solar_optimizer_<name>`) to change this behavior, for that device only:
+- **Off (default)**: nothing changes, Solar Optimizer behaves exactly as in previous versions.
+- **On**: a manual change of the device is respected. For example, someone turns the pool pump on from its own switch to go swimming: Solar Optimizer leaves it on instead of turning it off at the next cycle. The device is paused (a *manual override*, shown by `binary_sensor.solar_optimizer_override_<name>`) until it goes back to the state Solar Optimizer wanted, the daily reset time (`raz_time`), the Enable switch is turned back on, the [clear\_override](#clear_override) action is called, or this switch is turned off.
+
+The switch keeps its state across restarts. To turn it on, open the device page (**Settings > Devices & services > Solar Optimizer**, then the device), or show it in the card (see [How to Use the Official Card](#how-to-use-the-official-card)).
 
 ## Setting Purchase and Resale Costs
 The behavior of the algorithm is strongly influenced by the values of the sensors **"imported kWh cost"** and **"exported kWh cost"**.
@@ -853,6 +863,16 @@ type: custom:solar-optimizer-card
 All blocks are **collapsed by default** on first load. The open/close state of each block is automatically saved in the browser's `localStorage` and restored on the next visit.
 
 The card is also fully registered in Home Assistant's card editor list under the name **Solar Optimizer Card**.
+
+The [Respect manual changes](#respect-manual-changes) switch of each device is **hidden by default** in the card. To show it in the expanded block of each device:
+1. Edit the dashboard (**⋮ > Edit dashboard**), then edit the Solar Optimizer card.
+2. Check **Show "Respect manual changes" in each device** and save.
+
+Or in YAML:
+```yaml
+type: custom:solar-optimizer-card
+show_respect_manual_changes: true
+```
 
 # Contributions are welcome!
 

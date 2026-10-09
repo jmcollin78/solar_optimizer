@@ -13,6 +13,7 @@
   - [Anti-bagot](#anti-bagot)
   - [Utilisabilité](#utilisabilité)
   - [Priorisation des équipements](#priorisation-des-équipements)
+  - [Respecter les changements manuels](#respecter-les-changements-manuels)
   - [Réglage des coûts d'achat et de revente](#réglage-des-coûts-dachat-et-de-revente)
 - [Installation](#installation)
   - [Procédure de migration d'une version 2.x vers la 3.x](#procédure-de-migration-dune-version-2x-vers-la-3x)
@@ -107,6 +108,15 @@ Ces 5 règles permettent à l'algorithme de ne commander que ce qui est réellem
 
 ## Priorisation des équipements
 La gestion de la priorité est décrite [ici](#la-gestion-de-la-priorité).
+
+## Respecter les changements manuels
+Par défaut, Solar Optimizer pilote les équipements qu'il gère : si un équipement est allumé ou éteint en dehors de lui (à la main, depuis un autre tableau de bord, un assistant vocal, une autre automatisation...), Solar Optimizer le remet dans l'état qu'il a décidé au cycle suivant. Par exemple, un VE qui démarre sa charge quand on le branche est arrêté tant que les conditions ne sont pas réunies. Pour forcer un équipement, utilisez les boutons START/STOP de la [carte](#carte-lovelace-officielle).
+
+Chaque équipement a un switch **Respecter les changements manuels** (`switch.respect_manual_changes_solar_optimizer_<name>`) pour changer ce comportement, pour cet équipement uniquement :
+- **Désactivé (par défaut)** : rien ne change, Solar Optimizer se comporte exactement comme dans les versions précédentes.
+- **Activé** : un changement manuel de l'équipement est respecté. Par exemple, quelqu'un allume la pompe de la piscine depuis son propre interrupteur pour aller se baigner : Solar Optimizer la laisse allumée au lieu de l'éteindre au cycle suivant. L'équipement est mis en pause (une *reprise en main manuelle*, indiquée par `binary_sensor.solar_optimizer_override_<name>`) jusqu'à ce qu'il revienne à l'état voulu par Solar Optimizer, l'heure de remise à zéro (`raz_time`), la réactivation du switch Enable, l'appel de l'action [clear\_override](#clear_override), ou la désactivation de ce switch.
+
+Le switch conserve son état après un redémarrage. Pour l'activer, ouvrez la page de l'équipement (**Paramètres > Appareils et services > Solar Optimizer**, puis l'équipement), ou affichez-le dans la carte (cf. [Utilisation de la carte officielle](#utilisation-de-la-carte-officielle)).
 
 ## Réglage des coûts d'achat et de revente
 Le comportement de l'algorithme est fortement influencé par les valeurs des capteurs "coût du kWh importé" et "coût du kWh exporté". En effet, l'algorithme va calculer le "coût fictif" d'une combinaison d'allumage / extinction / puissance voulue des équipemenets pilotés.
@@ -813,6 +823,16 @@ type: custom:solar-optimizer-card
 Tous les blocs sont **fermés par défaut** au premier chargement. L'état ouvert/fermé de chaque bloc est automatiquement sauvegardé dans le `localStorage` du navigateur et restauré à la prochaine visite.
 
 La carte est également directement sélectionnable sous le nom **Solar Optimizer Card** dans l'éditeur visuel de cartes de Home Assistant.
+
+Le switch [Respecter les changements manuels](#respecter-les-changements-manuels) de chaque équipement est **masqué par défaut** dans la carte. Pour l'afficher dans le bloc déplié de chaque équipement :
+1. Modifiez le tableau de bord (**⋮ > Modifier le tableau de bord**), puis la carte Solar Optimizer.
+2. Cochez **Afficher « Respecter les changements manuels » dans chaque équipement** et enregistrez.
+
+Ou en YAML :
+```yaml
+type: custom:solar-optimizer-card
+show_respect_manual_changes: true
+```
 
 # Les contributions sont les bienvenues !
 
