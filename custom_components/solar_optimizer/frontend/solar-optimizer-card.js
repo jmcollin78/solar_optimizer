@@ -112,6 +112,7 @@ class SolarOptimizerCard extends HTMLElement {
           solar-optimizer-card {
             display: block !important;
             width: 100% !important;
+            container-type: inline-size;
           }
           solar-optimizer-card ha-card {
             display: block;
@@ -132,6 +133,7 @@ class SolarOptimizerCard extends HTMLElement {
             margin-bottom: 16px;
           }
           solar-optimizer-card .so-stat-box {
+            min-width: 0;
             background-color: var(--card-background-color, var(--paper-card-background-color, #fff));
             border: 1px solid var(--divider-color, #e0e0e0);
             border-radius: 8px;
@@ -146,11 +148,13 @@ class SolarOptimizerCard extends HTMLElement {
             font-size: 0.85em;
             color: var(--secondary-text-color);
             margin-bottom: 4px;
+            overflow-wrap: anywhere;
           }
           solar-optimizer-card .so-stat-value {
             font-size: 1.25em;
             font-weight: bold;
             color: var(--primary-color);
+            overflow-wrap: anywhere;
           }
           solar-optimizer-card .so-device-list {
             display: flex;
@@ -158,6 +162,7 @@ class SolarOptimizerCard extends HTMLElement {
             gap: 12px;
           }
           solar-optimizer-card .so-device-card {
+            min-width: 0;
             background-color: var(--card-background-color, var(--paper-card-background-color, #fff));
             border: 1px solid var(--divider-color, #e0e0e0);
             border-radius: 8px;
@@ -187,11 +192,21 @@ class SolarOptimizerCard extends HTMLElement {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            min-width: 0;
+            gap: 8px;
+          }
+          solar-optimizer-card .so-device-identity {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
           }
           solar-optimizer-card .so-device-name {
+            min-width: 0;
             font-weight: bold;
             font-size: 1.05em;
             margin-right: 8px;
+            overflow-wrap: anywhere;
           }
           solar-optimizer-card .so-device-meta {
             display: flex;
@@ -253,7 +268,7 @@ class SolarOptimizerCard extends HTMLElement {
           }
           solar-optimizer-card .so-info-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 4px 12px;
             font-size: 0.85em;
             color: var(--secondary-text-color);
@@ -262,21 +277,28 @@ class SolarOptimizerCard extends HTMLElement {
           solar-optimizer-card .so-info-item {
             display: flex;
             flex-direction: column;
+            min-width: 0;
           }
           solar-optimizer-card .so-info-label {
             font-size: 0.85em;
             color: var(--secondary-text-color);
+            min-width: 0;
+            overflow-wrap: anywhere;
           }
           solar-optimizer-card .so-info-value {
             font-weight: 500;
             color: var(--primary-text-color);
+            min-width: 0;
+            overflow-wrap: anywhere;
           }
           solar-optimizer-card .so-actions {
             display: flex;
             align-items: center;
             gap: 8px;
+            min-width: 0;
           }
           solar-optimizer-card .so-btn {
+            max-width: 100%;
             border: none;
             border-radius: 4px;
             padding: 4px 10px;
@@ -310,6 +332,7 @@ class SolarOptimizerCard extends HTMLElement {
             max-width: 72px;
           }
           solar-optimizer-card .so-timed-remaining {
+            max-width: 100%;
             font-size: 0.78em;
             font-weight: bold;
             color: var(--warning-color, #ff9800);
@@ -338,8 +361,10 @@ class SolarOptimizerCard extends HTMLElement {
             align-items: center;
             gap: 6px;
             font-size: 0.85em;
+            min-width: 0;
           }
           solar-optimizer-card .so-priority-select {
+            max-width: 100%;
             background: var(--card-background-color, #fff);
             color: var(--primary-text-color);
             border: 1px solid var(--divider-color, #ccc);
@@ -364,6 +389,7 @@ class SolarOptimizerCard extends HTMLElement {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            min-width: 0;
           }
           solar-optimizer-card .so-device-details.hidden {
             display: none;
@@ -412,6 +438,92 @@ class SolarOptimizerCard extends HTMLElement {
             display: flex;
             align-items: center;
             gap: 6px;
+            min-width: 0;
+          }
+          solar-optimizer-card .so-secondary-info > span {
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+          solar-optimizer-card .so-device-power-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            font-size: 0.85em;
+            color: var(--secondary-text-color);
+            padding: 0 4px;
+          }
+          solar-optimizer-card .so-device-power-row > span {
+            flex: 0 1 auto;
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+          solar-optimizer-card .so-device-power-row .so-power-bar-container {
+            flex: 1 1 120px;
+            min-width: 0;
+            margin-top: 0;
+          }
+          solar-optimizer-card .so-device-detail-footer {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-top: 6px;
+            min-width: 0;
+          }
+          solar-optimizer-card .so-device-detail-history {
+            flex: 1;
+            min-width: 0;
+          }
+          solar-optimizer-card .so-device-detail-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            flex-shrink: 0;
+            min-width: 0;
+          }
+          solar-optimizer-card .so-actions ha-switch,
+          solar-optimizer-card .so-badge {
+            max-width: 100%;
+          }
+          @container (max-width: 767px) {
+            solar-optimizer-card .so-grid-stats {
+              grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+            solar-optimizer-card .so-device-header,
+            solar-optimizer-card .so-actions {
+              flex-wrap: wrap;
+            }
+            solar-optimizer-card .so-info-grid {
+              grid-template-columns: minmax(0, 1fr);
+            }
+          }
+          @container (max-width: 599px) {
+            solar-optimizer-card .so-device-header {
+              flex-direction: column;
+              align-items: stretch;
+            }
+            solar-optimizer-card .so-actions {
+              width: 100%;
+            }
+            solar-optimizer-card .so-device-detail-footer {
+              flex-direction: column;
+            }
+            solar-optimizer-card .so-device-detail-controls {
+              width: 100%;
+              flex-direction: row;
+              flex-wrap: wrap;
+              align-items: center;
+              justify-content: flex-start;
+            }
+          }
+          @container (max-width: 359px) {
+            solar-optimizer-card .so-device-power-row {
+              flex-wrap: wrap;
+            }
+            solar-optimizer-card .so-device-power-row .so-power-bar-container {
+              flex-basis: 100%;
+            }
           }
         </style>
         <ha-card header="Solar Optimizer">
@@ -686,7 +798,7 @@ class SolarOptimizerCard extends HTMLElement {
       devicesHtml += `
         <div class="so-device-card ${cardStateClass}" data-device-id="${deviceId}">
           <div class="so-device-header">
-            <div style="display:flex;align-items:center;gap:6px;">
+            <div class="so-device-identity">
               <button class="${chevronClass}" data-collapse-id="${deviceId}" title="${isCollapsed ? t('expand') : t('collapse')}">
                 <ha-icon icon="mdi:chevron-down" style="--mdi-icon-size: 20px;"></ha-icon>
               </button>
@@ -698,10 +810,10 @@ class SolarOptimizerCard extends HTMLElement {
               ${switchToggleHtml}
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:8px; font-size:0.85em; color:var(--secondary-text-color); padding: 0 4px;">
+          <div class="so-device-power-row">
             <span><strong style="color:var(--primary-text-color);">${currentPower} W</strong> / ${powerMax} W</span>
             ${powerMax > 0 ? `
-              <div class="so-power-bar-container" style="flex:1; margin-top:0;">
+              <div class="so-power-bar-container">
                 ${powerPercent > 0 ? `<div class="so-power-bar" style="width: ${powerPercent}%"></div>` : ''}
               </div>
             ` : ''}
@@ -713,12 +825,12 @@ class SolarOptimizerCard extends HTMLElement {
               <div>${t('requiredPower')}: <strong>${requestedPower} W</strong></div>
             </div>
             ${availHtml}
-            <div style="display:flex; gap:12px; align-items:flex-start; margin-top:6px;">
-              <div style="flex:1; min-width:0;">
+            <div class="so-device-detail-footer">
+              <div class="so-device-detail-history">
                 ${this._renderHistoryBar(switchKey, t)}
                 ${attrs.can_change_power ? this._renderPowerHistoryGraph(switchKey, powerMax, t) : ''}
               </div>
-              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">
+              <div class="so-device-detail-controls">
                 <button
                   class="so-btn so-btn-reset device-reset-on-time"
                   data-entity-id="sensor.on_time_today_solar_optimizer_${deviceId}"
