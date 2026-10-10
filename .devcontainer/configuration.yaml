@@ -6,6 +6,9 @@ homeassistant:
 system_health:
 energy:
 
+# Provides water_heater.demo_water_heater for local Solar Optimizer tests.
+demo:
+
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes

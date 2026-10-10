@@ -15,6 +15,7 @@ from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
+from homeassistant.components.water_heater import DOMAIN as WATER_HEATER_DOMAIN
 
 
 from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -67,7 +68,9 @@ managed_device_schema = vol.Schema(
     {
         vol.Required(CONF_NAME): str,
         vol.Required(CONF_ENTITY_ID): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[INPUT_BOOLEAN_DOMAIN, SWITCH_DOMAIN, HUMIDIFIER_DOMAIN, CLIMATE_DOMAIN, FAN_DOMAIN, LIGHT_DOMAIN, SELECT_DOMAIN, BUTTON_DOMAIN])
+            selector.EntitySelectorConfig(
+                domain=[INPUT_BOOLEAN_DOMAIN, SWITCH_DOMAIN, HUMIDIFIER_DOMAIN, CLIMATE_DOMAIN, FAN_DOMAIN, LIGHT_DOMAIN, SELECT_DOMAIN, BUTTON_DOMAIN, WATER_HEATER_DOMAIN]
+            )
         ),
         vol.Required(CONF_POWER_MAX): str,
         vol.Optional(CONF_CHECK_USABLE_TEMPLATE, default="{{ True }}"): str,
