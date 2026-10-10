@@ -98,6 +98,68 @@ async def test_climate_device(
                 ]
             )
 
+
+async def test_water_heater_device(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """Testing water heater device."""
+
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtAUniqueId",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "water_heater.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0.3,
+            CONF_DURATION_STOP_MIN: 0.1,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "water_heater/set_operation_mode/operation_mode:eco",
+            CONF_DEACTIVATION_SERVICE: "water_heater/set_operation_mode/operation_mode:off",
+        },
+    )
+
+    device = await create_managed_device(
+        hass,
+        entry_a,
+        "equipement_a",
+    )
+    assert device is not None
+    assert device.name == "Equipement A"
+
+    with patch("homeassistant.core.ServiceRegistry.async_call") as mock_service_call:
+        await device.activate()
+
+        mock_service_call.assert_has_calls(
+            [
+                call.service_call(
+                    "water_heater",
+                    "set_operation_mode",
+                    service_data={"operation_mode": "eco"},
+                    target={"entity_id": "water_heater.fake_device_a"},
+                ),
+            ]
+        )
+
+    with patch("homeassistant.core.ServiceRegistry.async_call") as mock_service_call:
+        await device.deactivate()
+
+        mock_service_call.assert_has_calls(
+            [
+                call.service_call(
+                    "water_heater",
+                    "set_operation_mode",
+                    service_data={"operation_mode": "off"},
+                    target={"entity_id": "water_heater.fake_device_a"},
+                ),
+            ]
+        )
+
+
 async def test_humidifier_device(
     hass: HomeAssistant,
     init_solar_optimizer_central_config,

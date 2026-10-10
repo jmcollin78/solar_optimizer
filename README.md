@@ -22,11 +22,13 @@
   - [Configure the Integration for the First Time](#configure-the-integration-for-the-first-time)
   - [Configure the Devices](#configure-the-devices)
     - [Configuring a Simple Device (On/Off)](#configuring-a-simple-device-onoff)
+    - [Defining the Active Template](#defining-the-active-template)
   - [Configuring a Device with Variable Power](#configuring-a-device-with-variable-power)
   - [Configuration Examples](#configuration-examples)
     - [Controlling Tesla Charging](#controlling-tesla-charging)
     - [Controlling an Air Conditioner hvac mode](#controlling-an-air-conditioner-hvac-mode)
     - [Controlling an Air Conditioner preset](#controlling-an-air-conditioner-preset)
+    - [Controlling a Water Heater](#controlling-a-water-heater)
     - [Controlling a Dehumidifier](#controlling-a-dehumidifier)
     - [Control for a Light](#control-for-a-light)
     - [Control for a dimmable Light](#control-for-a-dimmable-light)
@@ -207,7 +209,7 @@ You need to specify the following attributes:
 | Attribute                     | Applicable to                       | Meaning                                                                                                                                                                                                                                | Example                                          | Comment                                                                                                                                                                                                           |
 | ----------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`                        | All                                 | The name of the device.                                                                                                                                                                                                                | Basement Ventilation                             | The name is used to identify the entities of this device.                                                                                                                                                         |
-| `entity_id`                   | All                                 | The entity ID of the device to be controlled.                                                                                                                                                                                          | switch.basement_ventilation                      | Can be a `switch`, an `humidifier`, a `climate`, a `fan`, a `select` or a `light`. If it is not a `switch`, the `activation_service` and `deactivation_service` fields must be adjusted.                          |
+| `entity_id`                   | All                                 | The entity ID of the device to be controlled.                                                                                                                                                                                          | switch.basement_ventilation                      | Can be a `switch`, an `humidifier`, a `climate`, a `fan`, a `select`, a `light` or a `water_heater`. If it is not a `switch`, the `activation_service` and `deactivation_service` fields must be adjusted.        |
 | `device_power` or `power_max` | All                                 | The maximum power consumption of the device when turned on, in watts.                                                                                                                                                                  | 250                                              | -                                                                                                                                                                                                                 |
 | `check_usable_template`       | All                                 | A template that evaluates to `True` if the device can be used by Solar Optimizer. A template must start with `{{` and end with `}}`.                                                                                                   | {{ is_state('cover.garage_door', 'closed') }}    | In this example, Solar Optimizer will not attempt to control the "Basement Ventilation" if the garage door is open. Use `{{ True }}` if you do not need this condition.                                           |
 | `active_template`             | All                                 | A template that evaluates to `True` if the device is currently active. A template must start with `{{` and end with `}}`. This template is not necessary when the state of the device is 'on' or 'off' when turned-on or off.          | {{ is_state('climate.living_room_ac', 'cool') }} | In this example, a `climate` device will be considered active by Solar Optimizer if its state is `cool`. Leave it blank for devices where the default 'on'/'off' state applies (switches and input_booleans).     |
@@ -220,6 +222,19 @@ You need to specify the following attributes:
 | `max_on_time_per_day_min`     | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
 | `min_on_time_per_day_min`     | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
 | `offpeak_time`                | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
+
+### Defining the Active Template
+
+The `check_active_template` field tells Solar Optimizer whether the device is actually active. Leave it blank when the entity's `on` / `off` state directly represents activity. Otherwise, provide a template that returns `True` for the configured active mode.
+
+| Domain                                                  | Recommended `check_active_template` value                                                                                                                       |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `switch`, `input_boolean`, `light`, `humidifier`, `fan` | Leave blank when the `on` state means the device is active.                                                                                                     |
+| `climate` with an HVAC mode                             | `{{ is_state('climate.my_device', 'heat') }}`, or the selected mode, for example `cool`.                                                                        |
+| `climate` with a preset                                 | `{{ is_state_attr('climate.my_device', 'preset_mode', 'boost') }}`, or the selected preset.                                                                     |
+| `water_heater`                                          | `{{ is_state('water_heater.my_water_heater', 'eco') }}`, or the selected activation mode. Available modes depend on the integration.                            |
+| `select`                                                | `{{ is_state('select.my_device', 'active_option') }}` with the selected option as the active state.                                                             |
+| `button`                                                | Use the entity that reports the actual activity, for example `{{ is_state('binary_sensor.my_device_active', 'on') }}`. A button has no persistent active state. |
 
 ## Configuring a Device with Variable Power
 This type of device allows for adjusting the power consumption based on solar production and the algorithm's decisions. Essentially, it acts as a software-based solar router, enabling, for example, an electric vehicle to charge using only surplus solar energy.
@@ -275,7 +290,7 @@ To turn on an air conditioner if the temperature is above 27°C:
     entity_id: "climate.clim_salon"
     device_power: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
-    active_template: "{{ is_state('climate.vtherm', 'cool') }}"
+    check_active_template: "{{ is_state('climate.vtherm', 'cool') }}"
     # 1 h minimum
     duration_min: 60
     action_mode: "service_call"
@@ -292,7 +307,7 @@ To change the preset of an air conditioner if the temperature is above 27°C:
     entity_id: "climate.clim_salon"
     device_power: 1500
     check_usable_template: "{{ states('sensor.temperature_salon') | float(0) > 27 }}"
-    active_template: "{{ is_state_attr('climate.clim_salon', 'preset_mode', 'boost') }}"
+    check_active_template: "{{ is_state_attr('climate.clim_salon', 'preset_mode', 'boost') }}"
     # 1 h minimum
     duration_min: 60
     action_mode: "service_call"
@@ -300,6 +315,23 @@ To change the preset of an air conditioner if the temperature is above 27°C:
     deactivation_service: "climate/set_preset_mode/preset_mode:eco"
     battery_soc_threshold: 80
 ```
+
+  ### Controlling a Water Heater
+  To control a water heater operating mode:
+
+  ```yaml
+    name: "Water heater"
+    entity_id: "water_heater.hot_water_tank"
+    device_power: 1500
+    check_usable_template: "{{ True }}"
+    check_active_template: "{{ is_state('water_heater.hot_water_tank', 'eco') }}"
+    duration_min: 60
+    action_mode: "service_call"
+    activation_service: "water_heater/set_operation_mode/operation_mode:eco"
+    deactivation_service: "water_heater/set_operation_mode/operation_mode:off"
+  ```
+
+  `eco` and `off` are illustrative modes. The available operating modes depend on the Home Assistant integration that provides the water heater entity.
 
 ### Controlling a Dehumidifier
 To turn on a dehumidifier if the humidity exceeds a threshold for at least one hour per day, with the possibility of activation during off-peak hours:
