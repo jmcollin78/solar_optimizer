@@ -131,6 +131,43 @@ async def test_offpeak_maximum_duration_incompatible_with_minimum_is_rejected(ha
     assert device is None
 
 
+async def test_invalid_runtime_offpeak_maximum_duration_blocks_forcing(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """A duration template that becomes incoherent cannot force the device."""
+    hass.states.async_set("input_number.offpeak_max", 6)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtA",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+            CONF_MAX_ON_TIME_OFFPEAK_MIN: "{{ states('input_number.offpeak_max') }}",
+            CONF_OFFPEAK_TIME: "23:00",
+        },
+    )
+
+    device = await create_managed_device(hass, entry, "equipement_a")
+    assert device is not None
+
+    device._set_now(datetime(2024, 11, 10, 23, 0, tzinfo=get_tz(hass)))
+    device.set_on_time(0)
+    hass.states.async_set("input_number.offpeak_max", 4)
+
+    with patch.object(device, "check_usable", return_value=True):
+        assert device.should_be_forced_offpeak is False
+
+
 async def test_min_on_time_config_ko_1(
     hass: HomeAssistant, init_solar_optimizer_central_config
 ):

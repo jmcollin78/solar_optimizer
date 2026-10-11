@@ -92,6 +92,36 @@
                     "columns": 12,
                     "rows": 2
                   }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.max_on_time_per_day_min",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.min_on_time_per_day_min",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_boolean.device_h_enable"
                 }
               ],
               "column_span": 4
@@ -148,10 +178,34 @@
                 },
                 {
                   "type": "tile",
-                  "entity": "input_boolean.fake_device_c",
+                  "grid_options": {
+                    "columns": 6,
+                    "rows": 2
+                  },
+                  "entity": "input_boolean.fake_device_h",
+                  "vertical": false,
                   "features": [
                     {
                       "type": "toggle"
+                    }
+                  ],
+                  "features_position": "bottom"
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.tesla_amps",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ]
+                },
+                {
+                  "type": "tile",
+                  "entity": "water_heater.demo_water_heater_celsius",
+                  "features": [
+                    {
+                      "type": "water-heater-operation-modes"
                     }
                   ],
                   "grid_options": {
@@ -161,10 +215,17 @@
                 },
                 {
                   "type": "tile",
-                  "entity": "water_heater.demo_water_heater_celsius",
+                  "entity": "climate.vtherm",
                   "features": [
                     {
-                      "type": "water-heater-operation-modes"
+                      "type": "climate-hvac-modes"
+                    },
+                    {
+                      "type": "climate-preset-modes",
+                      "style": "dropdown"
+                    },
+                    {
+                      "type": "target-temperature"
                     }
                   ],
                   "grid_options": {
