@@ -406,4 +406,40 @@ async def test_powered_device_rejects_incompatible_offpeak_duration(
     result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input)
 
     assert result["type"] == FlowResultType.FORM
-    assert result["errors"] == {CONF_MAX_ON_TIME_OFFPEAK_MIN: "invalid_value"}
+    assert result["errors"] == {CONF_MAX_ON_TIME_OFFPEAK_MIN: "invalid_offpeak_duration"}
+
+
+async def test_powered_device_rejects_incompatible_resolved_offpeak_duration(
+    hass: HomeAssistant,
+    skip_hass_states_get,
+    init_solar_optimizer_central_config,
+):
+    """The flow rejects a HC maximum incompatible with current template values."""
+    hass.states.async_set("input_number.max_daily", 1440)
+    hass.states.async_set("input_number.min_daily", 101)
+
+    result = await hass.config_entries.flow.async_init(config_flow.DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={CONF_DEVICE_TYPE: CONF_POWERED_DEVICE})
+    user_input = {
+        CONF_NAME: "Tesla",
+        CONF_ENTITY_ID: "input_boolean.fake_device_h",
+        CONF_POWER_MAX: "1000",
+        CONF_POWER_MIN: 0,
+        CONF_POWER_STEP: 220,
+        CONF_DURATION_MIN: 5,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+        CONF_BATTERY_SOC_THRESHOLD: "0",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: "{{ states('input_number.max_daily') }}",
+        CONF_MIN_ON_TIME_PER_DAY_MIN: "{{ states('input_number.min_daily') }}",
+        CONF_MAX_ON_TIME_OFFPEAK_MIN: "10",
+        CONF_OFFPEAK_POWER: "440",
+        CONF_OFFPEAK_TIME: "22:00",
+    }
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {CONF_MAX_ON_TIME_OFFPEAK_MIN: "invalid_offpeak_duration"}

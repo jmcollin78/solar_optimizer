@@ -136,7 +136,8 @@
         },
         "error": {
             "format_time_invalid": "Format of time should be HH:MM",
-            "invalid_value": "The value is invalid or incompatible with the device limits"
+            "invalid_value": "The value is invalid or incompatible with the device limits",
+            "invalid_offpeak_duration": "The off-peak maximum duration must be between the daily minimum and maximum durations"
         }
     },
     "options": {
@@ -275,7 +276,8 @@
         },
         "error": {
             "format_time_invalid": "Format of time should be HH:MM",
-            "invalid_value": "The value is invalid or incompatible with the device limits"
+            "invalid_value": "The value is invalid or incompatible with the device limits",
+            "invalid_offpeak_duration": "The off-peak maximum duration must be between the daily minimum and maximum durations"
         }
     },
     "selector": {

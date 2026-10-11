@@ -136,7 +136,8 @@
     },
     "error": {
       "format_time_invalid": "Il formato del tempo dovrebbe essere HH: mm",
-      "invalid_value": "Il valore non è valido o non è compatibile con i limiti del dispositivo"
+      "invalid_value": "Il valore non è valido o non è compatibile con i limiti del dispositivo",
+      "invalid_offpeak_duration": "La durata massima nelle ore non di punta deve essere compresa tra le durate minima e massima giornaliere"
     }
   },
   "options": {
@@ -275,7 +276,8 @@
     },
     "error": {
       "format_time_invalid": "Il formato dell'ora dovrebbe essere HH: mm",
-      "invalid_value": "Il valore non è valido o non è compatibile con i limiti del dispositivo"
+      "invalid_value": "Il valore non è valido o non è compatibile con i limiti del dispositivo",
+      "invalid_offpeak_duration": "La durata massima nelle ore non di punta deve essere compresa tra le durate minima e massima giornaliere"
     }
   },
   "selector": {

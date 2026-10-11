@@ -136,7 +136,8 @@
         },
         "error": {
             "format_time_invalid": "Le format de l'heure doit être HH:MM",
-            "invalid_value": "La valeur est invalide ou incompatible avec les limites de l'équipement"
+            "invalid_value": "La valeur est invalide ou incompatible avec les limites de l'équipement",
+            "invalid_offpeak_duration": "La durée maximale heures creuses doit être comprise entre les durées minimale et maximale quotidiennes"
         }
     },
     "options": {
@@ -275,7 +276,8 @@
         },
         "error": {
             "format_time_invalid": "Le format de l'heure doit être HH:MM",
-            "invalid_value": "La valeur est invalide ou incompatible avec les limites de l'équipement"
+            "invalid_value": "La valeur est invalide ou incompatible avec les limites de l'équipement",
+            "invalid_offpeak_duration": "La durée maximale heures creuses doit être comprise entre les durées minimale et maximale quotidiennes"
         }
     },
     "selector": {
