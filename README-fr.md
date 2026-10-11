@@ -25,6 +25,7 @@
     - [Définir le template d'activation](#définir-le-template-dactivation)
   - [Configurer un équipement avec une puissance variable](#configurer-un-équipement-avec-une-puissance-variable)
     - [Forçage en heures creuses](#forçage-en-heures-creuses)
+      - [Conditions de validité](#conditions-de-validité)
   - [Exemples de configurations](#exemples-de-configurations)
     - [Commande d'une recharge de Tesla](#commande-dune-recharge-de-tesla)
     - [Commande d'une climatisation](#commande-dune-climatisation)
@@ -58,22 +59,14 @@
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
 > * **release 3.9.0** :
->   - **Forçage en heures creuses** : les équipements à puissance variable reçoivent désormais explicitement la consigne `offpeak_power` (ou `power_max` par défaut). Tous les équipements peuvent utiliser `max_on_time_offpeak_min` pour plafonner le forçage HC sans modifier l'objectif quotidien minimal.
+>   - `offpeak_power` : consigne envoyée à un équipement à puissance variable lorsqu'il est forcé en heures creuses ; `power_max` est utilisée par défaut.
+>   - `max_on_time_offpeak_min` : durée maximale pendant laquelle tout équipement peut être forcé en heures creuses ; elle ne remplace pas l'objectif de durée minimale quotidienne.
 > * **release 3.8.1** :
 >   - **Activation forcée minutée** : nouveau sélecteur de durée (1h, 4h, 12h, 24h) à côté du bouton START. Lorsqu'une durée est sélectionnée, l'équipement est allumé en mode MANUEL pour la durée choisie puis s'éteint automatiquement et rend la main à SO. Le timer est persisté entre les redémarrages de HA. Cf. [start\_device](#start_device) et [stop\_device](#stop_device)
 > * **release 3.8.0** :
 >   - **Clarification des statuts** : nouveau statut `MANUEL` (ambre) lorsqu'un équipement est physiquement actif mais la gestion SO est désactivée. La bordure gauche reflète désormais toujours l'état physique (vert = allumé, gris = éteint), indépendamment de l'état de contrôle SO. Cf. [Statuts des équipements](#statuts-des-équipements)
 >   - **Informations secondaires** : nouvelle option `secondary_info` pour afficher des informations personnalisées par équipement via des templates. Cf. [Informations secondaires](#informations-secondaires)
 >   - **Blocs fermés par défaut** : tous les blocs équipement sont fermés au premier chargement. L'état ouvert/fermé de chaque bloc est persisté dans le `localStorage` du navigateur.
-> * **release 3.7.0** :
->   - ajout d'une carte Lovelace officielle native (`custom:solar-optimizer-card`) intégrée à l'intégration. Cf. [Carte Lovelace officielle](#carte-lovelace-officielle)
-> * **release 3.5.0** :
->   - ajout d'une gestion de la priorité. Cf. [la gestion de la priorité](#la-gestion-de-la-priorité)
-> * **release 3.2.0** :
->   - ajout d'un capteur optionnelle de la puissance nette instantanée chargée ou déchargée dans la batterie. Elle vient s'ajouter à la puissance nette consommée. En effet si la puissance de charge de la batterie est de la puissance disponible pour les équipements. Le capteur doit remonter une valeur en watt, positive si la batterie se décharge et négative si la batterie charge.
-> * **release 3.0.0** :
->   - ajout d'une IHM de configuration des équipmements.
->   - ⚠️ l'installation de la release 3.0.0 nécessite une procédure particulière. Voir la procédure ci-dessous [ici](#procédure-de-migration-dune-version-2x-vers-la-3x).
 
 # Qu'est-ce que Solar Optimizer ?
 Cette intégration va vous permettre de maximiser l'utilisation de votre production solaire. Vous lui déléguez le contrôle de vos équipements dontl'activation peut être différée dans le temps (chauffe-eau, pompe de piscine, charge de véhicle électrique, lave-vaisselle, lave-linge, etc) et elle s'occupe de les lancer lorsque la puissance produite est suffisante.
@@ -227,9 +220,20 @@ Le champ `check_active_template` indique à Solar Optimizer si l'équipement est
 Ce type d'équipement permet moduler la puissance consommée par l'équipement en fonction de la production solaire et de ce que décide l'algorithme. Vous avez ainsi une sorte de routeur solaire logiciel qui permet, par exemple, de moduler la charge d'une voiture électrique avec uniquement le surplus de production.
 
 ### Forçage en heures creuses
-`max_on_time_offpeak_min` est disponible pour tous les équipements. Cette durée optionnelle, en minutes, peut être un nombre ou un template et vaut `max_on_time_per_day_min` par défaut. Elle doit être positive ou nulle, ne pas dépasser le maximum quotidien, et ne pas être inférieure à `min_on_time_per_day_min` lorsque ce minimum est positif. Le maximum quotidien reste toujours une limite absolue ; `min_on_time_per_day_min` reste l'objectif du forçage et celui-ci s'arrête au plafond applicable si l'objectif ne peut pas être atteint.
 
-Les équipements à puissance variable peuvent aussi définir `offpeak_power`, sous forme de nombre ou de template. Cette consigne est explicitement envoyée quand le forçage HC active l'équipement. En son absence, Solar Optimizer envoie `power_max`. Elle doit être strictement positive, comprise entre `power_min` et `power_max`, et alignée sur `power_step`. Les équipements on/off n'exposent ni n'utilisent ce réglage. Les valeurs statiques invalides sont refusées par le formulaire ; un résultat de template invalide n'est pas envoyé à l'équipement.
+- **`max_on_time_offpeak_min`** — Disponible pour tous les équipements. Cette durée optionnelle, exprimée en minutes, limite le temps de fonctionnement **forcé** pendant les heures creuses lorsque la durée minimale quotidienne n'est pas encore atteinte. Elle peut être un nombre ou un template ; si elle est vide, Solar Optimizer utilise `max_on_time_per_day_min`. Elle ne remplace pas `min_on_time_per_day_min`, qui reste l'objectif à atteindre : elle constitue uniquement une limite de sécurité. Sa valeur doit être positive ou nulle, ne pas dépasser le maximum quotidien et ne pas être inférieure à la durée minimale quotidienne lorsque celle-ci est positive.
+- **`offpeak_power`** — Disponible uniquement pour les équipements à puissance variable. Cette consigne, sous forme de nombre ou de template, est envoyée explicitement lorsque Solar Optimizer force l'activation pendant les heures creuses. Elle est notamment utile lorsque l'équipement remet sa puissance à zéro après une extinction. Si elle est vide, Solar Optimizer envoie `power_max`. Sa valeur doit être strictement positive, comprise entre `power_min` et `power_max`, et alignée sur `power_step`. Les équipements on/off n'exposent ni n'utilisent ce réglage.
+
+Les valeurs invalides sont signalées dans le formulaire et ne sont pas enregistrées. Si un template devient invalide ultérieurement, l'équipement concerné n'est pas piloté pendant le cycle concerné.
+
+#### Conditions de validité
+
+| Paramètre                 | Conditions                                                                                                                                                                                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max_on_time_offpeak_min` | Disponible pour tous les équipements. La valeur résolue doit être numérique et finie, supérieure ou égale à `0`, inférieure ou égale à `max_on_time_per_day_min`, et supérieure ou égale à `min_on_time_per_day_min` lorsque cette dernière est positive.      |
+| `offpeak_power`           | Disponible uniquement pour les équipements à puissance variable. La valeur résolue doit être numérique et finie, strictement supérieure à `0`, comprise entre `power_min` et `power_max`, et correspondre à un palier de `power_step` à partir de `power_min`. |
+
+Lorsqu'un template est utilisé, Solar Optimizer valide sa valeur actuelle à l'enregistrement lorsque cela est possible, puis la contrôle de nouveau à chaque utilisation.
 
 Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'applique et douvent être complétés par ceux-ci :
 
