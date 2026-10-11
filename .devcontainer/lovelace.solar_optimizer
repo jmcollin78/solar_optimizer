@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace.solar_optimizer",
+  "data": {
+    "config": {
+      "views": [
+        {
+          "type": "sections",
+          "sections": [
+            {
+              "type": "grid",
+              "cards": [
+                {
+                  "type": "heading",
+                  "heading": "Nouvelle section"
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.production_solaire",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.consommation_brut",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.consommation_net",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.power_max",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.battery_soc",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_number.battery_soc_threshold",
+                  "features": [
+                    {
+                      "type": "numeric-input"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                }
+              ],
+              "column_span": 4
+            },
+            {
+              "type": "grid",
+              "cards": [
+                {
+                  "type": "heading",
+                  "heading": "Nouvelle section"
+                },
+                {
+                  "type": "custom:solar-optimizer-card",
+                  "grid_options": {
+                    "columns": 24,
+                    "rows": "auto"
+                  }
+                }
+              ],
+              "column_span": 2
+            },
+            {
+              "type": "grid",
+              "cards": [
+                {
+                  "type": "heading",
+                  "heading": "Nouvelle section"
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_boolean.fake_device_a",
+                  "features": [
+                    {
+                      "type": "toggle"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_boolean.fake_device_b",
+                  "features": [
+                    {
+                      "type": "toggle"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "input_boolean.fake_device_c",
+                  "features": [
+                    {
+                      "type": "toggle"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                },
+                {
+                  "type": "tile",
+                  "entity": "water_heater.demo_water_heater_celsius",
+                  "features": [
+                    {
+                      "type": "water-heater-operation-modes"
+                    }
+                  ],
+                  "grid_options": {
+                    "columns": 12,
+                    "rows": 2
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
