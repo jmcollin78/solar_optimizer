@@ -23,7 +23,13 @@ from homeassistant.util.unit_conversion import (
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN, DEFAULT_RAZ_TIME
+from .const import (
+    DEFAULT_REFRESH_PERIOD_SEC,
+    name_to_unique_id,
+    SOLAR_OPTIMIZER_DOMAIN,
+    DEFAULT_RAZ_TIME,
+    ConfigurationError,
+)
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 
@@ -231,6 +237,17 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             old_requested_power = device.requested_power
             is_active = device.is_active
             should_force_offpeak = device.should_be_forced_offpeak
+            effective_requested_power = requested_power
+            if should_force_offpeak and not state and device.can_change_power:
+                try:
+                    effective_requested_power = device.offpeak_power
+                except (ConfigurationError, TypeError, ValueError) as err:
+                    _LOGGER.error(
+                        "%s - invalid off-peak power configuration: %s",
+                        device.name,
+                        err,
+                    )
+                    continue
             if should_force_offpeak:
                 _LOGGER.debug("%s - we should force %s name", self, name)
             if is_active and not state and not should_force_offpeak:
@@ -241,22 +258,18 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             elif not is_active and (state or should_force_offpeak):
                 _LOGGER.debug("Allumage de %s", name)
                 should_log = True
-                old_requested_power = requested_power
-                await device.activate(requested_power)
+                old_requested_power = effective_requested_power
+                await device.activate(effective_requested_power)
 
             # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
-            if (
-                state
-                and device.can_change_power
-                and (device.current_power != requested_power or not is_active)
-            ):
+            if (state or should_force_offpeak) and device.can_change_power and (device.current_power != effective_requested_power or not is_active):
                 _LOGGER.debug(
                     "Change power of %s to %s",
                     equipement["name"],
-                    requested_power,
+                    effective_requested_power,
                 )
                 should_log = True
-                await device.change_requested_power(requested_power)
+                await device.change_requested_power(effective_requested_power)
 
             device.set_requested_power(old_requested_power)
 

@@ -89,6 +89,7 @@ managed_device_schema = vol.Schema(
         vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
+        vol.Optional(CONF_MAX_ON_TIME_OFFPEAK_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
     }
 )
@@ -108,14 +109,16 @@ power_managed_device_schema = vol.Schema(
                 ]
             )
         ),
-        vol.Optional(CONF_POWER_ENTITY_ID): selector.EntitySelector(selector.EntitySelectorConfig(
-            domain=[
-                INPUT_NUMBER_DOMAIN,
-                NUMBER_DOMAIN,
-                FAN_DOMAIN,
-                LIGHT_DOMAIN,
-            ]
-        )),
+        vol.Optional(CONF_POWER_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    INPUT_NUMBER_DOMAIN,
+                    NUMBER_DOMAIN,
+                    FAN_DOMAIN,
+                    LIGHT_DOMAIN,
+                ]
+            )
+        ),
         vol.Optional(CONF_POWER_MIN, default=220): vol.Coerce(float),
         vol.Required(CONF_POWER_MAX): str,
         vol.Optional(CONF_POWER_STEP, default=220): vol.All(vol.Coerce(float), vol.Range(min=0, min_included=False)),
@@ -140,6 +143,8 @@ power_managed_device_schema = vol.Schema(
         vol.Optional(CONF_BATTERY_SOC_THRESHOLD, default=0): str,
         vol.Optional(CONF_MAX_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
+        vol.Optional(CONF_MAX_ON_TIME_OFFPEAK_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
+        vol.Optional(CONF_OFFPEAK_POWER): str,
     }
 )

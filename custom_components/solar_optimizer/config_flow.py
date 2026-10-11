@@ -1,6 +1,7 @@
 """ Le Config Flow """
 
 import logging
+import math
 import voluptuous as vol
 
 from homeassistant.core import callback
@@ -11,6 +12,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
 )
 from homeassistant.data_entry_flow import FlowHandler
+from homeassistant.helpers.template import Template
 
 from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from .config_schema import (
@@ -64,6 +66,8 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
                 errors[str(err)] = "unknown_entity"
             except InvalidTime as err:
                 errors[str(err)] = "format_time_invalid"
+            except ConfigurationError as err:
+                errors[str(err)] = "invalid_offpeak_duration" if str(err) == CONF_MAX_ON_TIME_OFFPEAK_MIN else "invalid_value"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -132,6 +136,92 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
             except vol.Invalid as err:
                 raise InvalidTime(conf)
 
+        if step_id not in {"device", "powered_device"}:
+            return
+
+        if step_id == "device" and data.get(CONF_OFFPEAK_POWER) not in (None, ""):
+            raise ConfigurationError(CONF_OFFPEAK_POWER)
+
+        self._validate_offpeak_values(data)
+
+    @staticmethod
+    def _static_number(value, key):
+        """Return a finite static value, or None when a template must be resolved later."""
+        if value in (None, ""):
+            return None
+        if isinstance(value, str) and is_template_string(value):
+            return None
+        try:
+            number = float(value)
+        except (TypeError, ValueError) as err:
+            raise ConfigurationError(key) from err
+        if not math.isfinite(number):
+            raise ConfigurationError(key)
+        return number
+
+    def _resolved_number(self, value, key):
+        """Return a finite number after rendering a template with current states."""
+        if value in (None, ""):
+            return None
+        if isinstance(value, str) and is_template_string(value):
+            try:
+                value = Template(value, self.hass).async_render(context={})
+            except Exception as err:  # pylint: disable=broad-except
+                raise ConfigurationError(key) from err
+        return self._static_number(value, key)
+
+    def _validate_offpeak_values(self, data: dict) -> None:
+        """Validate static off-peak values; templates are validated when resolved."""
+        offpeak_power = self._static_number(data.get(CONF_OFFPEAK_POWER), CONF_OFFPEAK_POWER)
+        if offpeak_power is not None:
+            power_min = self._static_number(data.get(CONF_POWER_MIN), CONF_OFFPEAK_POWER)
+            power_max = self._static_number(data.get(CONF_POWER_MAX), CONF_OFFPEAK_POWER)
+            power_step = self._static_number(data.get(CONF_POWER_STEP), CONF_OFFPEAK_POWER)
+            if (
+                offpeak_power <= 0
+                or (power_min is not None and offpeak_power < power_min)
+                or (power_max is not None and offpeak_power > power_max)
+                or (
+                    power_min is not None
+                    and power_step is not None
+                    and not math.isclose(
+                        (offpeak_power - power_min) % power_step,
+                        0,
+                        abs_tol=1e-9,
+                    )
+                )
+            ):
+                raise ConfigurationError(CONF_OFFPEAK_POWER)
+
+        offpeak_max = self._static_number(data.get(CONF_MAX_ON_TIME_OFFPEAK_MIN), CONF_MAX_ON_TIME_OFFPEAK_MIN)
+        if offpeak_max is not None:
+            max_daily = self._static_number(data.get(CONF_MAX_ON_TIME_PER_DAY_MIN), CONF_MAX_ON_TIME_OFFPEAK_MIN)
+            min_daily = self._static_number(data.get(CONF_MIN_ON_TIME_PER_DAY_MIN), CONF_MAX_ON_TIME_OFFPEAK_MIN)
+            if offpeak_max < 0 or (max_daily is not None and offpeak_max > max_daily) or (min_daily is not None and min_daily > offpeak_max):
+                raise ConfigurationError(CONF_MAX_ON_TIME_OFFPEAK_MIN)
+
+        # Templates can be evaluated with the current Home Assistant states when
+        # an entry is created or updated. Reject a value that would otherwise
+        # cause setup to fail immediately after the form is accepted.
+        resolved_offpeak_max = self._resolved_number(data.get(CONF_MAX_ON_TIME_OFFPEAK_MIN), CONF_MAX_ON_TIME_OFFPEAK_MIN)
+        if resolved_offpeak_max is not None:
+            resolved_max_daily = (
+                self._resolved_number(
+                    data.get(CONF_MAX_ON_TIME_PER_DAY_MIN),
+                    CONF_MAX_ON_TIME_OFFPEAK_MIN,
+                )
+                or 24 * 60
+            )
+            resolved_min_daily = (
+                self._resolved_number(
+                    data.get(CONF_MIN_ON_TIME_PER_DAY_MIN),
+                    CONF_MAX_ON_TIME_OFFPEAK_MIN,
+                )
+                or 0
+            )
+            if resolved_offpeak_max < 0 or resolved_offpeak_max > resolved_max_daily or resolved_min_daily > resolved_offpeak_max:
+                raise ConfigurationError(CONF_MAX_ON_TIME_OFFPEAK_MIN)
+
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps user"""
         _LOGGER.debug("Into ConfigFlow.async_step_user user_input=%s", user_input)
@@ -187,10 +277,6 @@ class SolarOptimizerBaseConfigFlow(FlowHandler):
         _LOGGER.debug(
             "Into ConfigFlow.async_step_powered_device user_input=%s", user_input
         )
-
-        if user_input is not None:
-            # Check if the entity_ids are valid
-            await self.validate_input(user_input, "powered_device")
 
         return await self.generic_step(
             "powered_device",

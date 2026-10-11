@@ -24,6 +24,8 @@
     - [Configuring a Simple Device (On/Off)](#configuring-a-simple-device-onoff)
     - [Defining the Active Template](#defining-the-active-template)
   - [Configuring a Device with Variable Power](#configuring-a-device-with-variable-power)
+    - [Off-Peak Forcing](#off-peak-forcing)
+      - [Validation rules](#validation-rules)
   - [Configuration Examples](#configuration-examples)
     - [Controlling Tesla Charging](#controlling-tesla-charging)
     - [Controlling an Air Conditioner hvac mode](#controlling-an-air-conditioner-hvac-mode)
@@ -62,21 +64,15 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.9.0**:
+>   - `offpeak_power`: setpoint sent to a variable-power device when it is forced during off-peak hours; defaults to `power_max`.
+>   - `max_on_time_offpeak_min`: maximum amount of time any device may be forced during off-peak hours; it does not replace the daily minimum-duration target.
 > * **release 3.8.1**:
 >   - **Timed forced activation**: new duration selector (1h, 4h, 12h, 24h) next to the START button. When a duration is selected, the device is switched on in MANUAL mode for the chosen duration, then automatically turns off and returns control to SO. The timer is persisted across HA restarts. See [start\_device](#start_device) and [stop\_device](#stop_device)
 > * **release 3.8.0**:
 >   - **Device status clarification**: new `MANUAL` status (amber) when a device is physically active but SO management is disabled. The left border now always reflects the physical state (green = on, grey = off), independently of the SO control state. See [Device Status](#device-status)
 >   - **Secondary info**: new `secondary_info` option to display custom per-device information using templates. See [Secondary Info](#secondary-info)
 >   - **Collapsed by default**: all device blocks are collapsed on first load. The open/close state of each block is persisted in the browser `localStorage`.
-> * **release 3.7.0**:
->   - added an official native Lovelace card (`custom:solar-optimizer-card`) bundled with the integration. See [Official Lovelace Card](#official-lovelace-card)
-> * **release 3.5.0**:
->   - added support for priority management. See [Priority Management](#priority-management)
-> * **release 3.2.0** :
-> - Added an optional sensor for the net instantaneous power charged or discharged in the battery. This value is added to the net consumed power. Since the battery charging power affects the power available for the devices, it is taken into account. The sensor must report a value in watts, positive when the battery is discharging and negative when the battery is charging.
-> * **release 3.0.0** :
-> - Added a configuration UI for devices.
-> - ⚠️ Installing release 3.0.0 requires a specific procedure. See the migration procedure below [here](#migration-procedure-from-version-2x-to-3x).
 
 # What is Solar Optimizer?
 This integration will allow you to maximize the use of your solar production. You delegate to it the control of your equipment whose activation can be deferred over time (water heater, swimming pool pump, electric vehicle charge, dishwasher, washing machine, etc.) and it takes care of launching them when the power produced is sufficient.
@@ -238,6 +234,22 @@ The `check_active_template` field tells Solar Optimizer whether the device is ac
 
 ## Configuring a Device with Variable Power
 This type of device allows for adjusting the power consumption based on solar production and the algorithm's decisions. Essentially, it acts as a software-based solar router, enabling, for example, an electric vehicle to charge using only surplus solar energy.
+
+### Off-Peak Forcing
+
+- **`max_on_time_offpeak_min`** — Available for every device. This optional duration, expressed in minutes, limits **forced** operation during off-peak hours when the daily minimum duration has not yet been met. It can be a number or a template; when left blank, Solar Optimizer uses `max_on_time_per_day_min`. It does not replace `min_on_time_per_day_min`, which remains the target to achieve: it is only a safety limit. Its value must be non-negative, no greater than the daily maximum, and no lower than the daily minimum when that minimum is positive.
+- **`offpeak_power`** — Available only for variable-power devices. This number or template setpoint is explicitly sent when Solar Optimizer forces activation during off-peak hours. It is especially useful when a device resets its power to zero after being turned off. When left blank, Solar Optimizer sends `power_max`. It must be positive, between `power_min` and `power_max`, and aligned with `power_step`. On/off devices do not expose or use this setting.
+
+Invalid values are reported by the form and are not saved. If a template later resolves to an invalid value, the affected device is not controlled during that cycle.
+
+#### Validation rules
+
+| Parameter                 | Conditions                                                                                                                                                                                                                                    |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max_on_time_offpeak_min` | Available for every device. The resolved value must be numeric and finite, greater than or equal to `0`, less than or equal to `max_on_time_per_day_min`, and greater than or equal to `min_on_time_per_day_min` when the latter is positive. |
+| `offpeak_power`           | Available only for variable-power devices. The resolved value must be numeric and finite, strictly greater than `0`, between `power_min` and `power_max`, and match a `power_step` increment starting at `power_min`.                         |
+
+When a template is used, Solar Optimizer validates its current result when the entry is saved whenever possible, then checks it again every time it is used.
 
 All the parameters described [here](#configuring-a-simple-device-onoff) apply and must be supplemented with the following:
 

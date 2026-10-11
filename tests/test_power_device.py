@@ -1,5 +1,5 @@
 """ Device with power Unit test module"""
-from unittest.mock import call, patch, PropertyMock, ANY
+from unittest.mock import AsyncMock, call, patch, PropertyMock, ANY
 from datetime import datetime, timedelta
 
 from homeassistant.setup import async_setup_component
@@ -9,6 +9,144 @@ from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 
 from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from custom_components.solar_optimizer.managed_device import ACTION_ACTIVATE, ACTION_DEACTIVATE, ACTION_CHANGE_POWER
+
+
+@pytest.mark.parametrize("offpeak_power, expected_power", [(600, 600), ("{{ 600 }}", 600), (None, 1000)])
+async def test_offpeak_forcing_sets_variable_device_power(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    offpeak_power,
+    expected_power,
+):
+    """Off-peak forcing explicitly applies configured power or the power-max fallback."""
+    data = {
+        CONF_NAME: "Power Device A",
+        CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_ENTITY_ID: "input_number.fake_amps_number",
+        CONF_POWER_MAX: 1000,
+        CONF_POWER_MIN: 100,
+        CONF_POWER_STEP: 100,
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_POWER_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+        CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+        CONF_OFFPEAK_TIME: "23:00",
+    }
+    if offpeak_power is not None:
+        data[CONF_OFFPEAK_POWER] = offpeak_power
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(domain=DOMAIN, title="Power Device A", unique_id="powerA", data=data),
+        "power_device_a",
+    )
+    assert device is not None
+
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    device._set_now(datetime(2024, 11, 10, 23, 0, tzinfo=get_tz(hass)))
+    hass.states.async_set("sensor.fake_power_consumption", 0)
+    hass.states.async_set("sensor.fake_power_production", 0)
+    hass.states.async_set("input_number.fake_sell_cost", 1)
+    hass.states.async_set("input_number.fake_buy_cost", 1)
+    hass.states.async_set("input_number.fake_sell_tax_percent", 0)
+
+    solution = [{"name": "Power Device A", "requested_power": 0, "state": False}]
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 0)), patch.object(
+        type(device), "is_active", new_callable=PropertyMock, return_value=False
+    ), patch.object(type(device), "should_be_forced_offpeak", new_callable=PropertyMock, return_value=True), patch.object(
+        device, "activate", new_callable=AsyncMock
+    ) as activate, patch.object(
+        device, "change_requested_power", new_callable=AsyncMock
+    ) as change_power:
+        await coordinator._async_update_data()
+
+    activate.assert_awaited_once_with(expected_power)
+    change_power.assert_awaited_once_with(expected_power)
+
+
+async def test_offpeak_power_is_rejected_for_standard_device(hass: HomeAssistant, init_solar_optimizer_central_config):
+    """Injected off-peak power is invalid for a standard on/off device."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtA",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_OFFPEAK_POWER: 600,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        },
+    )
+
+    device = await create_managed_device(hass, entry, "equipement_a")
+    assert device is None
+
+
+async def test_invalid_offpeak_power_template_does_not_interrupt_cycle(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """An invalid resolved off-peak power skips only the affected device cycle."""
+    data = {
+        CONF_NAME: "Power Device A",
+        CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_ENTITY_ID: "input_number.fake_amps_number",
+        CONF_POWER_MAX: 1000,
+        CONF_POWER_MIN: 100,
+        CONF_POWER_STEP: 100,
+        CONF_OFFPEAK_POWER: "{{ states('input_number.offpeak_power') }}",
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_POWER_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+        CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+        CONF_OFFPEAK_TIME: "23:00",
+    }
+    hass.states.async_set("input_number.offpeak_power", 600)
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(domain=DOMAIN, title="Power Device A", unique_id="powerA", data=data),
+        "power_device_a",
+    )
+    assert device is not None
+
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    hass.states.async_set("sensor.fake_power_consumption", 0)
+    hass.states.async_set("sensor.fake_power_production", 0)
+    hass.states.async_set("input_number.fake_sell_cost", 1)
+    hass.states.async_set("input_number.fake_buy_cost", 1)
+    hass.states.async_set("input_number.fake_sell_tax_percent", 0)
+    hass.states.async_set("input_number.offpeak_power", "invalid")
+
+    solution = [{"name": "Power Device A", "requested_power": 0, "state": False}]
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 0)), patch.object(
+        type(device), "is_active", new_callable=PropertyMock, return_value=False
+    ), patch.object(type(device), "should_be_forced_offpeak", new_callable=PropertyMock, return_value=True), patch.object(
+        device, "activate", new_callable=AsyncMock
+    ) as activate, patch.object(
+        device, "change_requested_power", new_callable=AsyncMock
+    ) as change_power:
+        calculated_data = await coordinator._async_update_data()
+
+    activate.assert_not_awaited()
+    change_power.assert_not_awaited()
+    assert calculated_data["best_solution"] == solution
+
 
 async def test_power_device(
     hass: HomeAssistant,
@@ -682,4 +820,3 @@ async def test_fan_power_device(
                     ),
                 ]
             )
-    
