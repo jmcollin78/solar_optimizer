@@ -1,5 +1,6 @@
 """ A ManagedDevice represent a device than can be managed by the optimisatiion algorithm"""
 import logging
+import math
 from datetime import datetime, timedelta, time
 
 from homeassistant.core import HomeAssistant
@@ -19,6 +20,8 @@ from .const import (
     CONF_ACTION_MODE_ACTION,
     CONF_ACTION_MODE_EVENT,
     CONF_ACTION_MODES,
+    CONF_MAX_ON_TIME_OFFPEAK_MIN,
+    CONF_OFFPEAK_POWER,
     ConfigurationError,
     EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
     EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
@@ -146,6 +149,7 @@ class ManagedDevice:
         self._entity_id = device_config.get("entity_id")
         self._power_entity_id = device_config.get("power_entity_id")
         self._power_max = convert_to_template_or_value(hass, device_config.get("power_max"))
+        self._offpeak_power = convert_to_template_or_value(hass, device_config.get(CONF_OFFPEAK_POWER))
 
         self._power_min = (
             int(device_config.get("power_min"))
@@ -199,6 +203,7 @@ class ManagedDevice:
         self._battery_soc_threshold = convert_to_template_or_value(hass, device_config.get("battery_soc_threshold") or 0)
 
         self._max_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("max_on_time_per_day_min") or 60 * 24)
+        self._max_on_time_offpeak_min = convert_to_template_or_value(hass, device_config.get(CONF_MAX_ON_TIME_OFFPEAK_MIN))
         self._on_time_sec = 0
 
         self._min_on_time_per_day_min = convert_to_template_or_value(hass, device_config.get("min_on_time_per_day_min") or 0)
@@ -229,6 +234,13 @@ class ManagedDevice:
             msg = f"configuration of device ${self.name} is incorrect. min_on_time_per_day_sec should < max_on_time_per_day_sec"
             _LOGGER.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
+
+        try:
+            self.offpeak_power
+            self.max_on_time_offpeak_sec
+        except ConfigurationError as err:
+            _LOGGER.error("%s - invalid off-peak configuration: %s", self, err)
+            raise
 
         self._priority_entity = None
 
@@ -507,13 +519,19 @@ class ManagedDevice:
     @property
     def should_be_forced_offpeak(self) -> bool:
         """True is we are offpeak and the max_on_time is not exceeded"""
-        if not self.check_usable(False) or self._offpeak_time is None:
+        try:
+            if not self.check_usable(False) or self._offpeak_time is None:
+                return False
+            max_offpeak_sec = self.max_on_time_offpeak_sec
+        except (ConfigurationError, TypeError, ValueError) as err:
+            _LOGGER.error("%s - invalid off-peak configuration: %s", self._name, err)
             return False
 
         if self._offpeak_time >= self._coordinator.raz_time:
             return (
                 (self.now.time() >= self._offpeak_time or self.now.time() < self._coordinator.raz_time)
                 and self._on_time_sec < self.max_on_time_per_day_sec
+                and self._on_time_sec < max_offpeak_sec
                 and self._on_time_sec < self.min_on_time_per_day_sec
             )
         else:
@@ -521,6 +539,7 @@ class ManagedDevice:
                 self.now.time() >= self._offpeak_time
                 and self.now.time() < self._coordinator.raz_time
                 and self._on_time_sec < self.max_on_time_per_day_sec
+                and self._on_time_sec < max_offpeak_sec
                 and self._on_time_sec < self.min_on_time_per_day_sec
             )
 
@@ -548,6 +567,38 @@ class ManagedDevice:
     def power_max(self):
         """The power max of the managed device"""
         return get_template_or_value(self._hass, self._power_max)
+
+    @property
+    def offpeak_power(self):
+        """The explicit power setpoint used during off-peak forcing."""
+        if not self._can_change_power:
+            if self._offpeak_power is not None:
+                raise ConfigurationError(CONF_OFFPEAK_POWER)
+            return None
+
+        configured = self._offpeak_power is not None
+        value = self.power_max if not configured else get_template_or_value(self._hass, self._offpeak_power)
+        try:
+            value = float(value)
+            power_max = float(self.power_max)
+        except (TypeError, ValueError) as err:
+            raise ConfigurationError(CONF_OFFPEAK_POWER) from err
+        if (
+            not math.isfinite(value)
+            or value <= 0
+            or value < self._power_min
+            or value > power_max
+            or (
+                configured
+                and not math.isclose(
+                    (value - self._power_min) % self._power_step,
+                    0,
+                    abs_tol=1e-9,
+                )
+            )
+        ):
+            raise ConfigurationError(CONF_OFFPEAK_POWER)
+        return value
 
     @property
     def power_min(self):
@@ -618,6 +669,20 @@ class ManagedDevice:
     def max_on_time_per_day_sec(self) -> int:
         """The max_on_time_per_day_sec configured"""
         return get_template_or_value(self._hass, self._max_on_time_per_day_min) * 60
+
+    @property
+    def max_on_time_offpeak_sec(self) -> int:
+        """The maximum duration allowed during off-peak forcing."""
+        value = self._max_on_time_per_day_min if self._max_on_time_offpeak_min is None else self._max_on_time_offpeak_min
+        try:
+            value = float(get_template_or_value(self._hass, value))
+            max_daily = float(self.max_on_time_per_day_sec) / 60
+            min_daily = float(self.min_on_time_per_day_sec) / 60
+        except (TypeError, ValueError) as err:
+            raise ConfigurationError(CONF_MAX_ON_TIME_OFFPEAK_MIN) from err
+        if not math.isfinite(value) or value < 0 or value > max_daily or (min_daily > 0 and value < min_daily):
+            raise ConfigurationError(CONF_MAX_ON_TIME_OFFPEAK_MIN)
+        return value * 60
 
     @property
     def min_on_time_per_day_sec(self) -> int:

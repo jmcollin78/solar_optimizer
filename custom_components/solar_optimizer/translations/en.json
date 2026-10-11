@@ -60,6 +60,7 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
+                    "max_on_time_offpeak_min": "Max on time during off-peak hours",
                     "offpeak_time": "Offpeak time"
                 },
                 "data_description": {
@@ -76,6 +77,7 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_offpeak_min": "Maximum forced running time during off-peak hours in minutes. Defaults to the daily maximum and must be between the daily minimum and maximum.",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             },
@@ -102,6 +104,8 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
+                    "max_on_time_offpeak_min": "Max on time during off-peak hours",
+                    "offpeak_power": "Power during off-peak hours",
                     "offpeak_time": "Offpeak time"
                 },
                 "data_description": {
@@ -124,6 +128,8 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_offpeak_min": "Maximum forced running time during off-peak hours in minutes. Defaults to the daily maximum and must be between the daily minimum and maximum.",
+                    "offpeak_power": "Power explicitly sent during off-peak forcing. Defaults to power_max and must match the configured power range and step.",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             }
@@ -192,6 +198,7 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
+                    "max_on_time_offpeak_min": "Max on time during off-peak hours",
                     "offpeak_time": "Offpeak time"
                 },
                 "data_description": {
@@ -208,6 +215,7 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_offpeak_min": "Maximum forced running time during off-peak hours in minutes. Defaults to the daily maximum and must be between the daily minimum and maximum.",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             },
@@ -234,6 +242,8 @@
                     "battery_soc_threshold": "Battery soc threshold",
                     "max_on_time_per_day_min": "Max on time per day",
                     "min_on_time_per_day_min": "Min on time per day",
+                    "max_on_time_offpeak_min": "Max on time during off-peak hours",
+                    "offpeak_power": "Power during off-peak hours",
                     "offpeak_time": "Offpeak time"
                 },
                 "data_description": {
@@ -256,12 +266,15 @@
                     "battery_soc_threshold": "The battery state of charge threshold to activate the device. Can be a number or a template",
                     "max_on_time_per_day_min": "The maximum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time until max time is reached",
                     "min_on_time_per_day_min": "The minimum time per day in state on in minutes. Can be a number or a template. If minium time is not reached during daylight, it will be activated during offpeak time",
+                    "max_on_time_offpeak_min": "Maximum forced running time during off-peak hours in minutes. Defaults to the daily maximum and must be between the daily minimum and maximum.",
+                    "offpeak_power": "Power explicitly sent during off-peak forcing. Defaults to power_max and must match the configured power range and step.",
                     "offpeak_time": "The offpeak time with format HH:MM"
                 }
             }
         },
         "error": {
-            "format_time_invalid": "Format of time should be HH:MM"
+            "format_time_invalid": "Format of time should be HH:MM",
+            "invalid_value": "The value is invalid or incompatible with the device limits"
         }
     },
     "selector": {

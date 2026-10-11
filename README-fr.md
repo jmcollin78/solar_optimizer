@@ -22,7 +22,9 @@
   - [Configurer l'intégration pour la première fois](#configurer-lintégration-pour-la-première-fois)
   - [Configurer les équipements](#configurer-les-équipements)
     - [Configurer un équipement simple (on/off)](#configurer-un-équipement-simple-onoff)
+    - [Définir le template d'activation](#définir-le-template-dactivation)
   - [Configurer un équipement avec une puissance variable](#configurer-un-équipement-avec-une-puissance-variable)
+    - [Forçage en heures creuses](#forçage-en-heures-creuses)
   - [Exemples de configurations](#exemples-de-configurations)
     - [Commande d'une recharge de Tesla](#commande-dune-recharge-de-tesla)
     - [Commande d'une climatisation](#commande-dune-climatisation)
@@ -55,6 +57,8 @@
 - [Les contributions sont les bienvenues !](#les-contributions-sont-les-bienvenues)
 
 > ![Nouveau](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*Nouveautés*_
+> * **release 3.9.0** :
+>   - **Forçage en heures creuses** : les équipements à puissance variable reçoivent désormais explicitement la consigne `offpeak_power` (ou `power_max` par défaut). Tous les équipements peuvent utiliser `max_on_time_offpeak_min` pour plafonner le forçage HC sans modifier l'objectif quotidien minimal.
 > * **release 3.8.1** :
 >   - **Activation forcée minutée** : nouveau sélecteur de durée (1h, 4h, 12h, 24h) à côté du bouton START. Lorsqu'une durée est sélectionnée, l'équipement est allumé en mode MANUEL pour la durée choisie puis s'éteint automatiquement et rend la main à SO. Le timer est persisté entre les redémarrages de HA. Cf. [start\_device](#start_device) et [stop\_device](#stop_device)
 > * **release 3.8.0** :
@@ -221,6 +225,11 @@ Le champ `check_active_template` indique à Solar Optimizer si l'équipement est
 
 ## Configurer un équipement avec une puissance variable
 Ce type d'équipement permet moduler la puissance consommée par l'équipement en fonction de la production solaire et de ce que décide l'algorithme. Vous avez ainsi une sorte de routeur solaire logiciel qui permet, par exemple, de moduler la charge d'une voiture électrique avec uniquement le surplus de production.
+
+### Forçage en heures creuses
+`max_on_time_offpeak_min` est disponible pour tous les équipements. Cette durée optionnelle, en minutes, peut être un nombre ou un template et vaut `max_on_time_per_day_min` par défaut. Elle doit être positive ou nulle, ne pas dépasser le maximum quotidien, et ne pas être inférieure à `min_on_time_per_day_min` lorsque ce minimum est positif. Le maximum quotidien reste toujours une limite absolue ; `min_on_time_per_day_min` reste l'objectif du forçage et celui-ci s'arrête au plafond applicable si l'objectif ne peut pas être atteint.
+
+Les équipements à puissance variable peuvent aussi définir `offpeak_power`, sous forme de nombre ou de template. Cette consigne est explicitement envoyée quand le forçage HC active l'équipement. En son absence, Solar Optimizer envoie `power_max`. Elle doit être strictement positive, comprise entre `power_min` et `power_max`, et alignée sur `power_step`. Les équipements on/off n'exposent ni n'utilisent ce réglage. Les valeurs statiques invalides sont refusées par le formulaire ; un résultat de template invalide n'est pas envoyé à l'équipement.
 
 Tous les paramètres décrits [ici](#configurer-un-équipement-simple-onoff) s'applique et douvent être complétés par ceux-ci :
 

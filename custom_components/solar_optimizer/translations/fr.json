@@ -60,6 +60,7 @@
                     "battery_soc_threshold": "Seuil de charge de la batterie",
                     "max_on_time_per_day_min": "Temps max par jour",
                     "min_on_time_per_day_min": "Temps min par jour",
+                    "max_on_time_offpeak_min": "Temps max pendant les heures creuses",
                     "offpeak_time": "Heure creuse"
                 },
                 "data_description": {
@@ -76,6 +77,7 @@
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour activer l'équipement",
                     "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
                     "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_offpeak_min": "Temps maximal de fonctionnement forcé pendant les heures creuses en minutes. Vaut le maximum quotidien par défaut et doit être compris entre le minimum et le maximum quotidiens.",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             },
@@ -102,6 +104,8 @@
                     "battery_soc_threshold": "Seuil de charge de la batterie",
                     "max_on_time_per_day_min": "Temps max par jour",
                     "min_on_time_per_day_min": "Temps min par jour",
+                    "max_on_time_offpeak_min": "Temps max pendant les heures creuses",
+                    "offpeak_power": "Puissance pendant les heures creuses",
                     "offpeak_time": "Heure creuse"
                 },
                 "data_description": {
@@ -124,6 +128,8 @@
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour   activer l'équipement",
                     "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
                     "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_offpeak_min": "Temps maximal de fonctionnement forcé pendant les heures creuses en minutes. Vaut le maximum quotidien par défaut et doit être compris entre le minimum et le maximum quotidiens.",
+                    "offpeak_power": "Puissance explicitement envoyée pendant le forçage en heures creuses. Vaut power_max par défaut et doit respecter la plage et le pas de puissance configurés.",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             }
@@ -192,6 +198,7 @@
                     "battery_soc_threshold": "Seuil de charge de la batterie",
                     "max_on_time_per_day_min": "Temps max par jour",
                     "min_on_time_per_day_min": "Temps min par jour",
+                    "max_on_time_offpeak_min": "Temps max pendant les heures creuses",
                     "offpeak_time": "Heure creuse"
                 },
                 "data_description": {
@@ -208,6 +215,7 @@
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour activer l'équipement",
                     "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
                     "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_offpeak_min": "Temps maximal de fonctionnement forcé pendant les heures creuses en minutes. Vaut le maximum quotidien par défaut et doit être compris entre le minimum et le maximum quotidiens.",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             },
@@ -234,6 +242,8 @@
                     "battery_soc_threshold": "Seuil de charge de la batterie",
                     "max_on_time_per_day_min": "Temps max par jour",
                     "min_on_time_per_day_min": "Temps min par jour",
+                    "max_on_time_offpeak_min": "Temps max pendant les heures creuses",
+                    "offpeak_power": "Puissance pendant les heures creuses",
                     "offpeak_time": "Heure creuse"
                 },
                 "data_description": {
@@ -256,12 +266,15 @@
                     "battery_soc_threshold": "Le seuil de charge de la batterie pour   activer l'équipement",
                     "max_on_time_per_day_min": "Le temps maximum par jour en état allumé en minutes. Si le temps minimum n'est pas atteint pendant la journée, il sera activé pendant l'heure creuse à concurrence du temps maximum",
                     "min_on_time_per_day_min": "Le temps minimum par jour en état allumé en minutes. Si il n'est pas atteint, l'équipement sera activé pendant l'heure creuse",
+                    "max_on_time_offpeak_min": "Temps maximal de fonctionnement forcé pendant les heures creuses en minutes. Vaut le maximum quotidien par défaut et doit être compris entre le minimum et le maximum quotidiens.",
+                    "offpeak_power": "Puissance explicitement envoyée pendant le forçage en heures creuses. Vaut power_max par défaut et doit respecter la plage et le pas de puissance configurés.",
                     "offpeak_time": "L'heure de début des heures creuses au format HH:MM"
                 }
             }
         },
         "error": {
-            "format_time_invalid": "Le format de l'heure doit être HH:MM"
+            "format_time_invalid": "Le format de l'heure doit être HH:MM",
+            "invalid_value": "La valeur est invalide ou incompatible avec les limites de l'équipement"
         }
     },
     "selector": {

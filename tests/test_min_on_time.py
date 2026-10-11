@@ -54,6 +54,83 @@ async def test_min_on_time_config_ok(
     assert device.offpeak_time == time(23, 0)
 
 
+@pytest.mark.parametrize(
+    ("offpeak_max", "expected_max", "on_time", "expected_force"),
+    [
+        (None, 10 * 60, 9 * 60, True),
+        (6, 6 * 60, 5 * 60, True),
+        (6, 6 * 60, 6 * 60, False),
+    ],
+)
+async def test_offpeak_maximum_duration(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    offpeak_max,
+    expected_max,
+    on_time,
+    expected_force,
+):
+    """The off-peak limit falls back to the daily maximum and remains absolute."""
+    data = {
+        CONF_NAME: "Equipement A",
+        CONF_DEVICE_TYPE: CONF_DEVICE,
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_MAX: 1000,
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_STOP_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+        CONF_MIN_ON_TIME_PER_DAY_MIN: 10 if offpeak_max is None else 6,
+        CONF_OFFPEAK_TIME: "23:00",
+    }
+    if offpeak_max is not None:
+        data[CONF_MAX_ON_TIME_OFFPEAK_MIN] = offpeak_max
+
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(domain=DOMAIN, title="Equipement A", unique_id="eqtA", data=data),
+        "equipement_a",
+    )
+    assert device is not None
+    assert device.max_on_time_offpeak_sec == expected_max
+
+    device._set_now(datetime(2024, 11, 10, 23, 0, tzinfo=get_tz(hass)))
+    device._next_date_available = device.now - timedelta(seconds=1)
+    device.set_on_time(on_time)
+    with patch.object(device, "check_usable", return_value=True):
+        assert device.should_be_forced_offpeak is expected_force
+
+
+async def test_offpeak_maximum_duration_incompatible_with_minimum_is_rejected(hass: HomeAssistant, init_solar_optimizer_central_config):
+    """A template resolving below the minimum duration cannot force the device."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Equipement A",
+        unique_id="eqtA",
+        data={
+            CONF_NAME: "Equipement A",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.fake_device_a",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_BATTERY_SOC_THRESHOLD: 0,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+            CONF_MAX_ON_TIME_OFFPEAK_MIN: "{{ 4 }}",
+            CONF_OFFPEAK_TIME: "23:00",
+        },
+    )
+
+    device = await create_managed_device(hass, entry, "equipement_a")
+    assert device is None
+
+
 async def test_min_on_time_config_ko_1(
     hass: HomeAssistant, init_solar_optimizer_central_config
 ):

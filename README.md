@@ -62,6 +62,8 @@
 
 
 >![New](https://github.com/jmcollin78/solar_optimizer/blob/main/images/new-icon.png?raw=true) _*News*_
+> * **release 3.9.0**:
+>   - **Off-peak forcing**: variable-power devices now receive an explicit `offpeak_power` setpoint (or `power_max` by default). All devices can use `max_on_time_offpeak_min` to cap off-peak forcing without changing the daily minimum target.
 > * **release 3.8.1**:
 >   - **Timed forced activation**: new duration selector (1h, 4h, 12h, 24h) next to the START button. When a duration is selected, the device is switched on in MANUAL mode for the chosen duration, then automatically turns off and returns control to SO. The timer is persisted across HA restarts. See [start\_device](#start_device) and [stop\_device](#stop_device)
 > * **release 3.8.0**:
@@ -238,6 +240,11 @@ The `check_active_template` field tells Solar Optimizer whether the device is ac
 
 ## Configuring a Device with Variable Power
 This type of device allows for adjusting the power consumption based on solar production and the algorithm's decisions. Essentially, it acts as a software-based solar router, enabling, for example, an electric vehicle to charge using only surplus solar energy.
+
+### Off-Peak Forcing
+`max_on_time_offpeak_min` is available for every device. It is an optional number or template in minutes and defaults to `max_on_time_per_day_min`. It must be non-negative, no greater than the daily maximum, and no lower than `min_on_time_per_day_min` when that minimum is positive. The daily maximum always remains an absolute limit; `min_on_time_per_day_min` remains the forcing target and forcing stops at the applicable maximum if that target cannot be reached.
+
+Variable-power devices can additionally set `offpeak_power`, as a number or template. It is explicitly sent when off-peak forcing activates the device. When omitted, Solar Optimizer sends `power_max`. It must be positive, between `power_min` and `power_max`, and aligned with `power_step`. On/off devices do not expose or use this setting. Invalid static values are rejected by the configuration form; invalid template results are not sent to the device.
 
 All the parameters described [here](#configuring-a-simple-device-onoff) apply and must be supplemented with the following:
 

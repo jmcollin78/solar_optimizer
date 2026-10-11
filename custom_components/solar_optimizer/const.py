@@ -81,6 +81,8 @@ CONF_BATTERY_SOC_THRESHOLD = "battery_soc_threshold"
 CONF_MAX_ON_TIME_PER_DAY_MIN = "max_on_time_per_day_min"
 CONF_MIN_ON_TIME_PER_DAY_MIN = "min_on_time_per_day_min"
 CONF_OFFPEAK_TIME = "offpeak_time"
+CONF_OFFPEAK_POWER = "offpeak_power"
+CONF_MAX_ON_TIME_OFFPEAK_MIN = "max_on_time_offpeak_min"
 
 PRIORITY_WEIGHT_NULL = "None"
 PRIORITY_WEIGHT_LOW = "Low"
