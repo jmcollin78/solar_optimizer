@@ -311,6 +311,8 @@ async def test_powered_device_config(
         CONF_BATTERY_SOC_THRESHOLD: "50",
         CONF_MAX_ON_TIME_PER_DAY_MIN: "10",
         CONF_MIN_ON_TIME_PER_DAY_MIN: "1",
+        CONF_MAX_ON_TIME_OFFPEAK_MIN: "5",
+        CONF_OFFPEAK_POWER: "550",
         CONF_OFFPEAK_TIME: "22:00",
     }
 
@@ -341,9 +343,9 @@ async def test_powered_device_config(
     assert data.get(CONF_BATTERY_SOC_THRESHOLD) == "50"
     assert data.get(CONF_MAX_ON_TIME_PER_DAY_MIN) == "10"
     assert data.get(CONF_MIN_ON_TIME_PER_DAY_MIN) == "1"
+    assert data.get(CONF_MAX_ON_TIME_OFFPEAK_MIN) == "5"
+    assert data.get(CONF_OFFPEAK_POWER) == "550"
     assert data.get(CONF_OFFPEAK_TIME) == "22:00"
-    assert data.get(CONF_MAX_ON_TIME_OFFPEAK_MIN) is None
-    assert data.get(CONF_OFFPEAK_POWER) is None
 
 
 async def test_powered_device_rejects_invalid_offpeak_values(hass: HomeAssistant, skip_hass_states_get, init_solar_optimizer_central_config):
@@ -371,3 +373,37 @@ async def test_powered_device_rejects_invalid_offpeak_values(hass: HomeAssistant
     result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input)
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {CONF_OFFPEAK_POWER: "invalid_value"}
+
+
+@pytest.mark.parametrize("offpeak_max", ["4", "11"])
+async def test_powered_device_rejects_incompatible_offpeak_duration(
+    hass: HomeAssistant,
+    skip_hass_states_get,
+    init_solar_optimizer_central_config,
+    offpeak_max,
+):
+    """The flow rejects an off-peak maximum below the minimum or above daily max."""
+    result = await hass.config_entries.flow.async_init(config_flow.DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={CONF_DEVICE_TYPE: CONF_POWERED_DEVICE})
+    user_input = {
+        CONF_NAME: "Equipement A",
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_MAX: "1000",
+        CONF_POWER_MIN: 100,
+        CONF_POWER_STEP: 100,
+        CONF_DURATION_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        CONF_BATTERY_SOC_THRESHOLD: "0",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: "10",
+        CONF_MIN_ON_TIME_PER_DAY_MIN: "5",
+        CONF_MAX_ON_TIME_OFFPEAK_MIN: offpeak_max,
+        CONF_OFFPEAK_POWER: "600",
+        CONF_OFFPEAK_TIME: "22:00",
+    }
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {CONF_MAX_ON_TIME_OFFPEAK_MIN: "invalid_value"}

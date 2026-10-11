@@ -135,7 +135,8 @@
             }
         },
         "error": {
-            "format_time_invalid": "Format of time should be HH:MM"
+            "format_time_invalid": "Format of time should be HH:MM",
+            "invalid_value": "The value is invalid or incompatible with the device limits"
         }
     },
     "options": {

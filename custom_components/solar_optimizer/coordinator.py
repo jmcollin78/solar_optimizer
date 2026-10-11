@@ -23,7 +23,13 @@ from homeassistant.util.unit_conversion import (
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import DEFAULT_REFRESH_PERIOD_SEC, name_to_unique_id, SOLAR_OPTIMIZER_DOMAIN, DEFAULT_RAZ_TIME
+from .const import (
+    DEFAULT_REFRESH_PERIOD_SEC,
+    name_to_unique_id,
+    SOLAR_OPTIMIZER_DOMAIN,
+    DEFAULT_RAZ_TIME,
+    ConfigurationError,
+)
 from .managed_device import ManagedDevice
 from .simulated_annealing_algo import SimulatedAnnealingAlgorithm
 
@@ -233,7 +239,15 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             should_force_offpeak = device.should_be_forced_offpeak
             effective_requested_power = requested_power
             if should_force_offpeak and not state and device.can_change_power:
-                effective_requested_power = device.offpeak_power
+                try:
+                    effective_requested_power = device.offpeak_power
+                except (ConfigurationError, TypeError, ValueError) as err:
+                    _LOGGER.error(
+                        "%s - invalid off-peak power configuration: %s",
+                        device.name,
+                        err,
+                    )
+                    continue
             if should_force_offpeak:
                 _LOGGER.debug("%s - we should force %s name", self, name)
             if is_active and not state and not should_force_offpeak:
