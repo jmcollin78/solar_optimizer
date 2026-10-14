@@ -94,6 +94,7 @@ managed_device_schema = vol.Schema(
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MAX_ON_TIME_OFFPEAK_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
+        vol.Optional(CONF_ACTIVE_SWITCH_IS_OVERRIDE, default=False): cv.boolean,
     }
 )
 
@@ -151,6 +152,7 @@ power_managed_device_schema = vol.Schema(
         vol.Optional(CONF_MIN_ON_TIME_PER_DAY_MIN): str,
         vol.Optional(CONF_MAX_ON_TIME_OFFPEAK_MIN): str,
         vol.Optional(CONF_OFFPEAK_TIME): str,
+        vol.Optional(CONF_ACTIVE_SWITCH_IS_OVERRIDE, default=False): cv.boolean,
         vol.Optional(CONF_OFFPEAK_POWER): str,
     }
 )

@@ -22,6 +22,7 @@ from .const import (
     CONF_ACTION_MODES,
     CONF_MAX_ON_TIME_OFFPEAK_MIN,
     CONF_OFFPEAK_POWER,
+    CONF_ACTIVE_SWITCH_IS_OVERRIDE,
     ConfigurationError,
     EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
     EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
@@ -247,6 +248,9 @@ class ManagedDevice:
         # On: a manual change of the device is respected as an override (see the
         # "Respect manual changes" switch).
         self._respect_manual_changes: bool = False
+        # Off by default: the SO "Active" switch is a plain command the algorithm may revert.
+        # On: with respect_manual_changes, it is respected as an override like a change on the device.
+        self._active_switch_is_override: bool = device_config.get(CONF_ACTIVE_SWITCH_IS_OVERRIDE) is True
         self._last_context: Context | None = None
 
         # Some checks
@@ -581,6 +585,11 @@ class ManagedDevice:
     def respect_manual_changes(self) -> bool:
         """True if a manual change of the device is respected as an override"""
         return self._respect_manual_changes
+
+    @property
+    def active_switch_override(self) -> bool:
+        """True if turning the SO "Active" switch on or off is respected as an override"""
+        return self._respect_manual_changes and self._active_switch_is_override
 
     def check_for_manual_override(self) -> None:
         """Called periodically by the coordinator to detect a manual override: the

@@ -11,6 +11,8 @@
 from datetime import timedelta
 from unittest.mock import AsyncMock
 
+import pytest
+
 from homeassistant.core import Context
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
@@ -37,12 +39,12 @@ DEVICE_A_DATA = {
 }
 
 
-async def _setup_device(hass, respect_manual_changes=True):
+async def _setup_device(hass, respect_manual_changes=True, active_switch_is_override=False):
     entry_a = MockConfigEntry(
         domain=DOMAIN,
         title="Equipement A",
         unique_id="eqtAUniqueId",
-        data=DEVICE_A_DATA,
+        data={**DEVICE_A_DATA, CONF_ACTIVE_SWITCH_IS_OVERRIDE: active_switch_is_override},
     )
     device = await create_managed_device(hass, entry_a, "equipement_a")
     assert device is not None
@@ -248,9 +250,9 @@ async def test_clear_override_service(hass, init_solar_optimizer_central_config)
 # ---------------------------------------------------------------------------
 
 async def test_active_switch_turn_on_triggers_override(hass, init_solar_optimizer_central_config):
-    """Clicking the 'Active' switch on directly is an explicit override: it must not
-    be reverted by the algorithm on the next refresh."""
-    device, _ = await _setup_device(hass)
+    """With the option checked, clicking the 'Active' switch on directly is an explicit
+    override: it must not be reverted by the algorithm on the next refresh."""
+    device, _ = await _setup_device(hass, active_switch_is_override=True)
 
     device_switch = search_entity(hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN)
     assert device_switch.state == "off"
@@ -264,9 +266,9 @@ async def test_active_switch_turn_on_triggers_override(hass, init_solar_optimize
 
 
 async def test_active_switch_turn_off_triggers_override(hass, init_solar_optimizer_central_config):
-    """Clicking the 'Active' switch off directly (no forced session running) is an
-    explicit override."""
-    device, fake_bool = await _setup_device(hass)
+    """With the option checked, clicking the 'Active' switch off directly (no forced
+    session running) is an explicit override."""
+    device, fake_bool = await _setup_device(hass, active_switch_is_override=True)
     await fake_bool.async_turn_on()
     await hass.async_block_till_done()
 
@@ -278,6 +280,33 @@ async def test_active_switch_turn_off_triggers_override(hass, init_solar_optimiz
 
     assert device.override_active is True
     assert device.is_enabled is False
+
+
+@pytest.mark.parametrize("turn_on", [True, False])
+async def test_active_switch_is_a_plain_command_by_default(hass, init_solar_optimizer_central_config, turn_on):
+    """Option unchecked (default): the 'Active' switch only sends the command, it is not an
+    override even with "Respect manual changes" on, and a change on the device still is."""
+    device, fake_bool = await _setup_device(hass)
+    if not turn_on:
+        await fake_bool.async_turn_on()
+        await hass.async_block_till_done()
+        device.set_enable(True)  # the device turned on above is the new reference
+
+    device_switch = search_entity(hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    await (device_switch.async_turn_on() if turn_on else device_switch.async_turn_off())
+    await hass.async_block_till_done()
+
+    assert device.is_active is turn_on
+    assert device.last_commanded_state is turn_on
+    device.check_for_manual_override()
+    assert device.override_active is False
+    assert device.is_enabled is True
+
+    device._next_date_available = device.now - timedelta(minutes=5)
+    await (fake_bool.async_turn_off() if turn_on else fake_bool.async_turn_on())
+    await hass.async_block_till_done()
+    device.check_for_manual_override()
+    assert device.override_active is True
 
 
 async def test_active_switch_turn_off_during_forced_session_does_not_override(hass, init_solar_optimizer_central_config):

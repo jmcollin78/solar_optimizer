@@ -85,7 +85,7 @@ class Home:
         await self.hass.async_block_till_done()
 
 
-async def make_home(hass, respect: dict) -> Home:
+async def make_home(hass, respect: dict, active_switch_is_override=False) -> Home:
     """One on/off device of 1000 W per entry of `respect` (name -> Respect manual changes)"""
     for entity_id, value in {
         "sensor.fake_power_production": 5000,
@@ -118,6 +118,7 @@ async def make_home(hass, respect: dict) -> Home:
                 CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
                 CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
                 CONF_BATTERY_SOC_THRESHOLD: 0,
+                CONF_ACTIVE_SWITCH_IS_OVERRIDE: active_switch_is_override,
             },
         )
         devices[name] = await create_managed_device(hass, entry, name)
@@ -249,8 +250,9 @@ async def test_on_user_change_during_so_waiting_window(hass, init_solar_optimize
 
 @pytest.mark.parametrize("base, user_turns_on", [(SURPLUS, False), (NO_SURPLUS, True)])
 async def test_on_user_uses_so_switch(hass, init_solar_optimizer_central_config, base, user_turns_on):
-    """7. Same as 1 and 2 through the Solar Optimizer switch instead of the device"""
-    home = await make_home(hass, {"pump": True})
+    """7. Same as 1 and 2 through the Solar Optimizer switch instead of the device, with
+    "Consider Active switch action as override" checked"""
+    home = await make_home(hass, {"pump": True}, active_switch_is_override=True)
     await home.cycle(base)
     assert home.is_on("pump") is not user_turns_on
 
@@ -259,6 +261,23 @@ async def test_on_user_uses_so_switch(hass, init_solar_optimizer_central_config,
     for _ in range(2):
         await home.cycle(base, advance=600)
         assert home.is_on("pump") is user_turns_on and home.overridden("pump")
+
+
+@pytest.mark.parametrize("base, user_turns_on", [(SURPLUS, False), (NO_SURPLUS, True)])
+async def test_on_so_switch_is_a_plain_command_by_default(hass, init_solar_optimizer_central_config, base, user_turns_on):
+    """7b. Option unchecked (default): the Solar Optimizer switch is not an override, the
+    algorithm reverts it at its next decision. A change on the device still is one."""
+    home = await make_home(hass, {"pump": True})
+    await home.cycle(base)
+    await home.user_turns("pump", user_turns_on, via_so_switch=True)
+    assert not home.overridden("pump") and home.enabled("pump")
+    await home.cycle(base)
+    assert home.is_on("pump") is not user_turns_on and not home.overridden("pump")
+
+    await home.cycle(base, advance=600)
+    await home.user_turns("pump", user_turns_on)
+    await home.cycle(base)
+    assert home.is_on("pump") is user_turns_on and home.overridden("pump")
 
 
 # ---------------------------------------------------------------------------

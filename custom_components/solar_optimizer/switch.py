@@ -271,7 +271,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             # The user (or an automation) turned the device on directly through this
             # switch, bypassing the algorithm's own decision: treat it as a manual
             # override so the next coordinator refresh doesn't turn it back off.
-            if device.respect_manual_changes:
+            if device.active_switch_override:
                 device.trigger_manual_override(baseline=previous_commanded_state)
             self._attr_is_on = True
             self.update_custom_attributes(device)
@@ -303,7 +303,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
                     device.name,
                 )
                 device.set_forced_end_time(None)
-            elif device.respect_manual_changes:
+            elif device.active_switch_override:
                 # Not stopping an explicit forced session: the user (or an automation)
                 # is overriding the algorithm's own live decision directly through this
                 # switch, bypassing the underlying entity entirely. Capture the baseline
