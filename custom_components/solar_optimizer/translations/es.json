@@ -61,6 +61,7 @@
                     "battery_soc_threshold": "Umbral de carga de batería",
                     "max_on_time_per_day_min": "Tiempo máximo encendido por día",
                     "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "max_on_time_offpeak_min": "Tiempo máximo encendido en tarifa reducida",
                     "offpeak_time": "Hora de inicio de tarifa reducida"
                 },
                 "data_description": {
@@ -78,6 +79,7 @@
                     "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
                     "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
                     "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "max_on_time_offpeak_min": "El tiempo máximo forzado en tarifa reducida, en minutos. Por defecto es el máximo por día y debe estar entre el mínimo y el máximo por día.",
                     "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
                 }
             },
@@ -105,6 +107,8 @@
                     "battery_soc_threshold": "Umbral de carga de batería",
                     "max_on_time_per_day_min": "Tiempo máximo encendido por día",
                     "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "max_on_time_offpeak_min": "Tiempo máximo encendido en tarifa reducida",
+                    "offpeak_power": "Potencia en tarifa reducida",
                     "offpeak_time": "Hora de inicio de tarifa reducida"
                 },
                 "data_description": {
@@ -128,12 +132,16 @@
                     "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
                     "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
                     "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "max_on_time_offpeak_min": "El tiempo máximo forzado en tarifa reducida, en minutos. Por defecto es el máximo por día y debe estar entre el mínimo y el máximo por día.",
+                    "offpeak_power": "La potencia que se envía al forzar el encendido en tarifa reducida. Por defecto es la potencia máxima y debe respetar el rango y el paso de potencia configurados.",
                     "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
                 }
             }
         },
         "error": {
-            "format_time_invalid": "El formato de la hora debe ser HH:MM"
+            "format_time_invalid": "El formato de la hora debe ser HH:MM",
+            "invalid_value": "El valor no es válido o no es compatible con los límites del dispositivo",
+            "invalid_offpeak_duration": "El tiempo máximo en tarifa reducida debe estar entre el mínimo y el máximo por día"
         }
     },
     "options": {
@@ -197,6 +205,7 @@
                     "battery_soc_threshold": "Umbral de carga de batería",
                     "max_on_time_per_day_min": "Tiempo máximo encendido por día",
                     "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "max_on_time_offpeak_min": "Tiempo máximo encendido en tarifa reducida",
                     "offpeak_time": "Hora de inicio de tarifa reducida"
                 },
                 "data_description": {
@@ -214,6 +223,7 @@
                     "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
                     "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
                     "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "max_on_time_offpeak_min": "El tiempo máximo forzado en tarifa reducida, en minutos. Por defecto es el máximo por día y debe estar entre el mínimo y el máximo por día.",
                     "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
                 }
             },
@@ -241,6 +251,8 @@
                     "battery_soc_threshold": "Umbral de carga de batería",
                     "max_on_time_per_day_min": "Tiempo máximo encendido por día",
                     "min_on_time_per_day_min": "Tiempo mínimo encendido por día",
+                    "max_on_time_offpeak_min": "Tiempo máximo encendido en tarifa reducida",
+                    "offpeak_power": "Potencia en tarifa reducida",
                     "offpeak_time": "Hora de inicio de tarifa reducida"
                 },
                 "data_description": {
@@ -264,12 +276,16 @@
                     "battery_soc_threshold": "El estado de carga mínimo de la batería para activar el dispositivo. Puede ser un número o una plantilla",
                     "max_on_time_per_day_min": "El tiempo máximo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza el mínimo durante el día, se activa en tarifa reducida hasta llegar al máximo",
                     "min_on_time_per_day_min": "El tiempo mínimo encendido por día, en minutos. Puede ser un número o una plantilla. Si no se alcanza durante el día, se activa en tarifa reducida",
+                    "max_on_time_offpeak_min": "El tiempo máximo forzado en tarifa reducida, en minutos. Por defecto es el máximo por día y debe estar entre el mínimo y el máximo por día.",
+                    "offpeak_power": "La potencia que se envía al forzar el encendido en tarifa reducida. Por defecto es la potencia máxima y debe respetar el rango y el paso de potencia configurados.",
                     "offpeak_time": "La hora de inicio de tarifa reducida, con formato HH:MM"
                 }
             }
         },
         "error": {
-            "format_time_invalid": "El formato de la hora debe ser HH:MM"
+            "format_time_invalid": "El formato de la hora debe ser HH:MM",
+            "invalid_value": "El valor no es válido o no es compatible con los límites del dispositivo",
+            "invalid_offpeak_duration": "El tiempo máximo en tarifa reducida debe estar entre el mínimo y el máximo por día"
         }
     },
     "selector": {
