@@ -146,16 +146,16 @@ async def test_check_for_manual_override_ignores_match(hass, init_solar_optimize
 
 
 async def test_check_for_manual_override_ignores_while_waiting(hass, init_solar_optimizer_central_config):
-    """A mismatch during the post-command debounce window (is_waiting) must not be
-    flagged - that's just the real entity catching up with SO's own last command."""
-    device, fake_bool = await _setup_device(hass)
+    """The periodic check ignores a mismatch during the post-command debounce window
+    (is_waiting): the real entity may still be catching up with SO's own last command.
+    (A real state change during that window is checked by the switch, see
+    test_override_scenarios.)"""
+    device, _ = await _setup_device(hass)
 
     await device.activate()
-    # Re-arm a waiting window as if the command had just been sent
-    device.reset_next_date_available("Activate")
-
-    await fake_bool.async_turn_off()
-    await hass.async_block_till_done()
+    # SO has just commanded off, the device has not followed yet
+    device._last_commanded_state = False
+    device.reset_next_date_available("Deactivate")
 
     device.check_for_manual_override()
 
@@ -268,8 +268,8 @@ async def test_active_switch_turn_on_triggers_override(hass, init_solar_optimize
 async def test_active_switch_turn_off_triggers_override(hass, init_solar_optimizer_central_config):
     """With the option checked, clicking the 'Active' switch off directly (no forced
     session running) is an explicit override."""
-    device, fake_bool = await _setup_device(hass, active_switch_is_override=True)
-    await fake_bool.async_turn_on()
+    device, _ = await _setup_device(hass, active_switch_is_override=True)
+    await device.activate()
     await hass.async_block_till_done()
 
     device_switch = search_entity(hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN)
@@ -378,6 +378,23 @@ async def test_activate_sets_last_context(hass, init_solar_optimizer_central_con
     await device.deactivate()
     assert isinstance(device.last_context, Context)
     assert device.last_context.id != first_context.id
+
+
+async def test_so_context_is_applied_once_per_action(hass, init_solar_optimizer_central_config):
+    """The SO switch takes the context of Solar Optimizer's last action only at the first
+    refresh after it. Re-applying it at every refresh would attribute a later manual
+    change of the device to Solar Optimizer when a refresh writes it first."""
+    device, _ = await _setup_device(hass)
+    device_switch = search_entity(hass, "switch.solar_optimizer_equipement_a", SWITCH_DOMAIN)
+    device_switch.coordinator.data = {device_switch.idx: device}
+
+    await device.activate()
+    device_switch._handle_coordinator_update()
+    assert device_switch._context is device.last_context
+
+    device_switch._context = None  # HA drops it after a few seconds
+    device_switch._handle_coordinator_update()
+    assert device_switch._context is None
 
 
 # ---------------------------------------------------------------------------

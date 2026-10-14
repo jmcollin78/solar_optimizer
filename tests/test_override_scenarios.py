@@ -66,6 +66,8 @@ class Home:
             entity = self.bools[name]
         await (entity.async_turn_on() if on else entity.async_turn_off())
         await self.hass.async_block_till_done()
+        # the override event is fired from the state change listener
+        await self.hass.async_block_till_done()
 
     def is_on(self, name):
         return self.devices[name].is_active
@@ -230,14 +232,15 @@ async def test_on_enable_or_clear_override_releases_without_retrigger(hass, init
 
 async def test_on_user_change_during_so_waiting_window(hass, init_solar_optimizer_central_config):
     """6. The user turns off the device 5 s after SO turned it on, during its minimal on
-    duration (18 s). The detection waits for the end of that window, and meanwhile SO
-    does not turn it back on: then the override is detected and kept"""
+    duration (18 s). The override is detected right away (the device changed state) and
+    kept after the window"""
     home = await make_home(hass, {"pump": True})
     await home.cycle(SURPLUS)
     assert home.is_on("pump")
 
     home.advance(5)
     await home.user_turns("pump", False)
+    assert home.overridden("pump")
     await home.cycle(SURPLUS, advance=5)  # still in the window
     assert not home.is_on("pump")
 
@@ -278,6 +281,30 @@ async def test_on_so_switch_is_a_plain_command_by_default(hass, init_solar_optim
     await home.user_turns("pump", user_turns_on)
     await home.cycle(base)
     assert home.is_on("pump") is user_turns_on and home.overridden("pump")
+
+
+async def test_on_device_change_right_after_so_switch(hass, init_solar_optimizer_central_config):
+    """7c. Option unchecked: the user turns the device on with the SO switch (a plain
+    command, which starts its waiting window), then changes it on the device itself. That
+    change is an override right away, and the SO switch is attributed to the user's
+    change, not to the earlier Solar Optimizer command"""
+    home = await make_home(hass, {"pump": True})
+    await home.cycle(NO_SURPLUS)
+    await home.user_turns("pump", True, via_so_switch=True)
+    assert home.is_on("pump") and not home.overridden("pump")
+
+    home.advance(5)
+    await home.cycle(NO_SURPLUS, advance=1)  # a refresh keeps SO's context in the coordinator
+    await home.user_turns("pump", False)
+    assert not home.is_on("pump") and home.overridden("pump")
+    so_switch = hass.states.get("switch.solar_optimizer_pump")
+    device = hass.states.get("input_boolean.fake_pump")
+    assert so_switch.state == "off"
+    assert so_switch.context.id == device.context.id
+
+    await home.user_turns("pump", True)
+    assert home.is_on("pump")
+    assert hass.states.get("switch.solar_optimizer_pump").context.id == hass.states.get("input_boolean.fake_pump").context.id
 
 
 # ---------------------------------------------------------------------------

@@ -591,19 +591,21 @@ class ManagedDevice:
         """True if turning the SO "Active" switch on or off is respected as an override"""
         return self._respect_manual_changes and self._active_switch_is_override
 
-    def check_for_manual_override(self) -> None:
+    def check_for_manual_override(self, ignore_waiting: bool = False) -> None:
         """Called periodically by the coordinator to detect a manual override: the
         underlying entity changed state without Solar Optimizer having commanded it.
         Does nothing for a device already disabled (whatever the reason, including an
         already active override or an explicit forced activation) or still waiting out
-        its own last command's debounce delay. Does nothing (and releases a pending
+        its own last command's debounce delay (unless `ignore_waiting`, used when the
+        underlying entity has just changed state: if it no longer matches the last
+        command, the change was not made by SO). Does nothing (and releases a pending
         override) when manual changes are not respected for this device."""
         if not self._respect_manual_changes:
             self.clear_override()
             return
         if self.clear_override_if_resolved():
             return
-        if not self._enable or self._forced_end_time is not None or self.is_waiting:
+        if not self._enable or self._forced_end_time is not None or (self.is_waiting and not ignore_waiting):
             return
         if self._last_commanded_state is not None and self.is_active != self._last_commanded_state:
             self.trigger_manual_override()

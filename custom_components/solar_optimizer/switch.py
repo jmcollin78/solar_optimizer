@@ -95,6 +95,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
         self._attr_unique_id = "solar_optimizer_active_" + idx
         self._entity_id = device.entity_id
         self._attr_is_on = device.is_active
+        # Last Solar Optimizer action context already applied to our state
+        self._applied_context = None
 
         # Try to get the state if it exists
         # device: ManagedDevice = None
@@ -188,12 +190,18 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             _LOGGER.debug("Pas d'état disponible. Evenement ignoré")
             return
 
+        # Detect a manual change right away, even during the waiting delay of Solar
+        # Optimizer's own last command (the periodic check skips that delay)
+        device.check_for_manual_override(ignore_waiting=True)
+
         # On recherche la date de l'event pour la stocker dans notre état
         new_state = self._device.is_active  # new_state.state == STATE_ON
         if new_state == self._attr_is_on:
             return
 
         self._attr_is_on = new_state
+        # Same cause as the underlying entity's change (the user, the device, or SO)
+        self.async_set_context(event.context)
         # On sauvegarde le nouvel état
         self.update_custom_attributes(device)
         self.async_write_ha_state()
@@ -245,7 +253,10 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
         self.update_custom_attributes(device)
         # Trace this state write back to the action Solar Optimizer just applied (if
         # any), so history/logbook can attribute the underlying entity's change to us.
-        if device.last_context is not None:
+        # Only once per action: re-applying it at every refresh would keep it alive and
+        # attribute later manual changes to Solar Optimizer.
+        if device.last_context is not None and device.last_context is not self._applied_context:
+            self._applied_context = device.last_context
             self.async_set_context(device.last_context)
         self.async_write_ha_state()
 
