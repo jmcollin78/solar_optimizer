@@ -50,6 +50,8 @@
                     "name": "Device name",
                     "entity_id": "Device entity id",
                     "power_max": "Device power",
+                    "measured_power_entity_id": "Measured power sensor",
+                    "active_switch_is_override": "Consider Active switch action as override",
                     "check_usable_template": "Usable template",
                     "check_active_template": "Active template",
                     "duration_min": "Duration min",
@@ -67,6 +69,8 @@
                     "name": "The name of the device",
                     "entity_id": "The entity_id of the device",
                     "power_max": "The power of the device when activated. Can be a number or a template",
+                    "measured_power_entity_id": "Optional. Sensor measuring the real consumption of the device in W or kW (e.g. a smart plug). Only used to display the real consumption in the card: the algorithm keeps using the configured power as its budget.",
+                    "active_switch_is_override": "Only used when the 'Respect manual changes' switch is on. Checked: turning the Solar Optimizer 'Active' switch on or off is respected as a manual override. Unchecked (default): it is a plain command the algorithm may revert at its next decision. A change made on the device itself is always respected as an override.",
                     "check_usable_template": "The template to check if the device is usable. Example `True ` or `states('sensor.my_sensor') | float > 10` (don't forgeet double accolades)",
                     "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state_attr('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
                     "duration_min": "The minimum duration of the device when turned on in minutes",
@@ -98,6 +102,8 @@
                     "activation_service": "Activation service",
                     "deactivation_service": "Deactivation service",
                     "power_entity_id": "Power entity id",
+                    "measured_power_entity_id": "Measured power sensor",
+                    "active_switch_is_override": "Consider Active switch action as override",
                     "duration_power_min": "Duration of power change",
                     "change_power_service": "Power change service",
                     "convert_power_divide_factor": "Divide factor",
@@ -122,6 +128,8 @@
                     "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode/hvac_mode:cool`",
                     "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode/hvac_mode:off`",
                     "power_entity_id": "The entity id of the power sensor",
+                    "measured_power_entity_id": "Optional. Sensor measuring the real consumption of the device in W or kW (e.g. a smart plug). Only used to display the real consumption in the card: the algorithm keeps using the configured power as its budget.",
+                    "active_switch_is_override": "Only used when the 'Respect manual changes' switch is on. Checked: turning the Solar Optimizer 'Active' switch on or off is respected as a manual override. Unchecked (default): it is a plain command the algorithm may revert at its next decision. A change made on the device itself is always respected as an override.",
                     "duration_power_min": "The minimal duration of each power change in minutes",
                     "change_power_service": "The service used to change the power. Example `number/set_value`",
                     "convert_power_divide_factor": "The divide factor to convert power into units of the power device. If conversion from power to ampere, the divisor should be 220",
@@ -190,6 +198,8 @@
                     "name": "Device name",
                     "entity_id": "Device entity id",
                     "power_max": "Device power",
+                    "measured_power_entity_id": "Measured power sensor",
+                    "active_switch_is_override": "Consider Active switch action as override",
                     "check_usable_template": "Usable template",
                     "check_active_template": "Active template",
                     "duration_min": "Duration min",
@@ -207,6 +217,8 @@
                     "name": "The name of the device",
                     "entity_id": "The entity_id of the device",
                     "power_max": "The power of the device when activated. Can be a number or a template",
+                    "measured_power_entity_id": "Optional. Sensor measuring the real consumption of the device in W or kW (e.g. a smart plug). Only used to display the real consumption in the card: the algorithm keeps using the configured power as its budget.",
+                    "active_switch_is_override": "Only used when the 'Respect manual changes' switch is on. Checked: turning the Solar Optimizer 'Active' switch on or off is respected as a manual override. Unchecked (default): it is a plain command the algorithm may revert at its next decision. A change made on the device itself is always respected as an override.",
                     "check_usable_template": "The template to check if the device is usable. Example `True ` or `states('sensor.my_sensor') | float > 10` (don't forgeet double accolades)",
                     "check_active_template": "The template to check if the device is active. Keep it empty for switch type device or apparented. Example `is_state_attr('sensor.my_sensor', 'hvac_mode', 'heat')` (with double accolades)",
                     "duration_min": "The minimum duration of the device when turned on in minutes",
@@ -238,6 +250,8 @@
                     "activation_service": "Activation service",
                     "deactivation_service": "Deactivation service",
                     "power_entity_id": "Power entity id",
+                    "measured_power_entity_id": "Measured power sensor",
+                    "active_switch_is_override": "Consider Active switch action as override",
                     "duration_power_min": "Duration of power change",
                     "change_power_service": "Power change service",
                     "convert_power_divide_factor": "Divide factor",
@@ -262,6 +276,8 @@
                     "activation_service": "The service to activate the device. Example `switch/turn_on` or `climate/set_hvac_mode/hvac_mode:cool`",
                     "deactivation_service": "The service to deactivate the device. Example `switch/turn_off` or `climate/set_hvac_mode/hvac_mode:off`",
                     "power_entity_id": "The entity id of the power sensor",
+                    "measured_power_entity_id": "Optional. Sensor measuring the real consumption of the device in W or kW (e.g. a smart plug). Only used to display the real consumption in the card: the algorithm keeps using the configured power as its budget.",
+                    "active_switch_is_override": "Only used when the 'Respect manual changes' switch is on. Checked: turning the Solar Optimizer 'Active' switch on or off is respected as a manual override. Unchecked (default): it is a plain command the algorithm may revert at its next decision. A change made on the device itself is always respected as an override.",
                     "duration_power_min": "The minimal duration of each power change in minutes",
                     "change_power_service": "The service used to change the power. Example `number/set_value`",
                     "convert_power_divide_factor": "The divide factor to convert power into units of the power device. If conversion from power to ampere, the divisor should be 220",
@@ -292,6 +308,13 @@
             "options": {
                 "action_call": "Action call",
                 "event": "Event"
+            }
+        }
+    },
+    "entity": {
+        "switch": {
+            "respect_manual_changes": {
+                "name": "Respect manual changes"
             }
         }
     }

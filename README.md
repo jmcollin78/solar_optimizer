@@ -13,6 +13,7 @@
   - [Anti-flickering](#anti-flickering)
   - [Usability](#usability)
   - [Device Prioritization](#device-prioritization)
+  - [Respect manual changes](#respect-manual-changes)
   - [Setting Purchase and Resale Costs](#setting-purchase-and-resale-costs)
 - [Installation](#installation)
   - [Migration Procedure from Version 2.x to 3.x](#migration-procedure-from-version-2x-to-3x)
@@ -49,6 +50,7 @@
 - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
   - [start\_device](#start_device)
   - [stop\_device](#stop_device)
+  - [clear\_override](#clear_override)
 - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation-1)
     - [File `configuration.yaml`:](#file-configurationyaml)
     - [File `templates.yaml`:](#file-templatesyaml)
@@ -112,6 +114,16 @@ These 5 rules allow the algorithm to only order what is really useful at a time 
 
 ## Device Prioritization
 Priority management is described [here](#priority-management).
+
+## Respect manual changes
+By default, Solar Optimizer is in charge of the devices it manages: if a device is turned on or off outside of it (by hand, from another dashboard, a voice assistant, another automation...), Solar Optimizer puts it back as it decided at the next cycle. For example, an EV that starts charging when it is plugged in is stopped until the conditions are met. To force a device, use the START/STOP buttons of the [card](#official-lovelace-card).
+
+Each device has a **Respect manual changes** switch (`switch.respect_manual_changes_solar_optimizer_<name>`) to change this behavior, for that device only:
+- **Off (default)**: nothing changes, Solar Optimizer behaves exactly as in previous versions.
+- **On**: a manual change of the device is respected. For example, someone turns the pool pump on from its own switch to go swimming: Solar Optimizer leaves it on instead of turning it off at the next cycle. The device is paused (a *manual override*, shown by `binary_sensor.solar_optimizer_override_<name>`) until it goes back to the state Solar Optimizer wanted, the daily reset time (`raz_time`), the Enable switch is turned back on, the [clear\_override](#clear_override) action is called, or this switch is turned off.
+- Turning `switch.solar_optimizer_<name>` (the **Active** switch) on or off is a plain command by default, that the algorithm may revert at its next decision. Check **Consider Active switch action as override** in the device configuration to respect it as a manual override too.
+
+The switch keeps its state across restarts. To turn it on, open the device page (**Settings > Devices & services > Solar Optimizer**, then the device), or show it in the card (see [How to Use the Official Card](#how-to-use-the-official-card)).
 
 ## Setting Purchase and Resale Costs
 The behavior of the algorithm is strongly influenced by the values of the sensors **"imported kWh cost"** and **"exported kWh cost"**.
@@ -217,6 +229,8 @@ You need to specify the following attributes:
 | `battery_soc_threshold`       | All                                 | The minimum battery charge percentage required for the device to be usable.                                                                                                                                                            | 30                                               | In this example, the device will not be used by the algorithm if the solar battery is not charged to at least 30%. Requires the battery charge state entity to be configured in the common parameters. See above. |
 | `max_on_time_per_day_min`     | All                                 | The maximum number of minutes the device can be on per day. Once exceeded, the device will no longer be used by the algorithm.                                                                                                         | 10                                               | The device will be turned on for a maximum of 10 minutes per day.                                                                                                                                                 |
 | `min_on_time_per_day_min`     | All                                 | The minimum number of minutes the device should be on per day. If this threshold is not reached by the start of off-peak hours, the device will be activated until the start of the day or until `max_on_time_per_day_min` is reached. | 5                                                | The device will run for at least 5 minutes per day, either during solar production or during off-peak hours.                                                                                                      |
+| `measured_power_entity_id`    | All (optional)                      | A sensor measuring the real power consumption of the device, in W or kW (e.g. a smart plug).                                                                                                                                          | sensor.washing_machine_power                     | Display only: the card shows the measured power in the power bar and the power graph, with the configured power as a dashed reference line. The algorithm keeps using `power_max` as its budget.                  |
+| `active_switch_is_override`   | All (optional, unchecked by default) | Only with the **Respect manual changes** switch on: turning `switch.solar_optimizer_<name>` on or off is respected as a manual override. | checked | Unchecked: the Active switch is a plain command the algorithm may revert. A change made on the device itself is always respected. |
 | `offpeak_time`                | All                                 | The start time of off-peak hours in `hh:mm` format.                                                                                                                                                                                    | 22:00                                            | The device may be turned on at 22:00 if solar production during the day was insufficient.                                                                                                                         |
 
 ### Defining the Active Template
@@ -472,6 +486,18 @@ Each controlled device has the following entities:
 
 4. A dropdown list named **"Priority"** which defines the priority level of this device. Possible values range from 'Very low' to 'Very high'. See [priority management](#priority-management).
 
+5. A **binary sensor** named `binary_sensor.solar_optimizer_override_<name>`:
+   - Only used when **Respect manual changes** is on (see 6).
+   - **"On"** when a **manual override** is active: the device was turned on or off outside of Solar Optimizer (by hand or by another automation; from the card's switch only if **Consider Active switch action as override** is checked). While the override is active, the algorithm leaves the device alone instead of reverting the change at the next cycle.
+   - Attributes `override_since` and `override_baseline_state` (the state Solar Optimizer had requested before the override).
+   - The override is released when the device returns to the state Solar Optimizer had requested, at `raz_time`, when the Enable switch is turned back on, or with the [clear\_override](#clear_override) action.
+   - Actions performed by Solar Optimizer are attributed in the logbook: the change of the device shows Solar Optimizer as its origin, with the action and the configured service (e.g. "turned on Pool pump (switch.turn_on)").
+
+6. A **switch** named `switch.respect_manual_changes_solar_optimizer_<name>` (**Respect manual changes**), **off by default**:
+   - **Off**: Solar Optimizer puts the device back as it decides at the next cycle, even if it was changed by hand (e.g. an EV that starts charging when plugged in is stopped until the conditions are met). Use the START/STOP buttons of the card to override it.
+   - **On**: a change of the device made anywhere (its own switch, a dashboard, a voice assistant, the physical button) is respected as a manual override (see 5). A change of `switch.solar_optimizer_<name>` is only respected if **Consider Active switch action as override** is checked in the device configuration; otherwise it is a plain command the algorithm may revert.
+   - Turning it off releases a pending override.
+
 ![Simple Device Entities](images/entities-simple-device.png)
 
 ### Switch Attributes
@@ -486,6 +512,7 @@ The `switch.solar_optimizer_<name>` contains **attributes** accessible via **Dev
 | `is_usable`                 | `true` if the algorithm **can** use the device.                                             |
 | `can_change_power`          | `true` if the device's power **can** be adjusted.                                           |
 | `current_power`             | The **current power consumption** of the device.                                            |
+| `measured_power_entity_id`  | The sensor measuring the **real** consumption, if configured (used by the card only).       |
 | `requested_power`           | The power level requested by **Solar Optimizer**.                                           |
 | `duration_sec`              | The total **activation duration** in seconds.                                               |
 | `duration_power_sec`        | The duration of the **last power change** in seconds.                                       |
@@ -674,6 +701,21 @@ data:
   device_id: washing_machine
 ```
 
+## clear_override
+
+This action releases a pending manual override (see `binary_sensor.solar_optimizer_override_<name>` in [Devices and Their Entities](#devices-and-their-entities)) and gives control of the device back to Solar Optimizer immediately, without waiting for `raz_time` or for the device to return to the requested state.
+
+| Parameter   | Required | Description                                                                    |
+| ----------- | -------- | ------------------------------------------------------------------------------ |
+| `device_id` | Yes      | The unique ID of the managed device (the part after `switch.solar_optimizer_`) |
+
+In YAML mode:
+```yaml
+action: solar_optimizer.clear_override
+data:
+  device_id: washing_machine
+```
+
 
 # Creating Sensor Templates for Your Installation
 
@@ -799,6 +841,12 @@ history_hours: 48
 
 ## Available Actions
 
+The **Respect manual changes** switch of each device (see [Devices and Their Entities](#devices-and-their-entities)) can be shown in the expanded block of each device with the `show_respect_manual_changes` option (hidden by default), also available as a checkbox in the card editor:
+
+| Parameter                     | Type      | Default | Description                                                   |
+| ----------------------------- | --------- | ------- | ------------------------------------------------------------- |
+| `show_respect_manual_changes` | `boolean` | `false` | Show the "Respect manual changes" switch in each device block |
+
 Each device block exposes the following buttons and controls:
 1. **Enable/Disable**: enables or disables algorithm management for the device,
 2. **Duration selector**: a dropdown to choose a forced activation duration before pressing **START** (1h, 4h, 12h, 24h). When a forced activation is running, the selector is replaced by a badge showing the **remaining time** (in hours, or in minutes if less than 1h),
@@ -817,6 +865,16 @@ type: custom:solar-optimizer-card
 All blocks are **collapsed by default** on first load. The open/close state of each block is automatically saved in the browser's `localStorage` and restored on the next visit.
 
 The card is also fully registered in Home Assistant's card editor list under the name **Solar Optimizer Card**.
+
+The [Respect manual changes](#respect-manual-changes) switch of each device is **hidden by default** in the card. To show it in the expanded block of each device:
+1. Edit the dashboard (**⋮ > Edit dashboard**), then edit the Solar Optimizer card.
+2. Check **Show "Respect manual changes" in each device** and save.
+
+Or in YAML:
+```yaml
+type: custom:solar-optimizer-card
+show_respect_manual_changes: true
+```
 
 # Contributions are welcome!
 

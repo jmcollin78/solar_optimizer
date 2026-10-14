@@ -13,6 +13,7 @@ from homeassistant.core import callback, HomeAssistant, Event, State
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers import entity_platform
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorEntity,
     SensorDeviceClass,
     SensorStateClass,
@@ -25,16 +26,15 @@ from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
 from homeassistant.helpers.entity_platform import (
     AddEntitiesCallback,
 )
-from homeassistant.helpers.restore_state import (
-    RestoreEntity,
-    async_get as restore_async_get,
-)
+from homeassistant.helpers.restore_state import async_get as restore_async_get
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
     async_track_time_interval,
 )
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.util.unit_conversion import DurationConverter
+from homeassistant.exceptions import HomeAssistantError
 
 
 from .const import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -149,7 +149,11 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def device_class(self) -> SensorDeviceClass | None:
         if self.idx == "best_objective":
-            return SensorDeviceClass.MONETARY
+            # best_objective is a dimensionless score of the simulated annealing
+            # objective function (import/export cost coefficients blended with the
+            # priority weight), not an amount of money. Tagging it MONETARY/"€" was
+            # misleading regardless of the user's actual currency.
+            return None
         elif self.idx == "battery_soc":
             return SensorDeviceClass.BATTERY
         else:
@@ -157,6 +161,8 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
 
     @property
     def state_class(self) -> SensorStateClass | None:
+        if self.idx == "best_objective":
+            return SensorStateClass.MEASUREMENT
         if self.device_class in (SensorDeviceClass.POWER, SensorDeviceClass.BATTERY):
             return SensorStateClass.MEASUREMENT
         else:
@@ -165,14 +171,15 @@ class SolarOptimizerSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str | None:
         if self.idx == "best_objective":
-            return "€"
+            # Dimensionless optimizer score, not a currency amount (see device_class above)
+            return None
         elif self.idx == "battery_soc":
             return "%"
         else:
             return UnitOfPower.WATT
 
 
-class TodayOnTimeSensor(SensorEntity, RestoreEntity):
+class TodayOnTimeSensor(RestoreSensor):
     """Gives the time in minute in which the device was on for a day"""
 
     _entity_component_unrecorded_attributes = (
@@ -244,39 +251,43 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         )
 
         # restore the last value or set to 0
-        self._attr_native_value = 0
+        self._attr_native_value = await self._async_restore_on_time()
         old_state = await self.async_get_last_state()
         if old_state is not None:
-            # Filter out both STATE_UNKNOWN and STATE_UNAVAILABLE: float() of either string
-            # would otherwise raise ValueError and abort async_added_to_hass, leaving the
-            # entity stuck as "unavailable" across restarts because the bad state is then
-            # re-persisted by RestoreEntity.
-            if old_state.state is not None and old_state.state not in (
-                STATE_UNAVAILABLE,
-                STATE_UNKNOWN,
-            ):
-                try:
-                    self._attr_native_value = round(float(old_state.state))
-                except (ValueError, TypeError) as err:
-                    _LOGGER.warning(
-                        "%s - could not restore on_time from stored state %r: %s. Resetting to 0.",
-                        self,
-                        old_state.state,
-                        err,
-                    )
-                    self._attr_native_value = 0
-                _LOGGER.info(
-                    "%s - read on_time from storage is %s",
-                    self,
-                    self._attr_native_value,
-                )
-
             old_value = old_state.attributes.get("last_datetime_on")
             if old_value is not None:
                 self._last_datetime_on = datetime.fromisoformat(old_value)
 
+        # Sync the restored value into the ManagedDevice right away. Without this, the
+        # device's internal on_time_sec stays at 0 (its __init__ default) until the first
+        # underlying state change or the first 1-minute tick, which can let a device that
+        # already reached its daily max be allowed on again for that window after a restart.
+        self._device.set_on_time(self._attr_native_value)
+
         self.update_custom_attributes()
         self.async_write_ha_state()
+
+    async def _async_restore_on_time(self) -> int:
+        """The on_time in seconds before the restart. The sensor data stored by RestoreSensor
+        holds the native value in seconds, whatever the display unit chosen in the entity
+        settings. The stored state is in that display unit (e.g. 1.75 for 1h45 shown in
+        hours): it is only used as a fallback, converted to seconds, when the sensor data
+        is not stored yet (first restart after the update)."""
+        sensor_data = await self.async_get_last_sensor_data()
+        if sensor_data is not None and sensor_data.native_value is not None:
+            value, unit = sensor_data.native_value, sensor_data.native_unit_of_measurement
+        elif (old_state := await self.async_get_last_state()) is not None and old_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            value, unit = old_state.state, old_state.attributes.get("unit_of_measurement")
+        else:
+            return 0
+
+        try:
+            seconds = DurationConverter.convert(float(value), unit or UnitOfTime.SECONDS, UnitOfTime.SECONDS)
+        except (ValueError, TypeError, HomeAssistantError) as err:
+            _LOGGER.warning("%s - could not restore on_time from stored value %r %s: %s. Resetting to 0.", self, value, unit, err)
+            return 0
+        _LOGGER.info("%s - read on_time from storage is %s %s = %s s", self, value, unit, round(seconds))
+        return round(seconds)
 
     async def async_will_remove_from_hass(self):
         """Try to force backup of entity"""
