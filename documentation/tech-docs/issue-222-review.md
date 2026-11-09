@@ -6,7 +6,7 @@
 - Revue effectuée le 9 novembre 2026.
 - Issue ouverte, créée par @saucekorn69 le 6 novembre 2026, étiquettes `bug` et `question`, sans assigné ni jalon ; un commentaire de @Zedas030 consulté.
 - Révision locale examinée : `main`, commit `2f819a36553f51e58f7928f57571ece4325ff895`, identique à la référence citée dans le commentaire. Arbre de travail initialement propre.
-- Statut du processus : rapport approuvé par l'utilisateur le 9 novembre 2026 (« Je confirme. Go pour spec/design ») ; accord de fond confirmé au deuxième cycle et troisième cycle de clôture documentaire terminé avec les confirmations des deux spécialistes. Résultats en attente d'approbation humaine et d'autorisation explicite de développement. Aucun développement autorisé ni effectué.
+- Statut du processus : rapport approuvé par l'utilisateur le 9 novembre 2026 (« Je confirme. Go pour spec/design ») ; accord de fond confirmé au deuxième cycle et troisième cycle de clôture documentaire terminé avec les confirmations des deux spécialistes. Résultats approuvés et développement explicitement autorisé le 9 novembre 2026 (« Ok go pour développement. »), après présentation des fichiers concernés. Implémentation et contrôles automatisés terminés ; aucune recette de redémarrage Home Assistant réel effectuée.
 
 ## Résumé fidèle de l'issue
 
@@ -186,7 +186,54 @@ Les deux documents ont passé leurs contrôles de structure bilingue, traçabili
 
 1. Approbation explicite de ce rapport et autorisation de passer à la spécification et à la conception obtenues le 9 novembre 2026.
 2. Spécifications et conception produites par les sous-agents désignés ; accord de fond confirmé au deuxième cycle, puis clôture documentaire au troisième, comme consigné ci-dessus.
-3. Soumettre les documents convergents, les décisions et les risques résiduels à l'utilisateur ; leur approbation et une nouvelle autorisation explicite de développement restent à obtenir.
-4. Déléguer alors seulement l'implémentation au sous-agent `Développement d’intégrations Home Assistant`, avec le rapport, les spécifications, la conception et les critères validés. Cette délégation n'est pas engagée.
+3. Documents convergents, décisions, risques résiduels et fichiers concernés présentés à l'utilisateur ; résultats approuvés et développement autorisé le 9 novembre 2026 (« Ok go pour développement. »).
+4. Implémentation confiée au sous-agent `Développement d’intégrations Home Assistant`, avec le rapport, les spécifications, la conception et les critères validés ; correctif et tests livrés, résultats consignés ci-dessous après relecture du diff et vérification des tests ciblés par l'orchestrateur.
 
-Le passage au développement exige ces deux validations humaines, des documents complets et convergents, et l'absence de question bloquante. La première validation et la convergence sont acquises ; la validation humaine des résultats de spécification et de conception reste à obtenir. Aucun fichier de code, de configuration ou de dépendances n'a été modifié.
+Les deux validations humaines et la convergence sont acquises, sans question bloquante. Les mentions d'attente dans les spécifications et la conception décrivent leur statut à la clôture documentaire ; le présent rapport consigne l'autorisation ultérieure. Le périmètre d'édition annoncé reste limité à `custom_components/solar_optimizer/sensor.py`, `tests/test_min_on_time.py`, `tests/test_max_on_time.py` et au présent rapport de suivi. Aucun changement de configuration, dépendance, algorithme, coordinateur ou environnement Home Assistant réel n'est autorisé par cette implémentation.
+
+## Implémentation et vérification du 9 novembre 2026
+
+### Correctif livré
+
+Dans [sensor.py](../../custom_components/solar_optimizer/sensor.py#L278), l'unique ligne de production ajoutée est l'appel `self._device.set_on_time(self._attr_native_value)`. Il intervient après la restauration de la valeur et de la date, hors de la branche conditionnelle, avant `update_custom_attributes()` et `async_write_ha_state()`. Le repli zéro suit donc le même chemin. Aucun autre comportement de production n'est modifié.
+
+Les tests persistants sont ajoutés aux deux modules existants ; aucune fixture globale ni nouveau fichier n'est nécessaire. Les 16 cas antérieurs sont conservés et 19 cas paramétrés supplémentaires portent le total ciblé à 35.
+
+### Couverture des critères
+
+| Critères       | Tests persistants et observations                                                                                                                                                                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AC-001, AC-007 | [test_min_on_time.py](../../tests/test_min_on_time.py) : `test_restored_on_time_is_synchronized_before_initial_attributes` observe l'ordre setter, attributs et publication, les deux compteurs, l'état HA et l'attribut initial de forçage, sans actualisation préalable.                                                                 |
+| AC-002, AC-003 | Même module : `test_restored_minimum_and_offpeak_window` couvre 24 600, 7 800 et 7 200 s sans forçage, 7 140 s avec forçage autorisé, et une heure hors plage qui continue de le bloquer.                                                                                                                                                  |
+| AC-004         | [test_max_on_time.py](../../tests/test_max_on_time.py) : `test_restored_daily_maximum_is_used_by_real_annealing` vérifie 7 140, 7 200 et 7 800 s pour un maximum de 7 200 s, via `check_usable(False)`, `is_usable` et le champ d'utilisabilité du recuit réel, sans imposer une solution aléatoire précise.                               |
+| AC-005         | [test_min_on_time.py](../../tests/test_min_on_time.py) : `test_inactive_refresh_preserves_restored_on_time_without_activation` vérifie la conservation des compteurs et l'absence d'activation pendant une actualisation inactive.                                                                                                         |
+| AC-006         | Même module : `test_unrestorable_on_time_synchronizes_zero_before_publication` couvre absence d'état, valeur brute `None`, `unknown`, `unavailable`, texte invalide et conservation d'une date valide disponible ; l'appel du setter à zéro est attesté avant attributs et publication.                                                    |
+| AC-007         | Même module : `test_first_coordinator_calculation_uses_restored_minimum` conserve le coordinateur et le lecteur de forçage réels, avec solution normale déterministe éteinte ; 7 800 s n'activent pas l'appareil, 7 140 s conservent le forçage attendu. Les commandes sont simulées, sans équipement physique.                            |
+| AC-008         | [test_max_on_time.py](../../tests/test_max_on_time.py) : `test_active_restored_on_time_counts_once_and_resets` conserve la valeur et la date à la restauration, vérifie 600 → 660 s, l'absence de double ajout au même instant, la remise à zéro puis 60 s de comptage actif. Le test existant du gabarit d'activité retardé reste réussi. |
+| AC-009         | Les deux modules gardent leurs cas antérieurs et les nouveaux tests persistants. `test_restored_fractional_on_time_keeps_existing_rounding` vérifie en complément l'arrondi déjà prévu par la restauration.                                                                                                                                |
+
+Les lecteurs métier ne sont pas remplacés par des résultats attendus dans les nouveaux tests. Le lecteur de l'état persistant, les horloges et les commandes nécessaires sont simulés dans les fixtures HA de test ; cela ne constitue pas un redémarrage complet ni une lecture du stockage d'une installation réelle.
+
+### Résultats exécutés
+
+| Contrôle                    | Résultat et provenance                                                                                                                                                                         |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Régression avant correction | Le sous-agent a d'abord exécuté le test de synchronisation initiale sans correction : échec attendu, valeur du capteur 7 800 s contre compteur métier 0 s.                                     |
+| Même test après correction  | Réussi après l'ajout de l'unique affectation de production, selon l'exécution du sous-agent.                                                                                                   |
+| Deux modules ciblés         | 35 tests réussis par le sous-agent, puis **35 réussis en 1,36 seconde** lors de la vérification indépendante de l'orchestrateur sur les fichiers finaux.                                       |
+| Suite avec options CI       | Terminée sans échec selon le compte rendu du sous-agent, sur le modèle de [testus.yaml](../../.github/workflows/testus.yaml).                                                                  |
+| Suite sous couverture       | **126 réussis, 11 ignorés**, selon l'exécution complète du sous-agent ; aucun test ignoré n'est compté comme réussite.                                                                         |
+| Rapport de couverture       | `rtk proxy coverage report`, consulté par l'orchestrateur : **91 % au total**, **95 % pour sensor.py**, 99 % pour le module de tests minimum et 100 % pour le module maximum.                  |
+| Diagnostics et diff         | Aucun diagnostic signalé dans les trois fichiers de code/tests ; `rtk git diff --check` sans erreur. Diff et état Git vérifiés : uniquement les trois fichiers annoncés et le présent rapport. |
+
+Commande ciblée réexécutée par l'orchestrateur :
+
+```bash
+rtk proxy env PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider tests/test_min_on_time.py tests/test_max_on_time.py
+```
+
+Les fichiers de spécifications et de conception, les dépendances, la configuration, le coordinateur et l'algorithme sont inchangés pendant cette implémentation. Aucun commit ni publication n'a été effectué par les agents.
+
+### Limites maintenues
+
+La recette de redémarrage sur une instance Home Assistant réelle n'a pas été effectuée. Les 65 minutes observées chez l'auteur ne sont pas reproduites de bout en bout. Les exclusions validées restent applicables : pas de nouvelle garantie avant la fin de restauration, ni nouvelle politique de temps pendant l'arrêt, de remise à zéro manquée ou de données atypiques. Les contrôles automatisés ne prétendent pas certifier ces cas hors périmètre.
