@@ -112,7 +112,6 @@ class SolarOptimizerCard extends HTMLElement {
           solar-optimizer-card {
             display: block !important;
             width: 100% !important;
-            container-type: inline-size;
           }
           solar-optimizer-card ha-card {
             display: block;
@@ -128,7 +127,7 @@ class SolarOptimizerCard extends HTMLElement {
           }
           solar-optimizer-card .so-grid-stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 12px;
             margin-bottom: 16px;
           }
@@ -268,7 +267,7 @@ class SolarOptimizerCard extends HTMLElement {
           }
           solar-optimizer-card .so-info-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 4px 12px;
             font-size: 0.85em;
             color: var(--secondary-text-color);
@@ -471,7 +470,7 @@ class SolarOptimizerCard extends HTMLElement {
             min-width: 0;
           }
           solar-optimizer-card .so-device-detail-history {
-            flex: 1;
+            flex: 1 1 240px;
             min-width: 0;
           }
           solar-optimizer-card .so-device-detail-controls {
@@ -479,35 +478,28 @@ class SolarOptimizerCard extends HTMLElement {
             flex-direction: column;
             align-items: flex-end;
             gap: 6px;
-            flex-shrink: 0;
+            flex: 0 1 auto;
             min-width: 0;
           }
-          solar-optimizer-card .so-actions ha-switch,
-          solar-optimizer-card .so-badge {
-            max-width: 100%;
-          }
-          @container (max-width: 767px) {
-            solar-optimizer-card .so-grid-stats {
-              grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            }
-            solar-optimizer-card .so-device-header,
-            solar-optimizer-card .so-actions {
-              flex-wrap: wrap;
-            }
-            solar-optimizer-card .so-info-grid {
-              grid-template-columns: minmax(0, 1fr);
-            }
-          }
-          @container (max-width: 599px) {
+          @media (max-width: 599px) {
             solar-optimizer-card .so-device-header {
               flex-direction: column;
               align-items: stretch;
             }
+            solar-optimizer-card .so-device-identity {
+              flex-basis: auto;
+              width: 100%;
+            }
             solar-optimizer-card .so-actions {
               width: 100%;
+              justify-content: flex-start;
             }
             solar-optimizer-card .so-device-detail-footer {
               flex-direction: column;
+            }
+            solar-optimizer-card .so-device-detail-history {
+              width: 100%;
+              flex-basis: auto;
             }
             solar-optimizer-card .so-device-detail-controls {
               width: 100%;
@@ -517,7 +509,7 @@ class SolarOptimizerCard extends HTMLElement {
               justify-content: flex-start;
             }
           }
-          @container (max-width: 359px) {
+          @media (max-width: 359px) {
             solar-optimizer-card .so-device-power-row {
               flex-wrap: wrap;
             }
