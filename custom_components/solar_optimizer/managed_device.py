@@ -3,7 +3,7 @@ import logging
 import math
 from datetime import datetime, timedelta, time
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, Context
 from homeassistant.helpers.template import Template
 from homeassistant.components.select import SelectEntity
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -22,10 +22,12 @@ from .const import (
     CONF_ACTION_MODES,
     CONF_MAX_ON_TIME_OFFPEAK_MIN,
     CONF_OFFPEAK_POWER,
+    CONF_ACTIVE_SWITCH_IS_OVERRIDE,
     ConfigurationError,
     EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
     EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
     EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE,
+    EVENT_TYPE_SOLAR_OPTIMIZER_ACTION,
 )
 
 ACTION_ACTIVATE = "Activate"
@@ -48,6 +50,7 @@ async def do_service_action(
     current_power,
     requested_power,
     convert_power_divide_factor,
+    context: Context | None = None,
 ):
     """Activate an entity via a service call"""
 
@@ -88,8 +91,12 @@ async def do_service_action(
     }
 
     try:
+        # Passing our own context lets Home Assistant's history/logbook trace this
+        # state change back to Solar Optimizer instead of leaving it unattributed -
+        # see ManagedDeviceSwitch.async_added_to_hass which sets the same context on
+        # its own entity state.
         await hass.services.async_call(
-            domain, action, service_data=service_data, target=target
+            domain, action, service_data=service_data, target=target, context=context
         )
     except Exception as err:  # pylint: disable=broad-except
         _LOGGER.exception(err)
@@ -102,6 +109,7 @@ async def do_service_action(
         current_power,
         requested_power,
         EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER if action_type == ACTION_CHANGE_POWER else EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE,
+        context,
     )
 
 
@@ -112,6 +120,7 @@ def do_event_action(
     current_power,
     requested_power,
     event_type: str,
+    context: Context | None = None,
 ):
     """Activate an entity via an event"""
     _LOGGER.info(
@@ -131,6 +140,7 @@ def do_event_action(
             "current_power": current_power,
             "entity_id": entity_id,
         },
+        context=context,
     )
 
 
@@ -148,6 +158,8 @@ class ManagedDevice:
         self._unique_id = name_to_unique_id(self._name)
         self._entity_id = device_config.get("entity_id")
         self._power_entity_id = device_config.get("power_entity_id")
+        # Display-only: real consumption sensor shown in the card, never used by the algorithm
+        self._measured_power_entity_id = device_config.get("measured_power_entity_id")
         self._power_max = convert_to_template_or_value(hass, device_config.get("power_max"))
         self._offpeak_power = convert_to_template_or_value(hass, device_config.get(CONF_OFFPEAK_POWER))
 
@@ -217,11 +229,29 @@ class ManagedDevice:
             ).time()
 
         if self.is_active:
-            self._requested_power = self._current_power = self.power_max if self._can_change_power else self._power_min
+            self._requested_power = self._current_power = self.power_max if not self._can_change_power else self._power_min
 
         self._enable = True
 
         self._forced_end_time: datetime | None = None
+
+        # Manual override tracking (see trigger_manual_override/clear_override):
+        # _last_commanded_state remembers the last on/off state Solar Optimizer itself
+        # requested, so a later mismatch with the real state can be recognized as a
+        # manual override, and a later match again can be recognized as the user having
+        # put the device back the way SO wanted it.
+        self._last_commanded_state: bool | None = self.is_active
+        self._override_active: bool = False
+        self._override_since: datetime | None = None
+        self._override_baseline_state: bool | None = None
+        # Off by default: SO puts back the device as it decides, like it always did.
+        # On: a manual change of the device is respected as an override (see the
+        # "Respect manual changes" switch).
+        self._respect_manual_changes: bool = False
+        # Off by default: the SO "Active" switch is a plain command the algorithm may revert.
+        # On: with respect_manual_changes, it is respected as an override like a change on the device.
+        self._active_switch_is_override: bool = device_config.get(CONF_ACTIVE_SWITCH_IS_OVERRIDE) is True
+        self._last_context: Context | None = None
 
         # Some checks
         # min_on_time_per_day_sec requires an offpeak_time
@@ -258,6 +288,16 @@ class ManagedDevice:
         if requested_power is None:
             requested_power = self._requested_power
 
+        if action_type == ACTION_ACTIVATE:
+            self._last_commanded_state = True
+        elif action_type == ACTION_DEACTIVATE:
+            self._last_commanded_state = False
+
+        # A fresh Context per action, shared with the resulting service/event call and
+        # with our own switch entity's state write, so Home Assistant's history/logbook
+        # can trace the change back to Solar Optimizer instead of leaving it unattributed.
+        context = self._last_context = Context()
+
         if self._action_mode == CONF_ACTION_MODE_ACTION:
             method = None
             entity_id = self._entity_id
@@ -277,6 +317,7 @@ class ManagedDevice:
                 entity_id = self._power_entity_id
                 self.reset_next_date_available_power()
 
+            self._announce_action(action_type, method, entity_id, requested_power, context)
             await do_service_action(
                 self._hass,
                 entity_id,
@@ -285,8 +326,10 @@ class ManagedDevice:
                 self._current_power,
                 requested_power,
                 self._convert_power_divide_factor,
+                context,
             )
         elif self._action_mode == CONF_ACTION_MODE_EVENT:
+            self._announce_action(action_type, None, self._entity_id, self._requested_power, context)
             do_event_action(
                 self._hass,
                 self._entity_id,
@@ -294,6 +337,7 @@ class ManagedDevice:
                 self._current_power,
                 self._requested_power,
                 EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
+                context,
             )
         else:
             raise ConfigurationError(
@@ -301,6 +345,23 @@ class ManagedDevice:
             )
 
         self._current_power = self._requested_power
+
+    def _announce_action(self, action_type: str, service: str | None, entity_id: str, requested_power, context: Context):
+        """Fire the solar_optimizer_action event before applying an action. Being the first
+        event of the Context, it becomes its origin and the logbook describes the change of
+        the device as triggered by Solar Optimizer. service is the configured service of the
+        device (None in event mode)."""
+        self._hass.bus.async_fire(
+            EVENT_TYPE_SOLAR_OPTIMIZER_ACTION,
+            {
+                "device_name": self._name,
+                "entity_id": entity_id,
+                "action": action_type,
+                "service": service,
+                "requested_power": requested_power,
+            },
+            context=context,
+        )
 
     async def activate(self, requested_power=None):
         """Use this method to activate this ManagedDevice"""
@@ -394,10 +455,13 @@ class ManagedDevice:
             )
             return
 
-        if not self._can_change_power:
-            self._current_power = self.power_max
+        if not self._power_entity_id:
+            # No power monitoring entity configured: fall back to the planning value
+            # (power_max for a fixed device, power_min otherwise) since it's the best
+            # estimate we have of the real consumption.
+            self._current_power = self.power_max if not self._can_change_power else self._power_min
             _LOGGER.debug(
-                "Set current_power to %s for device %s cause active and not can_change_power",
+                "Set current_power to %s for device %s cause active and no power_entity_id configured",
                 self._current_power,
                 self._name,
             )
@@ -405,9 +469,11 @@ class ManagedDevice:
 
         power_entity_state = self._hass.states.get(self._power_entity_id)
         if not power_entity_state or power_entity_state.state in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
-            self._current_power = self._power_min
+            # Fall back to the planning value (power_max for a fixed device, power_min
+            # otherwise) while the real measurement is unavailable.
+            self._current_power = self.power_max if not self._can_change_power else self._power_min
             _LOGGER.debug(
-                "Set current_power to %s for device %s cause can_change_power but state is %s",
+                "Set current_power to %s for device %s cause power_entity_id state is %s",
                 self._current_power,
                 self._name,
                 power_entity_state,
@@ -441,7 +507,114 @@ class ManagedDevice:
         """Enable or disable the ManagedDevice for Solar Optimizer"""
         _LOGGER.info("%s - Set enable=%s", self.name, enable)
         self._enable = enable
+        # Re-enabling (by the user, an automation calling the Enable switch, or the
+        # forced-activation timer expiring) always clears a pending manual override:
+        # there is nothing left to protect the user's action from once SO is back in
+        # control.
+        if enable and self._override_active:
+            self._override_active = False
+            self._override_since = None
+            self._override_baseline_state = None
+        # Resuming control: the real state becomes the new reference. Whatever happened
+        # while SO was not managing the device is not an override, otherwise the stale
+        # last command re-triggers one right away (and loops at every re-enable).
+        if enable:
+            self._last_commanded_state = self.is_active
         self.publish_enable_state_change()
+
+    def trigger_manual_override(self, baseline: bool | None = None) -> None:
+        """Called either by the coordinator, when the underlying entity's real on/off
+        state no longer matches what Solar Optimizer itself last commanded, or directly
+        by the 'Active' switch when the user (or an automation) toggles it by hand.
+        Pauses SO management for this device, reusing the existing Enable flag, until
+        the override is cleared (see clear_override and clear_override_if_resolved).
+
+        `baseline` is the state Solar Optimizer had last requested *before* this
+        override, i.e. the state that, if the real device returns to it, means the
+        override is resolved. When omitted (the coordinator-detected case), it defaults
+        to `_last_commanded_state`, which at that point still holds SO's last real
+        decision. Callers that go through activate()/deactivate() to apply the manual
+        change themselves (which overwrites `_last_commanded_state`) must capture and
+        pass that previous value explicitly."""
+        if self._override_active:
+            return
+        _LOGGER.info(
+            "%s - Manual override detected (real state differs from what Solar Optimizer commanded). Pausing management.",
+            self.name,
+        )
+        self._override_active = True
+        self._override_since = self.now
+        self._override_baseline_state = baseline if baseline is not None else self._last_commanded_state
+        self.set_enable(False)
+
+    def clear_override(self) -> None:
+        """Clear an active manual override and resume Solar Optimizer management for
+        this device. Called when the daily reset time is reached, when the user (or an
+        automation) turns the Enable switch back on, when the solar_optimizer.clear_override
+        service is called, or automatically once the device's real state matches again
+        what Solar Optimizer last requested (see clear_override_if_resolved)."""
+        if not self._override_active:
+            return
+        _LOGGER.info("%s - Manual override cleared, resuming Solar Optimizer management", self.name)
+        self._override_active = False
+        self._override_since = None
+        self._override_baseline_state = None
+        self.set_enable(True)
+
+    def clear_override_if_resolved(self) -> bool:
+        """Called periodically by the coordinator. If an override is active and the
+        device's real state now matches what Solar Optimizer had last requested before
+        the override, the override is considered resolved and is cleared automatically.
+        Returns True if the override was cleared."""
+        if not self._override_active:
+            return False
+        if self._override_baseline_state is not None and self.is_active == self._override_baseline_state:
+            self.clear_override()
+            return True
+        return False
+
+    def set_respect_manual_changes(self, respect: bool) -> None:
+        """Turn on/off the manual override feature for this device. Turning it off
+        releases a pending override so SO manages the device again."""
+        _LOGGER.info("%s - Set respect_manual_changes=%s", self.name, respect)
+        self._respect_manual_changes = respect
+        if not respect:
+            self.clear_override()
+
+    @property
+    def respect_manual_changes(self) -> bool:
+        """True if a manual change of the device is respected as an override"""
+        return self._respect_manual_changes
+
+    @property
+    def active_switch_override(self) -> bool:
+        """True if turning the SO "Active" switch on or off is respected as an override"""
+        return self._respect_manual_changes and self._active_switch_is_override
+
+    def check_for_manual_override(self, ignore_waiting: bool = False) -> None:
+        """Called periodically by the coordinator to detect a manual override: the
+        underlying entity changed state without Solar Optimizer having commanded it.
+        Does nothing for a device already disabled (whatever the reason, including an
+        already active override or an explicit forced activation) or still waiting out
+        its own last command's debounce delay (unless `ignore_waiting`, used when the
+        underlying entity has just changed state: if it no longer matches the last
+        command, the change was not made by SO). Does nothing (and releases a pending
+        override) when manual changes are not respected for this device."""
+        if not self._respect_manual_changes:
+            self.clear_override()
+            return
+        if self.clear_override_if_resolved():
+            return
+        if not self._enable or self._forced_end_time is not None or (self.is_waiting and not ignore_waiting):
+            return
+        if self._last_commanded_state is not None and self.is_active != self._last_commanded_state:
+            self.trigger_manual_override()
+
+    def set_override_state(self, active: bool, since: datetime | None, baseline: bool | None = None) -> None:
+        """Restore the manual override state (used at HA restart)"""
+        self._override_active = active
+        self._override_since = since
+        self._override_baseline_state = baseline
 
     def set_forced_end_time(self, end_time: datetime | None) -> None:
         """Restore the forced_end_time (used at HA restart)"""
@@ -460,6 +633,35 @@ class ManagedDevice:
     def is_enabled(self) -> bool:
         """return true if the managed device is enabled for solar optimisation"""
         return self._enable
+
+    @property
+    def override_active(self) -> bool:
+        """True if a manual override is currently pausing Solar Optimizer management"""
+        return self._override_active
+
+    @property
+    def override_since(self) -> "datetime | None":
+        """The datetime the current manual override started, or None"""
+        return self._override_since
+
+    @property
+    def last_commanded_state(self) -> "bool | None":
+        """The last on/off state Solar Optimizer itself requested via activate()/deactivate()"""
+        return self._last_commanded_state
+
+    @property
+    def last_context(self) -> "Context | None":
+        """The Context of the last action Solar Optimizer applied to this device,
+        shared with the entity that mirrors its state so history/logbook can trace
+        changes back to Solar Optimizer (see switch.py)."""
+        return self._last_context
+
+    @property
+    def override_baseline_state(self) -> "bool | None":
+        """The on/off state Solar Optimizer had requested before the current manual
+        override started (None if there is no active override). The override is
+        considered resolved once the device's real state matches this again."""
+        return self._override_baseline_state
 
     @property
     def forced_end_time(self) -> "datetime | None":
@@ -631,6 +833,11 @@ class ManagedDevice:
         return self._entity_id
 
     @property
+    def measured_power_entity_id(self) -> str | None:
+        """The sensor measuring the real consumption of the device (display only)"""
+        return self._measured_power_entity_id
+
+    @property
     def power_entity_id(self) -> str:
         """The entity_id of the device which gives the current power"""
         return self._power_entity_id
@@ -721,6 +928,8 @@ class ManagedDevice:
                 "is_usable": self.is_usable,
                 "is_waiting": self.is_waiting,
                 "forced_end_time": self._forced_end_time.isoformat() if self._forced_end_time else None,
+                "override_active": self._override_active,
+                "override_since": self._override_since.isoformat() if self._override_since else None,
             },
         )
 

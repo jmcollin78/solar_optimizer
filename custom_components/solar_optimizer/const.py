@@ -12,7 +12,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.template import Template, is_template_string
 
 SOLAR_OPTIMIZER_DOMAIN = DOMAIN = "solar_optimizer"
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT, Platform.BINARY_SENSOR]
 
 DEVICE_MANUFACTURER = "JMCOLLIN"
 DEVICE_MODEL = "Solar Optimizer"
@@ -27,6 +27,9 @@ CONF_ACTION_MODES = [CONF_ACTION_MODE_ACTION, CONF_ACTION_MODE_EVENT]
 
 EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER = "solar_optimizer_change_power_event"
 EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE = "solar_optimizer_state_change_event"
+# Fired first with the Context of each action, so the logbook shows Solar Optimizer as
+# the origin of the change of the device (see logbook.py)
+EVENT_TYPE_SOLAR_OPTIMIZER_ACTION = "solar_optimizer_action"
 
 EVENT_TYPE_SOLAR_OPTIMIZER_ENABLE_STATE_CHANGE = (
     "solar_optimizer_enable_state_change_event"
@@ -39,6 +42,7 @@ DEVICE_MANUFACTURER = "JM. COLLIN"
 SERVICE_RESET_ON_TIME = "reset_on_time"
 SERVICE_START_DEVICE = "start_device"
 SERVICE_STOP_DEVICE = "stop_device"
+SERVICE_CLEAR_OVERRIDE = "clear_override"
 
 TIME_REGEX = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
 CONFIG_VERSION = 2
@@ -71,6 +75,8 @@ CONF_DEACTIVATION_SERVICE = "deactivation_service"
 CONF_POWER_MIN = "power_min"
 CONF_POWER_STEP = "power_step"
 CONF_POWER_ENTITY_ID = "power_entity_id"
+CONF_MEASURED_POWER_ENTITY_ID = "measured_power_entity_id"
+CONF_ACTIVE_SWITCH_IS_OVERRIDE = "active_switch_is_override"
 CONF_DURATION_POWER_MIN = "duration_power_min"
 CONF_CHANGE_POWER_SERVICE = "change_power_service"
 CONF_CONVERT_POWER_DIVIDE_FACTOR = "convert_power_divide_factor"

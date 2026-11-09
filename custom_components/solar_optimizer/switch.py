@@ -52,6 +52,7 @@ async def async_setup_entry(
     entities.append(entity)
     entity = ManagedDeviceEnable(hass, device)
     entities.append(entity)
+    entities.append(ManagedDeviceRespectManualChanges(device))
 
     async_add_entities(entities)
 
@@ -94,6 +95,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
         self._attr_unique_id = "solar_optimizer_active_" + idx
         self._entity_id = device.entity_id
         self._attr_is_on = device.is_active
+        # Last Solar Optimizer action context already applied to our state
+        self._applied_context = None
 
         # Try to get the state if it exists
         # device: ManagedDevice = None
@@ -187,12 +190,18 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             _LOGGER.debug("Pas d'état disponible. Evenement ignoré")
             return
 
+        # Detect a manual change right away, even during the waiting delay of Solar
+        # Optimizer's own last command (the periodic check skips that delay)
+        device.check_for_manual_override(ignore_waiting=True)
+
         # On recherche la date de l'event pour la stocker dans notre état
         new_state = self._device.is_active  # new_state.state == STATE_ON
         if new_state == self._attr_is_on:
             return
 
         self._attr_is_on = new_state
+        # Same cause as the underlying entity's change (the user, the device, or SO)
+        self.async_set_context(event.context)
         # On sauvegarde le nouvel état
         self.update_custom_attributes(device)
         self.async_write_ha_state()
@@ -207,6 +216,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             "is_usable": device.is_usable,
             "can_change_power": device.can_change_power,
             "current_power": device.current_power,
+            "measured_power_entity_id": device.measured_power_entity_id,
             "requested_power": device.requested_power,
             "duration_sec": device.duration_sec,
             "duration_power_sec": device.duration_power_sec,
@@ -241,6 +251,13 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
 
         self._attr_is_on = device.is_active
         self.update_custom_attributes(device)
+        # Trace this state write back to the action Solar Optimizer just applied (if
+        # any), so history/logbook can attribute the underlying entity's change to us.
+        # Only once per action: re-applying it at every refresh would keep it alive and
+        # attribute later manual changes to Solar Optimizer.
+        if device.last_context is not None and device.last_context is not self._applied_context:
+            self._applied_context = device.last_context
+            self.async_set_context(device.last_context)
         self.async_write_ha_state()
 
     def turn_on(self, **kwargs: Any) -> None:
@@ -257,7 +274,16 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
             return
 
         if not self._attr_is_on:
+            # Capture what Solar Optimizer had last requested *before* this manual
+            # action, so the override can be recognized as resolved once the device
+            # returns to that state (activate() below overwrites last_commanded_state).
+            previous_commanded_state = device.last_commanded_state
             await device.activate()
+            # The user (or an automation) turned the device on directly through this
+            # switch, bypassing the algorithm's own decision: treat it as a manual
+            # override so the next coordinator refresh doesn't turn it back off.
+            if device.active_switch_override:
+                device.trigger_manual_override(baseline=previous_commanded_state)
             self._attr_is_on = True
             self.update_custom_attributes(device)
             self.async_write_ha_state()
@@ -288,6 +314,12 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity, RestoreEntity):
                     device.name,
                 )
                 device.set_forced_end_time(None)
+            elif device.active_switch_override:
+                # Not stopping an explicit forced session: the user (or an automation)
+                # is overriding the algorithm's own live decision directly through this
+                # switch, bypassing the underlying entity entirely. Capture the baseline
+                # before deactivate() below overwrites last_commanded_state.
+                device.trigger_manual_override(baseline=device.last_commanded_state)
             await device.deactivate()
             self._attr_is_on = False
             self.update_custom_attributes(device)
@@ -419,3 +451,45 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
         self._attr_is_on = True
         self.async_write_ha_state()
         self.update_device_enabled()
+
+
+class ManagedDeviceRespectManualChanges(SwitchEntity, RestoreEntity):
+    """Off by default: SO puts back the device as it decides. On: a manual change of the
+    device (or of the SO switch) is respected as an override until it is released."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "respect_manual_changes"
+    _attr_icon = "mdi:hand-back-right"
+
+    def __init__(self, device: ManagedDevice):
+        name = name_to_unique_id(device.name)
+        self._device = device
+        self.entity_id = f"{SWITCH_DOMAIN}.respect_manual_changes_solar_optimizer_{name}"
+        self._attr_unique_id = "solar_optimizer_respect_manual_changes_" + name
+        self._attr_is_on = False
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._device.name)},
+            name="Solar Optimizer-" + self._device.name,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        self._attr_is_on = last_state is not None and last_state.state == STATE_ON
+        self._device.set_respect_manual_changes(self._attr_is_on)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self._attr_is_on = True
+        self._device.set_respect_manual_changes(True)
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._attr_is_on = False
+        self._device.set_respect_manual_changes(False)
+        self.async_write_ha_state()

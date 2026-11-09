@@ -13,6 +13,7 @@
   - [Anti-bagot](#anti-bagot)
   - [Utilisabilité](#utilisabilité)
   - [Priorisation des équipements](#priorisation-des-équipements)
+  - [Respecter les changements manuels](#respecter-les-changements-manuels)
   - [Réglage des coûts d'achat et de revente](#réglage-des-coûts-dachat-et-de-revente)
 - [Installation](#installation)
   - [Procédure de migration d'une version 2.x vers la 3.x](#procédure-de-migration-dune-version-2x-vers-la-3x)
@@ -46,6 +47,7 @@
   - [reset\_on\_time](#reset_on_time)
   - [start\_device](#start_device)
   - [stop\_device](#stop_device)
+  - [clear\_override](#clear_override)
 - [Créer des modèles de capteur pour votre installation](#créer-des-modèles-de-capteur-pour-votre-installation)
 - [Carte Lovelace officielle](#carte-lovelace-officielle)
   - [Informations globales](#informations-globales)
@@ -106,6 +108,16 @@ Ces 5 règles permettent à l'algorithme de ne commander que ce qui est réellem
 
 ## Priorisation des équipements
 La gestion de la priorité est décrite [ici](#la-gestion-de-la-priorité).
+
+## Respecter les changements manuels
+Par défaut, Solar Optimizer pilote les équipements qu'il gère : si un équipement est allumé ou éteint en dehors de lui (à la main, depuis un autre tableau de bord, un assistant vocal, une autre automatisation...), Solar Optimizer le remet dans l'état qu'il a décidé au cycle suivant. Par exemple, un VE qui démarre sa charge quand on le branche est arrêté tant que les conditions ne sont pas réunies. Pour forcer un équipement, utilisez les boutons START/STOP de la [carte](#carte-lovelace-officielle).
+
+Chaque équipement a un switch **Respecter les changements manuels** (`switch.respect_manual_changes_solar_optimizer_<name>`) pour changer ce comportement, pour cet équipement uniquement :
+- **Désactivé (par défaut)** : rien ne change, Solar Optimizer se comporte exactement comme dans les versions précédentes.
+- **Activé** : un changement manuel de l'équipement est respecté. Par exemple, quelqu'un allume la pompe de la piscine depuis son propre interrupteur pour aller se baigner : Solar Optimizer la laisse allumée au lieu de l'éteindre au cycle suivant. L'équipement est mis en pause (une *reprise en main manuelle*, indiquée par `binary_sensor.solar_optimizer_override_<name>`) jusqu'à ce qu'il revienne à l'état voulu par Solar Optimizer, l'heure de remise à zéro (`raz_time`), la réactivation du switch Enable, l'appel de l'action [clear\_override](#clear_override), ou la désactivation de ce switch.
+- Allumer ou éteindre `switch.solar_optimizer_<name>` (le switch **Active**) est par défaut une simple commande, que l'algorithme peut annuler à sa prochaine décision. Cochez **Considérer l'action sur le switch Active comme une reprise en main** dans la configuration de l'équipement pour la respecter aussi comme une reprise en main manuelle.
+
+Le switch conserve son état après un redémarrage. Pour l'activer, ouvrez la page de l'équipement (**Paramètres > Appareils et services > Solar Optimizer**, puis l'équipement), ou affichez-le dans la carte (cf. [Utilisation de la carte officielle](#utilisation-de-la-carte-officielle)).
 
 ## Réglage des coûts d'achat et de revente
 Le comportement de l'algorithme est fortement influencé par les valeurs des capteurs "coût du kWh importé" et "coût du kWh exporté". En effet, l'algorithme va calculer le "coût fictif" d'une combinaison d'allumage / extinction / puissance voulue des équipemenets pilotés.
@@ -201,6 +213,8 @@ Vous devez spécifier les attributs suivant :
 | `battery_soc_threshold`       | tous                                    | le pourcentage minimal de charge de la batterie pour que l'équipement soit utilisable                                                                                                                                                        | 30                                                    | Dans cet exemple, l'équipement ne sera utilisable par l'algorithme si la batterie solaire n'est pas chargée à au moins 30%. Nécessite le renseignement de l'entité d'état de charge de la batterie dans les paramètres communs. Cf. ci-dessus.      |
 | `max_on_time_per_day_min`     | tous                                    | le nombre de minutes maximal en position allumé pour cet équipement. Au delà, l'équipement n'est plus utilisable par l'algorithme                                                                                                            | 10                                                    | L'équipement sera allumé au maximum 10 minutes par jour                                                                                                                                                                                             |
 | `min_on_time_per_day_min`     | tous                                    | le nombre de minutes minimale en position allumé pour cet équipement. Si lors du démarrage des heures creuses, ce minimum n'est pas atteint alors l'équipement sera allumé à concurrence du début de journée ou du `max_on_time_per_day_min` | 5                                                     | L'équipement est sera allumé au minimum 5 minutes par jour ; soit pendant la production solaire, soit pendant les heures creuses                                                                                                                    |
+| `measured_power_entity_id`    | tous (optionnel)                        | Un capteur qui mesure la puissance réellement consommée par l'équipement, en W ou kW (ex : prise connectée)                                                                                                                                  | sensor.lave_linge_puissance                           | Affichage seulement : la carte montre la puissance mesurée dans la barre et le graphique de puissance, avec la puissance configurée en pointillés. L'algorithme continue d'utiliser `power_max` comme budget.                                   |
+| `active_switch_is_override`   | tous (optionnel, décoché par défaut)    | Seulement si le switch **Respecter les changements manuels** est activé : allumer ou éteindre `switch.solar_optimizer_<name>` est respecté comme une reprise en main manuelle. | coché | Décoché : le switch Active est une simple commande que l'algorithme peut annuler. Un changement fait sur l'équipement lui-même est toujours respecté. |
 | `offpeak_time`                | tous                                    | L'heure de début des heures creuses au format hh:mm                                                                                                                                                                                          | 22:00                                                 | L'équipement pourra être allumé à 22h00 si la production de la journée n'a pas été suffisante                                                                                                                                                       |
 
 ### Définir le template d'activation
@@ -441,6 +455,8 @@ La reconfiguration de cet appareil permet de configurer Solar Optimizer.
 2. un sensor nommé `sensor.on_time_today_solar_optimizer_<name>` qui donne la durée d'activation depuis la remise à zéro (cf. raz_time)
 3. un switch nommé `switch.solar_optimizer_<name>` qui reflète l'état d'activation demandé par Solar Optimizer
 4. une liste de choix nommé "Priority" qui est la priorité de cet appareil. Les valeurs possibles vont de 'Very low' à 'Very high'. Cf. [la gestion de la priorité](#la-gestion-de-la-priorité)
+5. un binary_sensor nommé `binary_sensor.solar_optimizer_override_<name>` (utilisé seulement si **Respecter les changements manuels** est activé, cf. 6) qui est "On" lorsqu'une **reprise en main manuelle** est active : l'équipement a été allumé ou éteint en dehors de Solar Optimizer (à la main ou par une autre automatisation ; depuis le switch de la carte seulement si **Considérer l'action sur le switch Active comme une reprise en main** est coché). Tant qu'elle est active, l'algorithme laisse l'équipement tel quel au lieu d'annuler le changement au cycle suivant. Attributs : `override_since` et `override_baseline_state` (l'état demandé par Solar Optimizer avant la reprise en main). Elle est levée quand l'équipement revient à l'état demandé par Solar Optimizer, à `raz_time`, quand le switch Enable est réactivé, ou avec l'action [clear\_override](#clear_override). Les actions de Solar Optimizer sont attribuées dans le journal : le changement de l'équipement indique Solar Optimizer comme origine, avec l'action et le service configuré (ex : "a allumé Pompe piscine (switch.turn_on)").
+6. un switch nommé `switch.respect_manual_changes_solar_optimizer_<name>` (**Respecter les changements manuels**), **désactivé par défaut**. Désactivé : Solar Optimizer remet l'équipement dans l'état qu'il a décidé au cycle suivant, même s'il a été changé à la main (ex : un VE qui démarre sa charge quand on le branche est arrêté tant que les conditions ne sont pas réunies) ; utilisez les boutons START/STOP de la carte pour forcer. Activé : un changement de l'équipement fait n'importe où (son propre switch, un tableau de bord, un assistant vocal, le bouton physique) est respecté comme une reprise en main manuelle (cf. 5). Un changement de `switch.solar_optimizer_<name>` n'est respecté que si **Considérer l'action sur le switch Active comme une reprise en main** est coché dans la configuration de l'équipement ; sinon c'est une simple commande que l'algorithme peut annuler. Le désactiver lève une reprise en main en cours.
 
 ![Simple appareil entités](images/entities-simple-device.png)
 
@@ -453,6 +469,7 @@ Ce dernier switch possède des attributs consultables via Outils de developpemen
 3. `is_usable` : true si l'appareil peut être utilisé par l'algorithme,
 4. `can_change_power` : true si la puissance peut être adaptée,
 5. `current_power` : la puissance courante de l'appareil,
+5. `measured_power_entity_id` : le capteur de puissance mesurée s'il est configuré (utilisé par la carte uniquement),
 6. `requested_power` : la puissance demandée par Solar Optimizer,
 7. `duration_sec` : la durée d'allumage en secondes,
 8. `duration_power_sec` : la durée d'un changement de puissance en secondes,
@@ -646,6 +663,21 @@ data:
   device_id: lave_linge
 ```
 
+## clear_override
+
+Cette action lève une reprise en main manuelle en cours (cf. `binary_sensor.solar_optimizer_override_<name>` dans [Les appareils](#les-appareils)) et rend immédiatement la main à Solar Optimizer, sans attendre `raz_time` ni le retour de l'équipement à l'état demandé.
+
+| Paramètre   | Obligatoire | Description                                                                        |
+| ----------- | ----------- | ---------------------------------------------------------------------------------- |
+| `device_id` | Oui         | L'identifiant unique du managed device (la partie après `switch.solar_optimizer_`) |
+
+En mode YAML :
+```yaml
+action: solar_optimizer.clear_override
+data:
+  device_id: lave_linge
+```
+
 
 # Créer des modèles de capteur pour votre installation
 Votre installation peut nécessiter de créer des capteurs spécifiques qui doivent être configurer [ici](README-fr.md#configurer-lintégration-pour-la-première-fois). Les règles sur ces capteurs sont importantes et doivent être scrupuleusement respectées pour un bon fonctionnement de Solar Optimizer.
@@ -769,6 +801,12 @@ history_hours: 48
 
 ## Actions disponibles
 
+Le switch **Respecter les changements manuels** de chaque équipement (cf. [Les appareils](#les-appareils)) peut être affiché dans le bloc déplié de chaque équipement avec l'option `show_respect_manual_changes` (masqué par défaut), aussi disponible comme case à cocher dans l'éditeur de la carte :
+
+| Paramètre                     | Type      | Valeur par défaut | Description                                                                 |
+| ----------------------------- | --------- | ----------------- | --------------------------------------------------------------------------- |
+| `show_respect_manual_changes` | `boolean` | `false`           | Affiche le switch « Respecter les changements manuels » dans chaque équipement |
+
 Chaque bloc équipement expose les boutons et contrôles suivants :
 1. **Enable/Disable** : active ou désactive la gestion de l'équipement par l'algorithme,
 2. **Sélecteur de durée** : liste déroulante permettant de choisir une durée d'activation forcée avant d'appuyer sur **START** (1h, 4h, 12h, 24h). Lorsqu'une activation forcée est en cours, le sélecteur est remplacé par un badge affichant le **temps restant** (en heures ou en minutes si < 1h),
@@ -787,6 +825,16 @@ type: custom:solar-optimizer-card
 Tous les blocs sont **fermés par défaut** au premier chargement. L'état ouvert/fermé de chaque bloc est automatiquement sauvegardé dans le `localStorage` du navigateur et restauré à la prochaine visite.
 
 La carte est également directement sélectionnable sous le nom **Solar Optimizer Card** dans l'éditeur visuel de cartes de Home Assistant.
+
+Le switch [Respecter les changements manuels](#respecter-les-changements-manuels) de chaque équipement est **masqué par défaut** dans la carte. Pour l'afficher dans le bloc déplié de chaque équipement :
+1. Modifiez le tableau de bord (**⋮ > Modifier le tableau de bord**), puis la carte Solar Optimizer.
+2. Cochez **Afficher « Respecter les changements manuels » dans chaque équipement** et enregistrez.
+
+Ou en YAML :
+```yaml
+type: custom:solar-optimizer-card
+show_respect_manual_changes: true
+```
 
 # Les contributions sont les bienvenues !
 

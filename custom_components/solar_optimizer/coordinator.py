@@ -5,11 +5,13 @@ import math
 from datetime import datetime, timedelta, time
 from typing import Any
 
-from homeassistant.core import HomeAssistant, Event, EventStateChangedData
+from homeassistant.core import HomeAssistant, Event, EventStateChangedData, callback
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.components.select import SelectEntity
 
 from homeassistant.helpers.event import (
     async_track_state_change_event,
+    async_track_time_change,
 )
 
 from homeassistant.helpers.update_coordinator import (
@@ -66,6 +68,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._power_production_entity_id: str = None
         self._subscribe_to_events: bool = False
         self._unsub_events = None
+        self._unsub_raz_override = None
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._async_cancel_listeners)
         self._sell_cost_entity_id: str = None
         self._buy_cost_entity_id: str = None
         self._sell_tax_percent_entity_id: str = None
@@ -133,7 +137,36 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         self._raz_time = datetime.strptime(
             config.data.get("raz_time") or DEFAULT_RAZ_TIME, "%H:%M"
         ).time()
+
+        if self._unsub_raz_override is not None:
+            self._unsub_raz_override()
+            self._unsub_raz_override = None
+
+        self._unsub_raz_override = async_track_time_change(
+            self.hass,
+            self._async_on_raz_time,
+            hour=self._raz_time.hour,
+            minute=self._raz_time.minute,
+            second=0,
+        )
+
         self._central_config_done = True
+
+    @callback
+    def _async_cancel_listeners(self, _event=None) -> None:
+        """Cancel the time/state listeners when HA stops"""
+        for attr in ("_unsub_events", "_unsub_raz_override"):
+            if (unsub := getattr(self, attr)) is not None:
+                unsub()
+                setattr(self, attr, None)
+
+    async def _async_on_raz_time(self, _now=None) -> None:
+        """Called each day at raz_time: clears any pending manual override so Solar
+        Optimizer resumes managing the device, same as the daily on_time reset."""
+        for device in self._devices:
+            if device.override_active:
+                _LOGGER.info("%s - Clearing manual override at raz_time", device.name)
+                device.clear_override()
 
     async def on_ha_started(self, _) -> None:
         """Listen the homeassistant_started event to initialize the first calculation"""
@@ -158,6 +191,9 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         for _, device in enumerate(self._devices):
             # Initialize current power depending or reality
             device.set_current_power_with_device_state()
+            # Detect a manual override (the underlying entity changed state without SO
+            # having commanded it) and auto-clear a resolved one - see managed_device.py
+            device.check_for_manual_override()
 
         # Add a power_consumption and power_production
         power_production = get_safe_float(self.hass, self._power_production_entity_id, "W")

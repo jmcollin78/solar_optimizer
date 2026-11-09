@@ -297,7 +297,8 @@ async def test_power_device(
                         'requested_power': 500,
                         'current_power': 0,
                         'entity_id': 'input_boolean.fake_device_a'
-                    }),
+                    },
+                    context=ANY),
                 call(
                     event_type=EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
                     event_data={
@@ -305,7 +306,8 @@ async def test_power_device(
                         'requested_power': 500,
                         'current_power': 0,
                         'entity_id': 'input_number.fake_amps_number'
-                    })
+                    },
+                    context=ANY)
             ],
             any_order=True,
         )
@@ -379,7 +381,8 @@ async def test_power_device(
                         'requested_power': 800,
                         'current_power': 500,
                         'entity_id': 'input_number.fake_amps_number'
-                    })
+                    },
+                    context=ANY)
             ],
             any_order=True,
         )
@@ -456,7 +459,8 @@ async def test_power_device(
                         'requested_power': 100,
                         'current_power': 800,
                         'entity_id': 'input_number.fake_amps_number'
-                    })
+                    },
+                    context=ANY)
             ],
             any_order=True,
         )
@@ -561,7 +565,8 @@ async def test_power_device(
                         'requested_power': 0,
                         'current_power': 100,
                         'entity_id': 'input_boolean.fake_device_a'
-                    }),
+                    },
+                    context=ANY),
             ],
             any_order=True,
         )
@@ -632,6 +637,7 @@ async def test_light_power_device(
                         target= {
                             "entity_id": "light.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
@@ -651,6 +657,7 @@ async def test_light_power_device(
                         target= {
                             "entity_id": "light.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
@@ -670,6 +677,7 @@ async def test_light_power_device(
                         target= {
                             "entity_id": "light.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
@@ -689,6 +697,7 @@ async def test_light_power_device(
                         target= {
                             "entity_id": "light.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
@@ -760,6 +769,7 @@ async def test_fan_power_device(
                         target= {
                             "entity_id": "fan.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
@@ -779,6 +789,7 @@ async def test_fan_power_device(
                         target= {
                             "entity_id": "fan.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
@@ -798,6 +809,7 @@ async def test_fan_power_device(
                         target= {
                             "entity_id": "fan.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
@@ -817,6 +829,7 @@ async def test_fan_power_device(
                         target= {
                             "entity_id": "fan.fake_device_a",
                         },
+                        context=ANY,
                     ),
                 ]
             )
