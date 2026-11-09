@@ -2,15 +2,300 @@
 
 # pylint: disable=protected-access
 
-from unittest.mock import patch, PropertyMock
+from unittest.mock import AsyncMock, patch, PropertyMock
 from datetime import datetime, timedelta, time
+from types import SimpleNamespace
 
 
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.solar_optimizer.const import get_tz
+from custom_components.solar_optimizer.sensor import TodayOnTimeSensor
 from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-import
+
+
+async def _create_restored_device(
+    hass,
+    monkeypatch,
+    old_state,
+    now,
+    min_on_time=120,
+    max_on_time=600,
+    active=False,
+):
+    """Create a device whose duration sensor receives a supplied restored state."""
+    entity_id = "sensor.on_time_today_solar_optimizer_restored_device"
+    events = []
+    original_get_last_state = RestoreEntity.async_get_last_state
+    original_set_on_time = ManagedDevice.set_on_time
+    original_update_custom_attributes = TodayOnTimeSensor.update_custom_attributes
+    original_write_ha_state = TodayOnTimeSensor.async_write_ha_state
+
+    async def get_last_state(entity):
+        if isinstance(entity, TodayOnTimeSensor):
+            return old_state
+        return await original_get_last_state(entity)
+
+    def set_on_time(device, value):
+        original_set_on_time(device, value)
+        if device.name == "Restored device":
+            events.append(("setter", value, device._on_time_sec))
+
+    def update_custom_attributes(entity):
+        original_update_custom_attributes(entity)
+        if entity._device.name == "Restored device":
+            events.append(
+                (
+                    "attributes",
+                    entity._attr_native_value,
+                    entity._device._on_time_sec,
+                    entity._attr_extra_state_attributes["should_be_forced_offpeak"],
+                    entity.last_datetime_on,
+                )
+            )
+
+    def write_ha_state(entity):
+        original_write_ha_state(entity)
+        if isinstance(entity, TodayOnTimeSensor) and hasattr(entity, "_attr_extra_state_attributes"):
+            events.append(
+                (
+                    "publish",
+                    entity._attr_native_value,
+                    entity._device._on_time_sec,
+                    dict(entity._attr_extra_state_attributes),
+                )
+            )
+
+    monkeypatch.setattr(RestoreEntity, "async_get_last_state", get_last_state)
+    monkeypatch.setattr(ManagedDevice, "set_on_time", set_on_time)
+    monkeypatch.setattr(TodayOnTimeSensor, "update_custom_attributes", update_custom_attributes)
+    monkeypatch.setattr(TodayOnTimeSensor, "async_write_ha_state", write_ha_state)
+
+    fake_switch = await create_test_input_boolean(hass, "input_boolean.restored_device", "restored device")
+    if active:
+        await fake_switch.async_turn_on()
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Restored device",
+        unique_id="restoredDevice",
+        data={
+            CONF_NAME: "Restored device",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.restored_device",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0,
+            CONF_DURATION_STOP_MIN: 0,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_BATTERY_SOC_THRESHOLD: 0,
+            CONF_MAX_ON_TIME_PER_DAY_MIN: max_on_time,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: min_on_time,
+            CONF_OFFPEAK_TIME: "02:00",
+        },
+    )
+
+    with patch.object(ManagedDevice, "now", new_callable=PropertyMock, return_value=now):
+        device = await create_managed_device(hass, entry, "restored_device")
+        await hass.async_block_till_done()
+    device._set_now(now)
+
+    sensor = search_entity(hass, entity_id, SENSOR_DOMAIN)
+    assert sensor is not None
+    return device, sensor, events
+
+
+async def test_restored_on_time_is_synchronized_before_initial_attributes(hass: HomeAssistant, init_solar_optimizer_central_config, monkeypatch):
+    """The restored counter is effective before initial attributes are published."""
+    now = datetime(2024, 11, 10, 2, 3, tzinfo=get_tz(hass))
+    restored_state = State(
+        "sensor.on_time_today_solar_optimizer_restored_device",
+        "7800",
+        {"last_datetime_on": None},
+    )
+    device, sensor, events = await _create_restored_device(hass, monkeypatch, restored_state, now)
+    assert sensor.native_value == 7800
+    assert device._on_time_sec == 7800
+    assert device.should_be_forced_offpeak is False
+    assert [event[0] for event in events[:3]] == ["setter", "attributes", "publish"]
+    assert events[0] == ("setter", 7800, 7800)
+    assert events[1][:3] == ("attributes", 7800, 7800)
+    assert events[1][3] is False
+    assert events[2][0:3] == ("publish", 7800, 7800)
+    assert events[2][3]["should_be_forced_offpeak"] is False
+    published_state = hass.states.get(sensor.entity_id)
+    assert published_state is not None
+    assert published_state.state == "7800"
+    assert published_state.attributes["should_be_forced_offpeak"] is False
+
+
+async def test_restored_fractional_on_time_keeps_existing_rounding(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    monkeypatch,
+):
+    """The restored sensor and business counter retain the existing rounding."""
+    old_state = State(
+        "sensor.on_time_today_solar_optimizer_restored_device",
+        "7140.6",
+        {},
+    )
+    now = datetime(2024, 11, 10, 2, 3, tzinfo=get_tz(hass))
+    device, sensor, events = await _create_restored_device(hass, monkeypatch, old_state, now)
+
+    assert sensor.native_value == 7141
+    assert device._on_time_sec == 7141
+    assert events[0] == ("setter", 7141, 7141)
+
+
+@pytest.mark.parametrize(
+    ("restored_seconds", "hour", "minute", "expected_forcing"),
+    [
+        (24600, 2, 3, False),
+        (7800, 2, 3, False),
+        (7200, 2, 3, False),
+        (7140, 2, 3, True),
+        (7140, 1, 59, False),
+    ],
+)
+async def test_restored_minimum_and_offpeak_window(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    monkeypatch,
+    restored_seconds,
+    hour,
+    minute,
+    expected_forcing,
+):
+    """The restored duration and existing off-peak window govern forcing."""
+    now = datetime(2024, 11, 10, hour, minute, tzinfo=get_tz(hass))
+    old_state = State(
+        "sensor.on_time_today_solar_optimizer_restored_device",
+        str(restored_seconds),
+        {},
+    )
+    device, sensor, events = await _create_restored_device(hass, monkeypatch, old_state, now)
+
+    assert sensor.native_value == restored_seconds
+    assert device._on_time_sec == restored_seconds
+    assert device.should_be_forced_offpeak is expected_forcing
+    assert events[1][0] == "attributes"
+    assert events[1][3] is expected_forcing
+    assert events[2][0] == "publish"
+    assert events[2][3]["should_be_forced_offpeak"] is expected_forcing
+
+
+@pytest.mark.parametrize(
+    ("state_value", "has_old_state", "date_value"),
+    [
+        (None, False, None),
+        (None, True, "2024-11-10T01:00:00-05:00"),
+        ("unknown", True, None),
+        ("unavailable", True, None),
+        ("not-a-number", True, "2024-11-10T01:00:00-05:00"),
+    ],
+)
+async def test_unrestorable_on_time_synchronizes_zero_before_publication(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    monkeypatch,
+    state_value,
+    has_old_state,
+    date_value,
+):
+    """Every currently handled fallback synchronizes zero before attributes."""
+    entity_id = "sensor.on_time_today_solar_optimizer_restored_device"
+    attributes = {"last_datetime_on": date_value} if date_value else {}
+    if not has_old_state:
+        old_state = None
+    elif state_value is None:
+        old_state = SimpleNamespace(state=None, attributes=attributes)
+    else:
+        old_state = State(entity_id, state_value, attributes)
+
+    now = datetime(2024, 11, 10, 2, 3, tzinfo=get_tz(hass))
+    device, sensor, events = await _create_restored_device(hass, monkeypatch, old_state, now)
+
+    assert sensor.native_value == 0
+    assert device._on_time_sec == 0
+    assert [event[0] for event in events[:3]] == [
+        "setter",
+        "attributes",
+        "publish",
+    ]
+    assert events[0] == ("setter", 0, 0)
+    assert events[1][1:3] == (0, 0)
+    assert events[2][1:3] == (0, 0)
+    expected_date = datetime.fromisoformat(date_value) if date_value else None
+    assert sensor.last_datetime_on == expected_date
+    assert events[1][4] == expected_date
+
+
+async def test_inactive_refresh_preserves_restored_on_time_without_activation(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    monkeypatch,
+):
+    """An inactive refresh retains restored time and never activates the device."""
+    old_state = State(
+        "sensor.on_time_today_solar_optimizer_restored_device",
+        "7800",
+        {},
+    )
+    now = datetime(2024, 11, 10, 2, 3, tzinfo=get_tz(hass))
+    device, sensor, _ = await _create_restored_device(hass, monkeypatch, old_state, now)
+
+    with patch.object(device, "activate", new_callable=AsyncMock) as activate:
+        await sensor._on_update_on_time()
+
+    assert sensor.native_value == 7800
+    assert device._on_time_sec == 7800
+    assert sensor.last_datetime_on is None
+    activate.assert_not_awaited()
+
+
+@pytest.mark.parametrize(("restored_seconds", "expected_activation"), [(7800, False), (7140, True)])
+async def test_first_coordinator_calculation_uses_restored_minimum(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    monkeypatch,
+    restored_seconds,
+    expected_activation,
+):
+    """The first explicit optimization applies real forcing to restored time."""
+    old_state = State(
+        "sensor.on_time_today_solar_optimizer_restored_device",
+        str(restored_seconds),
+        {},
+    )
+    now = datetime(2024, 11, 10, 2, 3, tzinfo=get_tz(hass))
+    device, sensor, _ = await _create_restored_device(hass, monkeypatch, old_state, now)
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    assert coordinator is not None
+    hass.states.async_set("sensor.fake_power_consumption", 0)
+    hass.states.async_set("sensor.fake_power_production", 0)
+    hass.states.async_set("input_number.fake_sell_cost", 1)
+    hass.states.async_set("input_number.fake_buy_cost", 1)
+    hass.states.async_set("input_number.fake_sell_tax_percent", 0)
+    solution = [{"name": device.name, "requested_power": 0, "state": False}]
+
+    with (
+        patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 0)),
+        patch.object(device, "activate", new_callable=AsyncMock) as activate,
+    ):
+        await coordinator._async_update_data()
+
+    assert sensor.native_value == restored_seconds
+    assert device._on_time_sec == restored_seconds
+    assert device.should_be_forced_offpeak is expected_activation
+    if expected_activation:
+        activate.assert_awaited_once()
+    else:
+        activate.assert_not_awaited()
 
 
 async def test_min_on_time_config_ok(
