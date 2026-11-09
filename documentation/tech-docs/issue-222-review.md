@@ -6,7 +6,7 @@
 - Revue effectuée le 9 novembre 2026.
 - Issue ouverte, créée par @saucekorn69 le 6 novembre 2026, étiquettes `bug` et `question`, sans assigné ni jalon ; un commentaire de @Zedas030 consulté.
 - Révision locale examinée : `main`, commit `2f819a36553f51e58f7928f57571ece4325ff895`, identique à la référence citée dans le commentaire. Arbre de travail initialement propre.
-- Statut du processus : rapport approuvé par l'utilisateur le 9 novembre 2026 (« Je confirme. Go pour spec/design ») ; phase de spécification et de conception autorisée. Aucun développement autorisé ni effectué.
+- Statut du processus : rapport approuvé par l'utilisateur le 9 novembre 2026 (« Je confirme. Go pour spec/design ») ; accord de fond confirmé au deuxième cycle et troisième cycle de clôture documentaire terminé avec les confirmations des deux spécialistes. Résultats en attente d'approbation humaine et d'autorisation explicite de développement. Aucun développement autorisé ni effectué.
 
 ## Résumé fidèle de l'issue
 
@@ -144,11 +144,49 @@ Aucune question fonctionnelle bloquante n'est identifiée pour ce périmètre re
 8. La restauration d'un appareil actif, le comptage existant et la remise à zéro quotidienne restent compatibles avec le comportement actuel, sans double comptage ajouté par la synchronisation.
 9. Des tests persistants de restauration sont ajoutés dans les modules de test existants appropriés ; les 16 tests ciblés actuellement réussis restent verts. La reproduction isolée de cette revue ne remplace pas ces tests.
 
+## Résultats de convergence spécification et conception
+
+Documents bilingues produits sur le périmètre approuvé :
+
+- [Spécifications fonctionnelles](issue-222-specifications.md) : sept exigences FR-001 à FR-007, quatre règles BR-001 à BR-004 et neuf critères AC-001 à AC-009, reliés aux neuf critères du présent rapport.
+- [Conception technique détaillée](issue-222-design.md) : ordre de restauration, responsabilités, données, limites et plan de tests T-01 à T-09 traçable aux spécifications.
+
+### Relectures croisées et confirmations
+
+Au premier cycle, le `Rédacteur de spécifications` a produit les spécifications, puis `Conception logicielle détaillée` a produit la conception et confirmé son alignement. Au deuxième cycle, le rédacteur a relu intégralement la conception et confirmé la convergence ; le concepteur a vérifié les spécifications actualisées et confirmé à nouveau l'alignement. Les ajustements de ce cycle concernent uniquement les liens, les statuts et la clarification de la recette complémentaire, sans modification des exigences ni de la solution.
+
+Au troisième et dernier cycle, une restriction propre à la délégation du rédacteur, copiée à tort comme interdiction générale de mettre à jour le rapport, a été retirée des spécifications ; les statuts historiques ont été clarifiés. Les deux spécialistes ont confirmé explicitement la version finale sur les quatre conditions ci-dessous. L'orchestrateur a ensuite consigné ces confirmations et la clôture dans les statuts, sans changer les exigences, la solution ou le plan de tests.
+
+| Condition de convergence                       | Rédacteur de spécifications | Conception logicielle détaillée |
+| ---------------------------------------------- | --------------------------- | ------------------------------- |
+| Même périmètre                                 | Confirmé explicitement      | Confirmé explicitement          |
+| Couverture de toutes les exigences et critères | Confirmée explicitement     | Confirmée explicitement         |
+| Absence de contradiction bloquante             | Confirmée explicitement     | Confirmée explicitement         |
+| Solution techniquement réalisable et testable  | Confirmée explicitement     | Confirmée explicitement         |
+
+Aucun désaccord restant. Accord de fond obtenu au deuxième cycle ; troisième et dernier cycle de clôture documentaire terminé, sans modification de fond.
+
+### Décisions de conception
+
+1. Une affectation via le setter existant, après restauration de la valeur et de la date, hors de la branche conditionnelle, avant les attributs et la publication ; aucune modification d'algorithme ou de stockage.
+2. Garantie portant sur la première publication à cette fin de restauration et le premier calcul suivant celle-ci, sans verrou ni promesse nouvelle sur un calcul antérieur.
+3. Futurs tests persistants dans les modules existants, avec décisions métier réelles, observation de l'ordre des appels et vérification rouge puis verte du défaut avant/après correction.
+4. Recette de redémarrage Home Assistant complémentaire, non bloquante et non exécutée ; responsable, environnement et calendrier à convenir avant son exécution autorisée, sans commande physique obligatoire.
+
+Les deux documents ont passé leurs contrôles de structure bilingue, traçabilité et liens locaux, sans diagnostic signalé. Il s'agit de validations documentaires : aucun nouveau test fonctionnel, correctif ou redémarrage Home Assistant n'a été exécuté pendant cette phase. Les 16 tests et la reproduction isolée décrits plus haut restent les seules preuves d'exécution de cette revue.
+
+### Risques résiduels et points ouverts
+
+- L'absence de calcul avant la fin de restauration n'est pas démontrée ; une garantie plus large nécessiterait un nouveau périmètre et une décision explicite.
+- Les politiques de temps pendant l'arrêt, de remise à zéro manquée et de données atypiques restent exclues ; la préservation du comportement actuel ne vaut pas validation de ces politiques.
+- Les modalités de recette complémentaire restent ouvertes, sans question bloquante pour le correctif restreint.
+- La confirmation de faisabilité ne remplace pas l'exécution des tests prévus lors d'un développement ultérieurement autorisé.
+
 ## Suite du processus et passage au développement
 
 1. Approbation explicite de ce rapport et autorisation de passer à la spécification et à la conception obtenues le 9 novembre 2026.
-2. Confier les spécifications au sous-agent `Rédacteur de spécifications`, puis la conception au sous-agent `Conception logicielle détaillée` ; faire converger périmètre, exigences, critères et solution testable, au maximum en trois cycles.
-3. Présenter les documents convergents, les décisions et les risques résiduels ; obtenir une nouvelle autorisation explicite de développement.
-4. Déléguer alors seulement l'implémentation au sous-agent `Développement d’intégrations Home Assistant`, avec le rapport, les spécifications, la conception et les critères validés.
+2. Spécifications et conception produites par les sous-agents désignés ; accord de fond confirmé au deuxième cycle, puis clôture documentaire au troisième, comme consigné ci-dessus.
+3. Soumettre les documents convergents, les décisions et les risques résiduels à l'utilisateur ; leur approbation et une nouvelle autorisation explicite de développement restent à obtenir.
+4. Déléguer alors seulement l'implémentation au sous-agent `Développement d’intégrations Home Assistant`, avec le rapport, les spécifications, la conception et les critères validés. Cette délégation n'est pas engagée.
 
-Le passage au développement exige ces deux validations humaines, des documents complets et convergents, et l'absence de question bloquante. La première validation est acquise ; la validation des résultats de spécification et de conception reste à obtenir. Aucun fichier de code, de configuration ou de dépendances n'a été modifié.
+Le passage au développement exige ces deux validations humaines, des documents complets et convergents, et l'absence de question bloquante. La première validation et la convergence sont acquises ; la validation humaine des résultats de spécification et de conception reste à obtenir. Aucun fichier de code, de configuration ou de dépendances n'a été modifié.
