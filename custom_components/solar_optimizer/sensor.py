@@ -275,6 +275,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             if old_value is not None:
                 self._last_datetime_on = datetime.fromisoformat(old_value)
 
+        self._device.set_on_time(self._attr_native_value)
         self.update_custom_attributes()
         self.async_write_ha_state()
 
