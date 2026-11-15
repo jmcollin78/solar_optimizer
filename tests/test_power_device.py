@@ -69,6 +69,59 @@ async def test_offpeak_forcing_sets_variable_device_power(
     change_power.assert_awaited_once_with(expected_power)
 
 
+async def test_offpeak_forced_fixed_device_is_locked_in_solution_and_activated(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """A fixed forced device stays in the solution but is excluded from optimization."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Water heater",
+        unique_id="waterHeater",
+        data={
+            CONF_NAME: "Water heater",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.water_heater",
+            CONF_POWER_MAX: 2400,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 600,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 480,
+            CONF_OFFPEAK_TIME: "22:00",
+        },
+    )
+    await create_test_input_boolean(hass, "input_boolean.water_heater", "water heater")
+    device = await create_managed_device(hass, entry, "water_heater")
+    assert device is not None
+
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    device._set_now(datetime(2024, 11, 10, 22, 0, tzinfo=get_tz(hass)))
+    for entity_id, value in {
+        "sensor.fake_power_consumption": 1500,
+        "sensor.fake_power_production": 8,
+        "input_number.fake_sell_cost": 1,
+        "input_number.fake_buy_cost": 1,
+        "input_number.fake_sell_tax_percent": 0,
+    }.items():
+        hass.states.async_set(entity_id, value)
+
+    with patch.object(
+        type(device), "should_be_forced_offpeak", new_callable=PropertyMock, return_value=True
+    ):
+        calculated_data = await coordinator._async_update_data()
+
+    heater = next(item for item in coordinator._algo._equipements if item["name"] == device.name)
+    assert heater["state"] is False
+    assert heater["is_usable"] is False
+    assert heater["requested_power"] == 0
+    assert device.battery_soc == calculated_data["battery_soc"]
+    assert calculated_data["total_power"] == 0
+    assert hass.states.get("input_boolean.water_heater").state == "on"
+
+
 async def test_offpeak_power_is_rejected_for_standard_device(hass: HomeAssistant, init_solar_optimizer_central_config):
     """Injected off-peak power is invalid for a standard on/off device."""
     entry = MockConfigEntry(
