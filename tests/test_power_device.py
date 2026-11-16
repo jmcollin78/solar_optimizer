@@ -69,6 +69,77 @@ async def test_offpeak_forcing_sets_variable_device_power(
     change_power.assert_awaited_once_with(expected_power)
 
 
+async def test_offpeak_forcing_updates_power_of_already_active_variable_device(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """An active variable-power device is moved to its off-peak setpoint."""
+    await create_test_input_boolean(hass, "input_boolean.active_variable_device", "active variable device")
+    power_entity = await create_test_input_number(
+        hass, "input_number.active_variable_device_power", "active variable device power"
+    )
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Active variable device",
+        unique_id="activeVariableDevice",
+        data={
+            CONF_NAME: "Active variable device",
+            CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.active_variable_device",
+            CONF_POWER_ENTITY_ID: "input_number.active_variable_device_power",
+            CONF_POWER_MAX: 1000,
+            CONF_POWER_MIN: 100,
+            CONF_POWER_STEP: 100,
+            CONF_OFFPEAK_POWER: 600,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0,
+            CONF_DURATION_POWER_MIN: 0,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+            CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+            CONF_OFFPEAK_TIME: "23:00",
+        },
+    )
+    device = await create_managed_device(hass, entry, "active_variable_device")
+    assert device is not None
+
+    await hass.services.async_call(
+        "input_boolean",
+        "turn_on",
+        {"entity_id": "input_boolean.active_variable_device"},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        "input_number",
+        "set_value",
+        {"entity_id": power_entity.entity_id, "value": 100},
+        blocking=True,
+    )
+
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    device._set_now(datetime(2024, 11, 10, 23, 0, tzinfo=get_tz(hass)))
+    for entity_id, value in {
+        "sensor.fake_power_consumption": 0,
+        "sensor.fake_power_production": 0,
+        "input_number.fake_sell_cost": 1,
+        "input_number.fake_buy_cost": 1,
+        "input_number.fake_sell_tax_percent": 0,
+    }.items():
+        hass.states.async_set(entity_id, value)
+
+    with patch.object(
+        type(device), "should_be_forced_offpeak", new_callable=PropertyMock, return_value=True
+    ):
+        calculated_data = await coordinator._async_update_data()
+
+    assert calculated_data["best_solution"][0]["state"] is True
+    assert hass.states.get("input_boolean.active_variable_device").state == STATE_ON
+    assert power_entity.state == 600
+
+
 async def test_offpeak_forced_active_fixed_device_stays_locked_and_prevents_false_surplus(
     hass: HomeAssistant,
     init_solar_optimizer_central_config,
