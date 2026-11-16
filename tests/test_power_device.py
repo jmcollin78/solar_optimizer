@@ -69,7 +69,7 @@ async def test_offpeak_forcing_sets_variable_device_power(
     change_power.assert_awaited_once_with(expected_power)
 
 
-async def test_offpeak_forced_fixed_device_is_locked_in_solution_and_activated(
+async def test_offpeak_forced_active_fixed_device_stays_locked_and_prevents_false_surplus(
     hass: HomeAssistant,
     init_solar_optimizer_central_config,
 ):
@@ -93,9 +93,43 @@ async def test_offpeak_forced_fixed_device_is_locked_in_solution_and_activated(
             CONF_OFFPEAK_TIME: "22:00",
         },
     )
-    await create_test_input_boolean(hass, "input_boolean.water_heater", "water heater")
+    await async_setup_component(
+        hass,
+        INPUT_BOOLEAN_DOMAIN,
+        {
+            INPUT_BOOLEAN_DOMAIN: {
+                "water_heater": {"name": "water heater"},
+                "radiator": {"name": "radiator"},
+            }
+        },
+    )
     device = await create_managed_device(hass, entry, "water_heater")
     assert device is not None
+    await hass.services.async_call(
+        "input_boolean",
+        "turn_on",
+        {"entity_id": "input_boolean.water_heater"},
+        blocking=True,
+    )
+
+    radiator_entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Radiator",
+        unique_id="radiator",
+        data={
+            CONF_NAME: "Radiator",
+            CONF_DEVICE_TYPE: CONF_DEVICE,
+            CONF_ENTITY_ID: "input_boolean.radiator",
+            CONF_POWER_MAX: 1000,
+            CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+            CONF_DURATION_MIN: 0,
+            CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+            CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+            CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        },
+    )
+    radiator = await create_managed_device(hass, radiator_entry, "radiator")
+    assert radiator is not None
 
     coordinator = SolarOptimizerCoordinator.get_coordinator()
     device._set_now(datetime(2024, 11, 10, 22, 0, tzinfo=get_tz(hass)))
@@ -108,18 +142,17 @@ async def test_offpeak_forced_fixed_device_is_locked_in_solution_and_activated(
     }.items():
         hass.states.async_set(entity_id, value)
 
-    with patch.object(
-        type(device), "should_be_forced_offpeak", new_callable=PropertyMock, return_value=True
-    ):
-        calculated_data = await coordinator._async_update_data()
+    calculated_data = await coordinator._async_update_data()
 
     heater = next(item for item in coordinator._algo._equipements if item["name"] == device.name)
-    assert heater["state"] is False
+    assert heater["state"] is True
     assert heater["is_usable"] is False
-    assert heater["requested_power"] == 0
+    assert heater["requested_power"] == 2400
     assert device.battery_soc == calculated_data["battery_soc"]
-    assert calculated_data["total_power"] == 0
+    assert calculated_data["total_power"] == 2400
     assert hass.states.get("input_boolean.water_heater").state == "on"
+    assert hass.states.get("input_boolean.radiator").state == "off"
+    assert next(item for item in calculated_data["best_solution"] if item["name"] == radiator.name)["state"] is False
 
 
 async def test_offpeak_power_is_rejected_for_standard_device(hass: HomeAssistant, init_solar_optimizer_central_config):

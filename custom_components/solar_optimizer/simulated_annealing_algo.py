@@ -120,19 +120,18 @@ class SimulatedAnnealingAlgorithm:
 
             device.set_battery_soc(battery_soc)
             waiting = device.is_waiting
-            if device.should_be_forced_offpeak:
+            is_forced_offpeak = device.should_be_forced_offpeak
+            if is_forced_offpeak:
                 _LOGGER.debug("%s is forced off-peak. Keep it locked out of optimization", device.name)
-                usable = False
-                force_state = False
-            else:
-                usable = device.is_usable
-                # Force deactivation if active, not usable and not waiting
-                force_state = (
-                    False
-                    if device.is_active
-                    and ((not usable and not waiting) or device.current_power <= 0)
-                    else device.is_active
-                )
+            usable = not is_forced_offpeak and device.is_usable
+            is_active = device.is_active
+            force_state = (
+                False
+                if is_active
+                and not is_forced_offpeak
+                and ((not usable and not waiting) or device.current_power <= 0)
+                else is_active
+            )
 
             self._equipements.append(
                 {
