@@ -274,7 +274,7 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             is_active = device.is_active
             should_force_offpeak = device.should_be_forced_offpeak
             effective_requested_power = requested_power
-            if should_force_offpeak and device.can_change_power:
+            if should_force_offpeak and not state and device.can_change_power:
                 try:
                     effective_requested_power = device.offpeak_power
                 except (ConfigurationError, TypeError, ValueError) as err:
