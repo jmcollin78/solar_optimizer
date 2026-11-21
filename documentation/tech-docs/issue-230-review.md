@@ -10,7 +10,7 @@ Le second ne peut pas etre resolu exactement avec les seules informations actuel
 
 **Recommandation revisee : combiner le verrouillage des appareils actifs forces HC avec l'interdiction d'activer un appareil dans un cycle comportant l'arret d'un autre.** Cette piste proposee par l'utilisateur ne requiert ni capteur individuel ni attente d'une nouvelle mesure globale. La mesure individuelle reste une amelioration facultative. La confirmation par mesure globale est ecartee comme solution de base en raison de delais trop dependants de l'installation.
 
-Ce rapport ne constitue pas une specification approuvee ni une autorisation de developpement. Aucun code de production, test existant ou parametre Home Assistant n'a ete modifie.
+Revue approuvee par l'utilisateur le 21 novembre 2026 ; redaction des [specifications et taches unitaires](issue-230-specifications.md) autorisee. Cette approbation ne vaut pas encore approbation des specifications ni autorisation de developpement. Aucun code de production, test existant ou parametre Home Assistant n'a ete modifie.
 
 ## 2. Sources et perimetre
 
@@ -169,7 +169,7 @@ Dans le cas HC deja actif de #228, A empeche directement l'arret fictif du chauf
 
 **Limites :** separer les cycles ne rend pas une mesure perimee exacte et ne garantit pas l'absence de tout import, notamment si d'autres charges, la production ou la batterie changent. La correction du cas au cycle suivant suppose aussi que l'etat de l'appareil arrete soit effectivement observe ; un retour d'etat lent ou un echec de commande doit etre teste. La regle ne remplace pas A : un arret simule puis refuse en HC ne doit jamais financer d'autres candidats.
 
-**Points a arbitrer avant implementation, sans exception presumee :** une reduction de consigne d'un appareil variable n'est pas un arret et une augmentation n'est pas un allumage. La regle binaire laisserait donc possibles ces transferts de puissance ; son extension aux diminutions/augmentations reste a decider. L'activation obligatoire d'un appareil HC initialement eteint, lorsqu'un autre doit etre arrete, peut aussi entrer en conflit avec la regle stricte. Il faut definir cette priorite, pas introduire silencieusement une exception.
+**Decisions utilisateur confirmees le 21 novembre 2026 pendant la specification :** la regle porte uniquement sur les allumages/arrets, pas sur les augmentations/diminutions de consigne d'un appareil restant actif. Les transferts par variation de puissance restent une limite connue. Une activation forcee HC d'un appareil initialement eteint est egalement reportee lorsque le cycle comporte un arret : aucune exception HC a la separation n'est retenue. Les tests doivent aussi couvrir les retours d'etat retardes et les arrets precedant le recuit, notamment les expirations de timers.
 
 ## 7. Choix propose
 
@@ -208,4 +208,4 @@ Les tests devront etre deterministes, dans les fichiers existants, avec permutat
 12. Deux cycles avec mesure nette inchangee : apres arret effectivement observe du chauffe-eau, la reference ne contient plus ses 2 400 W et le radiateur ne peut pas beneficier a nouveau de cette economie fictive. Aucun rafraichissement du compteur n'est exige pour lancer le nouveau calcul.
 13. Plans sans arret : activations permises selon l'objectif et les contraintes habituelles. Tester les arbitrages retenus pour les variations de puissance et pour une activation forcee HC concomitante a un arret.
 
-Avant developpement, les decisions necessaires sont la portee exacte de F pour les variations de puissance, sa priorite par rapport aux activations forcees HC, le traitement des retours d'etat retardes, les egalites d'objectif, et l'evolution eventuelle du contrat "affichage seulement" si B est retenue. La confirmation globale C ne fait plus partie de la direction recommandee. Une recette sur l'installation reelle reste necessaire apres tests, avec configuration et journaux anonymises ; aucune commande reelle n'a ete lancee pour ce rapport.
+Avant developpement, les [specifications](issue-230-specifications.md) doivent etre approuvees et le test de regression doit etre constate rouge avant toute correction. Elles precisent la portee binaire de F, le report des activations HC et les tests de retours d'etat retardes. L'evolution du contrat "affichage seulement" n'est pas incluse dans cette correction ; la confirmation globale C reste ecartee. Une recette sur l'installation reelle requiert une autorisation distincte ; aucune commande reelle n'a ete lancee pour ce rapport.
