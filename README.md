@@ -47,7 +47,7 @@
 - [Events](#events)
 - [Actions](#actions)
   - [reset\_on\_time](#reset_on_time)
-- [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
+  - [Creating Sensor Templates for Your Installation](#creating-sensor-templates-for-your-installation)
   - [start\_device](#start_device)
   - [stop\_device](#stop_device)
   - [clear\_override](#clear_override)
