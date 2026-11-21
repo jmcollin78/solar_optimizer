@@ -771,8 +771,30 @@ class ManagedDevice:
         return get_template_or_value(self._hass, self._power_max)
 
     @property
+    def offpeak_power_configured(self) -> bool:
+        """True when an explicit off-peak power is configured (value or template)."""
+        return self._offpeak_power is not None
+
+    @property
     def offpeak_power(self):
-        """The explicit power setpoint used during off-peak forcing."""
+        """The explicit power setpoint used during off-peak forcing.
+
+        Kept as an alias of `offpeak_setpoint` for backward compatibility
+        (external calls and existing tests)."""
+
+        return self.offpeak_setpoint
+
+    @property
+    def offpeak_setpoint(self):
+        """The resolved off-peak power setpoint for the current cycle.
+
+        This is the single source of truth for the off-peak setpoint: it renders
+        the template (if any), applies the `power_max` fallback and validates the
+        value. It must be resolved once per coordinator cycle and the result
+        reused for both `activate` and `change_requested_power`.
+
+        Raises `ConfigurationError` when the device cannot change its power and
+        an off-peak power is configured, or when the resolved value is invalid."""
         if not self._can_change_power:
             if self._offpeak_power is not None:
                 raise ConfigurationError(CONF_OFFPEAK_POWER)

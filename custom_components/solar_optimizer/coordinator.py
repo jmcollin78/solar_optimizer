@@ -274,9 +274,13 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             is_active = device.is_active
             should_force_offpeak = device.should_be_forced_offpeak
             effective_requested_power = requested_power
-            if should_force_offpeak and not state and device.can_change_power:
+            offpeak_forcing = should_force_offpeak and device.can_change_power
+            fallback_offpeak = False
+            if offpeak_forcing:
                 try:
-                    effective_requested_power = device.offpeak_power
+                    # Resolve the off-peak setpoint exactly once per cycle and reuse it
+                    # for both activate() and change_requested_power().
+                    effective_requested_power = device.offpeak_setpoint
                 except (ConfigurationError, TypeError, ValueError) as err:
                     _LOGGER.error(
                         "%s - invalid off-peak power configuration: %s",
@@ -284,6 +288,27 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                         err,
                     )
                     continue
+                fallback_offpeak = not device.offpeak_power_configured
+                _LOGGER.debug(
+                    "%s - off-peak setpoint imposed: %s (algorithm state=%s, algorithm power=%s ignored)",
+                    device.name,
+                    effective_requested_power,
+                    state,
+                    requested_power,
+                )
+                if fallback_offpeak:
+                    _LOGGER.debug(
+                        "%s - off-peak setpoint fallback to power_max (%s): no offpeak_power configured",
+                        device.name,
+                        effective_requested_power,
+                    )
+            else:
+                _LOGGER.debug(
+                    "%s - off-peak setpoint not applicable (forcing=%s, can_change_power=%s)",
+                    device.name,
+                    should_force_offpeak,
+                    device.can_change_power,
+                )
             if should_force_offpeak:
                 _LOGGER.debug("%s - we should force %s name", self, name)
             if is_active and not state and not should_force_offpeak:
@@ -297,14 +322,22 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                 old_requested_power = effective_requested_power
                 await device.activate(effective_requested_power)
 
-            # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
-            if (state or should_force_offpeak) and device.can_change_power and (device.current_power != effective_requested_power or not is_active):
+            # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated).
+            # While off-peak forcing is active, compare against the last planned value
+            # (device.requested_power) instead of the measurement, to avoid spurious
+            # re-issuance when the power measurement is unavailable (falls back to power_min).
+            reference_power = device.requested_power if offpeak_forcing else device.current_power
+            if (state or should_force_offpeak) and device.can_change_power and (reference_power != effective_requested_power or not is_active):
                 _LOGGER.debug(
                     "Change power of %s to %s",
                     equipement["name"],
                     effective_requested_power,
                 )
                 should_log = True
+                if offpeak_forcing:
+                    # Keep the planning in sync with the value actually applied, so the
+                    # next cycle compares against the off-peak setpoint (REQ-009).
+                    old_requested_power = effective_requested_power
                 await device.change_requested_power(effective_requested_power)
 
             device.set_requested_power(old_requested_power)
