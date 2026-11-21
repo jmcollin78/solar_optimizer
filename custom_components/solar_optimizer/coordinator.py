@@ -334,11 +334,8 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
                     effective_requested_power,
                 )
                 should_log = True
-                if offpeak_forcing:
-                    # Keep the planning in sync with the value actually applied, so the
-                    # next cycle compares against the off-peak setpoint (REQ-009).
-                    old_requested_power = effective_requested_power
                 await device.change_requested_power(effective_requested_power)
+                old_requested_power = effective_requested_power
 
             device.set_requested_power(old_requested_power)
 

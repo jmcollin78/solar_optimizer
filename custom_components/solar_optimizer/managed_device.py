@@ -329,13 +329,13 @@ class ManagedDevice:
                 context,
             )
         elif self._action_mode == CONF_ACTION_MODE_EVENT:
-            self._announce_action(action_type, None, self._entity_id, self._requested_power, context)
+            self._announce_action(action_type, None, self._entity_id, requested_power, context)
             do_event_action(
                 self._hass,
                 self._entity_id,
                 action_type,
                 self._current_power,
-                self._requested_power,
+                requested_power,
                 EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER,
                 context,
             )
@@ -344,7 +344,7 @@ class ManagedDevice:
                 f"Incorrect action_mode declaration for entity '{self._entity_id}'. Action_mode '{self._action_mode}' is not supported. Use one of {CONF_ACTION_MODES}"
             )
 
-        self._current_power = self._requested_power
+        self._current_power = requested_power
 
     def _announce_action(self, action_type: str, service: str | None, entity_id: str, requested_power, context: Context):
         """Fire the solar_optimizer_action event before applying an action. Being the first

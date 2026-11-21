@@ -11,6 +11,231 @@ from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-impor
 from custom_components.solar_optimizer.managed_device import ACTION_ACTIVATE, ACTION_DEACTIVATE, ACTION_CHANGE_POWER
 
 
+async def test_event_change_power_uses_explicit_setpoint(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """Transmit the explicit setpoint without taking ownership of the prior plan."""
+    data = {
+        CONF_NAME: "Power Device A",
+        CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_ENTITY_ID: "input_number.fake_amps_number",
+        CONF_POWER_MAX: 1000,
+        CONF_POWER_MIN: 100,
+        CONF_POWER_STEP: 100,
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_POWER_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_EVENT,
+    }
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(domain=DOMAIN, title="Power Device A", unique_id="powerA", data=data),
+        "power_device_a",
+    )
+    assert device is not None
+    device.set_requested_power(100)
+    device._current_power = 100
+    announcements = []
+    commands = []
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_ACTION, announcements.append)
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER, commands.append)
+
+    await device.change_requested_power(600)
+    await hass.async_block_till_done()
+
+    assert len(announcements) == len(commands) == 1
+    assert announcements[0].data == {
+        "device_name": "Power Device A",
+        "entity_id": "input_boolean.fake_device_a",
+        "action": ACTION_CHANGE_POWER,
+        "service": None,
+        "requested_power": 600,
+    }
+    assert commands[0].data == {
+        "action_type": ACTION_CHANGE_POWER,
+        "requested_power": 600,
+        "current_power": 100,
+        "entity_id": "input_boolean.fake_device_a",
+    }
+    context = device.last_context
+    assert context is not None
+    assert announcements[0].context is commands[0].context is context
+    assert context.origin_event is announcements[0]
+    assert device.current_power == 600
+    assert device.requested_power == 100
+
+
+@pytest.mark.parametrize("action_mode", [CONF_ACTION_MODE_EVENT, CONF_ACTION_MODE_ACTION])
+@pytest.mark.parametrize(
+    "action_type, requested_power, expected_power",
+    [
+        (ACTION_ACTIVATE, None, 100),
+        (ACTION_ACTIVATE, 600, 600),
+        (ACTION_DEACTIVATE, 0, 0),
+        (ACTION_CHANGE_POWER, None, 100),
+        (ACTION_CHANGE_POWER, 600, 600),
+    ],
+)
+async def test_apply_action_uses_normalized_setpoint(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    action_mode,
+    action_type,
+    requested_power,
+    expected_power,
+):
+    """Preserve the fallback and transmit explicit power for both action modes."""
+    data = {
+        CONF_NAME: "Power Device A",
+        CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_ENTITY_ID: "input_number.fake_amps_number",
+        CONF_POWER_MAX: 1000,
+        CONF_POWER_MIN: 100,
+        CONF_POWER_STEP: 100,
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_POWER_MIN: 0,
+        CONF_ACTION_MODE: action_mode,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+    }
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(domain=DOMAIN, title="Power Device A", unique_id="powerA", data=data),
+        "power_device_a",
+    )
+    assert device is not None
+    device.set_requested_power(100)
+    device._current_power = 100
+    event_mode = action_mode == CONF_ACTION_MODE_EVENT
+    change_power = action_type == ACTION_CHANGE_POWER
+    entity_id = data[CONF_POWER_ENTITY_ID] if change_power and not event_mode else data[CONF_ENTITY_ID]
+    service = {
+        ACTION_ACTIVATE: data[CONF_ACTIVATION_SERVICE],
+        ACTION_DEACTIVATE: data[CONF_DEACTIVATION_SERVICE],
+        ACTION_CHANGE_POWER: data[CONF_CHANGE_POWER_SERVICE],
+    }[action_type]
+    event_type = EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER if event_mode or change_power else EVENT_TYPE_SOLAR_OPTIMIZER_STATE_CHANGE
+    announcements = []
+    commands = []
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_ACTION, announcements.append)
+    hass.bus.async_listen(event_type, commands.append)
+
+    with patch("homeassistant.core.ServiceRegistry.async_call", new_callable=AsyncMock) as service_call:
+        if action_type == ACTION_ACTIVATE:
+            await device.activate(requested_power)
+        elif action_type == ACTION_DEACTIVATE:
+            await device.deactivate()
+        else:
+            await device.change_requested_power(requested_power)
+        await hass.async_block_till_done()
+
+    context = device.last_context
+    assert context is not None
+    assert len(announcements) == len(commands) == 1
+    assert announcements[0].data == {
+        "device_name": "Power Device A",
+        "entity_id": entity_id,
+        "action": action_type,
+        "service": None if event_mode else service,
+        "requested_power": expected_power,
+    }
+    assert commands[0].data == {
+        "action_type": action_type,
+        "requested_power": expected_power,
+        "current_power": 100,
+        "entity_id": entity_id,
+    }
+    assert announcements[0].context is commands[0].context is context
+    assert context.origin_event is announcements[0]
+    if event_mode:
+        service_call.assert_not_awaited()
+    else:
+        domain, action = service.split("/")
+        service_call.assert_awaited_once_with(
+            domain,
+            action,
+            service_data={"value": expected_power} if change_power else {},
+            target={"entity_id": entity_id},
+            context=context,
+        )
+    assert device.current_power == expected_power
+    assert device.requested_power == 100
+
+
+async def test_offpeak_event_setpoint_is_emitted_once(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """Emit the off-peak setpoint before updating the plan, then stay stable."""
+    data = {
+        CONF_NAME: "Power Device A",
+        CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_ENTITY_ID: "input_number.fake_amps_number",
+        CONF_POWER_MAX: 1000,
+        CONF_POWER_MIN: 100,
+        CONF_POWER_STEP: 100,
+        CONF_OFFPEAK_POWER: 600,
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_POWER_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_EVENT,
+        CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+        CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+        CONF_OFFPEAK_TIME: "23:00",
+    }
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(domain=DOMAIN, title="Power Device A", unique_id="powerA", data=data),
+        "power_device_a",
+    )
+    assert device is not None
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    hass.states.async_set("sensor.fake_power_consumption", "0")
+    hass.states.async_set("sensor.fake_power_production", "0")
+    hass.states.async_set("input_number.fake_sell_cost", "1")
+    hass.states.async_set("input_number.fake_buy_cost", "1")
+    hass.states.async_set("input_number.fake_sell_tax_percent", "0")
+    device.set_requested_power(100)
+    device._current_power = 100
+    announcements = []
+    commands = []
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_ACTION, announcements.append)
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_CHANGE_POWER, commands.append)
+    solution = [{"name": "Power Device A", "requested_power": 100, "state": True}]
+
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 0)), patch.object(
+        type(device), "is_active", new_callable=PropertyMock, return_value=True
+    ), patch.object(type(device), "should_be_forced_offpeak", new_callable=PropertyMock, return_value=True), patch.object(device, "set_current_power_with_device_state"):
+        await coordinator._async_update_data()
+        await hass.async_block_till_done()
+
+        assert len(announcements) == len(commands) == 1
+        assert announcements[0].data["requested_power"] == 600
+        assert commands[0].data == {
+            "action_type": ACTION_CHANGE_POWER,
+            "requested_power": 600,
+            "current_power": 100,
+            "entity_id": "input_boolean.fake_device_a",
+        }
+        assert announcements[0].context is commands[0].context is device.last_context
+        assert device.current_power == device.requested_power == 600
+
+        announcements.clear()
+        commands.clear()
+        await coordinator._async_update_data()
+        await hass.async_block_till_done()
+
+        assert announcements == commands == []
+        assert device.current_power == device.requested_power == 600
+        assert solution == [{"name": "Power Device A", "requested_power": 100, "state": True}]
+
+
 @pytest.mark.parametrize("offpeak_power, expected_power", [(600, 600), ("{{ 600 }}", 600), (None, 1000)])
 async def test_offpeak_forcing_sets_variable_device_power(
     hass: HomeAssistant,
@@ -206,6 +431,79 @@ async def test_offpeak_forcing_overrides_active_algorithm_power(
     activate.assert_not_awaited()
     change_power.assert_awaited_once_with(600)
     assert change_power.await_args_list[0] != call(100)
+
+
+async def test_offpeak_forcing_updates_planning_after_algorithm_power_change(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """Keep the plan aligned outside forcing so off-peak entry applies its target."""
+    data = {
+        CONF_NAME: "Power Device A",
+        CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+        CONF_ENTITY_ID: "input_boolean.fake_device_a",
+        CONF_POWER_ENTITY_ID: "input_number.fake_amps_number",
+        CONF_POWER_MAX: 1000,
+        CONF_POWER_MIN: 100,
+        CONF_POWER_STEP: 100,
+        CONF_OFFPEAK_POWER: 600,
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_POWER_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+        CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+        CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+        CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+        CONF_OFFPEAK_TIME: "23:00",
+    }
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(domain=DOMAIN, title="Power Device A", unique_id="powerA", data=data),
+        "power_device_a",
+    )
+    assert device is not None
+
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    hass.states.async_set("sensor.fake_power_consumption", "0")
+    hass.states.async_set("sensor.fake_power_production", "0")
+    hass.states.async_set("input_number.fake_sell_cost", "1")
+    hass.states.async_set("input_number.fake_buy_cost", "1")
+    hass.states.async_set("input_number.fake_sell_tax_percent", "0")
+
+    cycles = [
+        (False, False, 600, 0, 600, 600),
+        (True, False, 300, 600, 300, 300),
+        (True, True, 300, 300, 600, 600),
+        (True, True, 300, 600, 600, None),
+    ]
+    for is_active, forcing, algorithm_power, measured_power, planned_power, command_power in cycles:
+        solution = [{"name": "Power Device A", "requested_power": algorithm_power, "state": True}]
+        with patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 0)), patch.object(
+            type(device), "is_active", new_callable=PropertyMock, return_value=is_active
+        ), patch.object(type(device), "should_be_forced_offpeak", new_callable=PropertyMock, return_value=forcing), patch.object(
+            device, "set_current_power_with_device_state"
+        ), patch.object(
+            device, "activate", new_callable=AsyncMock
+        ) as activate, patch.object(
+            device, "deactivate", new_callable=AsyncMock
+        ) as deactivate, patch.object(
+            device, "change_requested_power", new_callable=AsyncMock
+        ) as change_power:
+            device._current_power = measured_power
+            await coordinator._async_update_data()
+
+        if is_active:
+            activate.assert_not_awaited()
+        else:
+            activate.assert_awaited_once_with(600)
+        deactivate.assert_not_awaited()
+        if command_power is None:
+            change_power.assert_not_awaited()
+        else:
+            change_power.assert_awaited_once_with(command_power)
+        assert device.requested_power == planned_power
 
 
 async def test_offpeak_forcing_no_reemission_when_already_applied(
@@ -755,7 +1053,7 @@ async def test_power_device(
         assert calculated_data["total_power"] == 500
         assert calculated_data["power_device_a"].is_waiting is True
         assert calculated_data["power_device_a"].requested_power == 500
-        assert calculated_data["power_device_a"].current_power == 0
+        assert calculated_data["power_device_a"].current_power == 500
         assert calculated_data["power_device_a"].is_active is False # it was not activated
         assert calculated_data["power_device_a"].is_usable is False # no more usable cause waiting
         assert calculated_data["power_device_a"].is_waiting is True
@@ -791,7 +1089,7 @@ async def test_power_device(
                     event_data={
                         'action_type': ACTION_CHANGE_POWER,
                         'requested_power': 500,
-                        'current_power': 0,
+                        'current_power': 500,
                         'entity_id': 'input_number.fake_amps_number'
                     },
                     context=ANY)
