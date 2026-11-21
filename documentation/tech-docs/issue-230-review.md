@@ -10,7 +10,7 @@ Le second ne peut pas etre resolu exactement avec les seules informations actuel
 
 **Recommandation revisee : combiner le verrouillage des appareils actifs forces HC avec l'interdiction d'activer un appareil dans un cycle comportant l'arret d'un autre.** Cette piste proposee par l'utilisateur ne requiert ni capteur individuel ni attente d'une nouvelle mesure globale. La mesure individuelle reste une amelioration facultative. La confirmation par mesure globale est ecartee comme solution de base en raison de delais trop dependants de l'installation.
 
-Revue approuvee par l'utilisateur le 21 novembre 2026 ; redaction des [specifications et taches unitaires](issue-230-specifications.md) autorisee. Cette approbation ne vaut pas encore approbation des specifications ni autorisation de developpement. Aucun code de production, test existant ou parametre Home Assistant n'a ete modifie.
+Revue approuvee par l'utilisateur le 21 novembre 2026 ; les [specifications et taches unitaires](issue-230-specifications.md) ont ensuite ete approuvees et le developpement autorise. Au moment de cette revue initiale, aucun code de production, test existant ou parametre Home Assistant n'avait ete modifie.
 
 ## 2. Sources et perimetre
 
@@ -75,7 +75,7 @@ Controles supplementaires passes :
 4. Injecter directement `current_power=0` pour un appareil variable actif conduit actuellement a une solution initiale inactive. Remplacer aveuglement la consigne par la mesure introduirait donc un autre defaut.
 5. Un petit modele de projection distingue maintien, arret et activation : avec une consommation initiale connue a zero, maintien et arret predisent 1 500 W, tandis que l'allumage du radiateur predit 2 500 W. C'est une verification arithmetique de la proposition, pas une implementation validee.
 
-Ces controles prouvent le mecanisme local de l'algorithme. Ils ne constituent ni une reproduction de l'installation du declarant, ni un test complet du coordinateur, ni une preuve de convergence pour tous les tirages du recuit. La suite pytest complete n'a pas ete executee ; aucune correction fonctionnelle n'est livree. Un avertissement d'import Home Assistant/voluptuous a ete emis, sans echec d'execution.
+Ces controles prouvent le mecanisme local de l'algorithme. Ils ne constituent ni une reproduction de l'installation du declarant, ni un test complet du coordinateur, ni une preuve de convergence pour tous les tirages du recuit. Au moment de cette revue initiale, la suite pytest complete n'avait pas ete executee et aucune correction fonctionnelle n'etait livree. Un avertissement d'import Home Assistant/voluptuous a ete emis, sans echec d'execution.
 
 ## 5. Pourquoi le probleme general est difficile
 
@@ -208,4 +208,8 @@ Les tests devront etre deterministes, dans les fichiers existants, avec permutat
 12. Deux cycles avec mesure nette inchangee : apres arret effectivement observe du chauffe-eau, la reference ne contient plus ses 2 400 W et le radiateur ne peut pas beneficier a nouveau de cette economie fictive. Aucun rafraichissement du compteur n'est exige pour lancer le nouveau calcul.
 13. Plans sans arret : activations permises selon l'objectif et les contraintes habituelles. Tester les arbitrages retenus pour les variations de puissance et pour une activation forcee HC concomitante a un arret.
 
-Avant developpement, les [specifications](issue-230-specifications.md) doivent etre approuvees et le test de regression doit etre constate rouge avant toute correction. Elles precisent la portee binaire de F, le report des activations HC et les tests de retours d'etat retardes. L'evolution du contrat "affichage seulement" n'est pas incluse dans cette correction ; la confirmation globale C reste ecartee. Une recette sur l'installation reelle requiert une autorisation distincte ; aucune commande reelle n'a ete lancee pour ce rapport.
+## 9. Resultat du developpement
+
+Les specifications ont ete approuvees avant le demarrage. T01 a ete constate rouge sur les deux variantes avant toute correction de production, puis passe avec les deux ordres d'appareils. L'implementation partage un instantane de cycle entre recuit et application, verrouille les appareils effectivement forces en HC, decide les arrets et activations sur le plan complet, et reporte les activations du cycle comportant un arret sans attente de mesure ni rejeu automatique. Les activations forcees HC suivent la meme regle ; les changements de puissance d'un appareil qui reste actif sont preserves. Le diagnostic distingue les activations differees du plan brut, et le capteur individuel reste facultatif et reserve a l'affichage.
+
+Validation finale : `rtk pytest tests -q -p no:cacheprovider` donne 213 tests passes, 0 echec et 11 ignores. Aucun changement de version, aucune configuration Home Assistant ni recette sur l'installation reelle n'a ete effectue ; cette derniere requiert une autorisation distincte.

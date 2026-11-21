@@ -3,7 +3,7 @@
 ## 1. Statut et sources
 
 - Reference : [issue #230](https://github.com/jmcollin78/solar_optimizer/issues/230).
-- Date : 2026-11-21. Revue approuvee par l'utilisateur ; specifications en attente d'approbation. La redaction de ce document n'autorise pas encore le developpement.
+- Date : 2026-11-21. Revue et specifications approuvees par l'utilisateur ; developpement autorise.
 - Source fonctionnelle : [revue approuvee](issue-230-review.md), propositions A + F, et decisions utilisateur recueillies pendant la specification.
 - Decisions confirmees : separation des allumages/arrets uniquement ; report egalement des activations forcees HC ; aucun capteur individuel obligatoire ; aucune attente de nouvelle mesure globale.
 - Sources techniques : [coordinateur](../../custom_components/solar_optimizer/coordinator.py), [recuit](../../custom_components/solar_optimizer/simulated_annealing_algo.py), [appareil gere](../../custom_components/solar_optimizer/managed_device.py), [tests de puissance](../../tests/test_power_device.py), [tests de duree minimale](../../tests/test_min_on_time.py) et [tests d'activation temporisee](../../tests/test_timed_activation.py).
@@ -209,11 +209,11 @@ L'ordre ci-dessous est obligatoire pour T01 : **d'abord constater le rouge, ensu
 
 La correction est terminee lorsque les AC-001 a AC-012 sont verifies, T01 a ete observe rouge puis vert sans affaiblissement, les configurations existantes restent valides, les tests touches et les controles du depot sont passes ou leurs blocages explicitement rapportes, et la documentation FR/EN explique la nouvelle separation et ses limites. Aucun succes d'une reproduction synthetique ne remplace les tests du vrai chemin coordinateur/recuit.
 
-Les essais exposes dans la revue sont des preuves exploratoires anterieures. **Le test de regression T01 n'est pas encore implemente ni execute dans cette phase de specification.**
+Les essais exposes dans la revue sont des preuves exploratoires anterieures. T01 a ensuite ete observe rouge sur les variantes avec et sans forcage HC avant toute correction de production, puis vert dans les quatre combinaisons de forcage et d'ordre des appareils. Les tests de cycles, d'expiration, d'echec de commande, de diagnostic et de variation de puissance ont ete ajoutes. La suite complete compte 213 tests passes, aucun echec et 11 ignores ; le bilan est consigne dans la revue de developpement.
 
 ## 8. English normative summary
 
-Status: the review is approved; these specifications require approval before implementation. Scope: combine active off-peak constraints with cycle-wide start/stop separation. Individual power measurements remain optional and are not newly consumed by the algorithm. No fresh-meter wait is introduced.
+Status: the review and specifications are approved; development is authorized. T01 was observed failing on both off-peak and ordinary variants before the production fix, then passing with both device orders. Scope: combine active off-peak constraints with cycle-wide start/stop separation. Individual power measurements remain optional and are not newly consumed by the algorithm. No fresh-meter wait is introduced.
 
 | Rule   | English contract                                                                                                                                        |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
