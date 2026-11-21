@@ -110,7 +110,7 @@ Lorsque `offpeak_power` est fourni sous forme de gabarit (template) dont la vale
 
 Critères d'acceptation liés : AC-005.
 
-> Ce point est **en attente de décision** (voir Q-003) : la valeur échantillonnée à l'entrée de la plage doit-elle être figée pour toute la plage, ou ré-échantillonnée à chaque cycle ?
+> **Décision (Q-003, validée le 2026-11-21)** : la valeur du gabarit est ré-échantillonnée **une fois par cycle** du coordinateur (pas figée sur toute la plage) ; la valeur obtenue est réutilisée dans le cycle pour `activate` et `change_requested_power`, garantissant l'absence de variation intra-cycle.
 
 ### REQ-004 — Application uniquement sur appareil actif
 
@@ -298,7 +298,7 @@ La règle métier de l'utilisateur est formulée en termes de **période d'heure
 - **Option A** : appliquer la règle strictement sur la **période** (plage) ; dans ce cas, il faut garantir la consigne HC **même** si `should_be_forced_offpeak` est faux dans la plage.
 - **Option B** : conserver le lien avec `should_be_forced_offpeak` **et** documenter que la consigne ne peut pas être appliquée si l'appareil n'est pas « forcible » (par ex. minimum atteint). Dans ce cas, la règle est écartée et il n'y a pas de garantie de constance sur toute la plage.
 
-**À décider** : l'utilisateur a formulé la règle comme une exigence fonctionnelle non dépendante du forçage. L'option A est alignée sur cette exigence et devrait être retenue, **sauf** si l'utilisateur accepte expressément l'écart de l'option B.
+> **Décision (utilisateur, 2026-11-21) : Option B retenue.** La règle est ancrée sur `should_be_forced_offpeak` : la consigne `offpeak_power` est imposée **tant que** le forçage est vrai. Conséquences documentées (conception § 5, R3) : si `min_on_time_per_day_min` est atteint avant la fin de la plage, ou si la temporisation `duration_power_min` court, le forçage est faux et la consigne HC ne s'applique pas — l'utilisateur accepte cet écart à la formulation initiale en termes de période.
 
 ### Q-002 — Temporisation de puissance au début de la plage
 
@@ -307,7 +307,7 @@ Si `duration_power_min` est encore en cours au démarrage de la plage, la consig
 - **Option A** : retarder l'application de la consigne HS jusqu'à expiration de `duration_power_min`, sans action pendant l'attente.
 - **Option B** : appliquer la consigne HS **immédiatement** en annulant la temporisation en cours (risque d'enfreindre la protection de l'appareil).
 
-**À décider** : la sécurité de l'appareil prime ; l'Option A (respect de la temporisation) est recommandée.
+> **Décision (utilisateur, 2026-11-21) : Option A retenue.** La temporisation est respectée ; aucun changement de puissance n'est émis tant que `duration_power_min` court (le forçage est faux pendant l'attente, via `check_usable(False)`).
 
 ### Q-003 — Échantillonnage d'une `offpeak_power` dynamique (gabarit)
 
@@ -317,7 +317,7 @@ Si `offpeak_power` est un gabarit :
 - **Option B** : ré-échantillonner la valeur à **chaque cycle** du coordinateur.
 - **Option C** : échantillonner à un rythme défini (par ex. une fois par heure).
 
-**À décider** : l'Option A est la plus alignée sur l'exigence de constance pendant la plage ; l'Option B est la plus simple mais enfreint la constance si le gabarit varie. À trancher avec l'utilisateur.
+> **Décision (Q-003, validée le 2026-11-21)** : la valeur du gabarit est ré-échantillonnée **une fois par cycle** du coordinateur (pas figée sur toute la plage) ; la valeur obtenue est réutilisée dans le cycle pour `activate` et `change_requested_power`, garantissant l'absence de variation intra-cycle.
 
 ### Q-004 — Repli en cas de mesure indisponible
 
@@ -332,8 +332,8 @@ Le repli actuel de la reconstruction de la puissance courante (sur `power_min` s
 
 La règle « pas de ré-émission en état stable » (REQ-009) peut entrer en tension avec la reconstruction de la puissance, si la mesure est indisponible : le système comparerait `offpeak_power` à `power_min` (repli) et **ré-émettrait** alors même que l'appareil est déjà à `offpeak_power`.
 
-- **Option A** : ne ré-émettre que si la consigne **planifiée** (dernière valeur demandée par SO) diffère de la cible, en ignorant la mesure.
-- **Option B** : ré-émettre si **toute** source (mesure OU planning) indique une valeur différente.
+- **Option A** : ne ré-émets que si la consigne **planifiée** (dernière valeur demandée par SO) diffère de la cible, en ignorant la mesure.
+- **Option B** : ré-émets si **toute** source (mesure OU planning) indique une valeur différente.
 
 > **Décision (utilisateur, 2026-11-21) : Option A retenue, en cohérence avec la décision Q-004**, et limitée au chemin de forçage actif : hors forçage, le comportement existant (comparaison à la mesure) est conservé.
 
@@ -341,7 +341,7 @@ La règle « pas de ré-émission en état stable » (REQ-009) peut entrer en te
 
 La surcharge manuelle peut co-exister avec la consigne HS. Le comportement actuel (selon `respect_manual_changes`) **peut** ou **ne peut pas** céder la main à l'utilisateur.
 
-**À décider** : préciser si la consigne HS doit ou non interrompre une surcharge manuelle en cours pendant la plage (option par défaut recommandée : la surcharge manuelle continue d'avoir la priorité selon son contrat existant).
+> **Décision (utilisateur, 2026-11-21) : la surcharge manuelle conserve la priorité selon son contrat existant.** La consigne HC n'interrompt pas une surcharge en cours ; lorsque le verrou de surcharge est actif (`enable=False`), aucune commande SO n'est émise.
 
 ---
 
@@ -440,8 +440,11 @@ The English version mirrors the French acceptance criteria **one-for-one**: each
 
 ### 10.9 Open questions requiring decision (mirrors Q-001–Q-006, identical identifiers)
 
-Each open question must be resolved **before** development. The options and recommended defaults are the same as the French version; identifiers are identical. The French version is the authoritative source; the English version is provided for alignment and review.
+All questions have been resolved by user decision on 2026-11-21 (see the French section 8 for the full rationale; identifiers are identical, the French version is the authoritative source):
 
-### 10.10 Traceability
-
-The traceability table of the French version (section 9) applies identically; file and symbol names are language-independent. The English version does not restate line numbers that have not been verified.
+- **Q-001 — Option B selected**: the rule is anchored on `should_be_forced_offpeak`; the setpoint is enforced **only while** forcing is true. Documented consequence: if `min_on_time_per_day_min` is reached before the end of the window (or while `duration_power_min` is running), forcing is false and the off-peak setpoint does not apply.
+- **Q-002 — Option A selected**: the `duration_power_min` timeout is respected; no power-change command is issued while the timeout is running.
+- **Q-003 — Re-sampled once per coordinator cycle** (not frozen for the whole window); no additional persisted state; intra-cycle constancy guaranteed by single per-cycle resolution reused for `activate` and `change_requested_power`; inter-cycle changes are attributable to the template and logged (AC-014).
+- **Q-004 — Option A selected**: when forcing is active and the measurement is unavailable, the emission comparison is made against the last **planned** value instead of the measurement.
+- **Q-005 — Option A selected**, consistent with Q-004 and limited to the active-forcing path: without forcing, existing behaviour (comparison against the measurement) is preserved.
+- **Q-006 — Manual override keeps priority per its existing contract**: the off-peak setpoint does not interrupt an active override; while the override lock is active (`enable=False`), no SO command is issued.
