@@ -11,6 +11,455 @@ from .commons import *  # pylint: disable=wildcard-import, unused-wildcard-impor
 from custom_components.solar_optimizer.managed_device import ACTION_ACTIVATE, ACTION_DEACTIVATE, ACTION_CHANGE_POWER
 
 
+async def _create_issue_230_fixed_device(
+    hass: HomeAssistant,
+    suffix: str,
+    power_max: int,
+    active: bool,
+    extra_config: dict | None = None,
+):
+    name = f"Issue 230 {suffix}"
+    unique_id = name_to_unique_id(name)
+    entity_id = f"input_boolean.{unique_id}"
+    await create_test_input_boolean(hass, entity_id, name)
+    hass.states.async_set(entity_id, "on" if active else "off")
+    data = {
+        CONF_NAME: name,
+        CONF_DEVICE_TYPE: CONF_DEVICE,
+        CONF_ENTITY_ID: entity_id,
+        CONF_POWER_MAX: power_max,
+        CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+        CONF_DURATION_MIN: 0,
+        CONF_DURATION_STOP_MIN: 0,
+        CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+        CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+        CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+    }
+    data.update(extra_config or {})
+    device = await create_managed_device(
+        hass,
+        MockConfigEntry(
+            domain=DOMAIN,
+            title=name,
+            unique_id=f"issue230_{unique_id}",
+            data=data,
+        ),
+        unique_id,
+    )
+    assert device is not None
+    return device
+
+
+def _set_issue_230_power_inputs(hass: HomeAssistant):
+    hass.states.async_set("sensor.fake_power_consumption", "1500")
+    hass.states.async_set("sensor.fake_power_production", "8")
+    hass.states.async_set("input_number.fake_sell_cost", "0.10")
+    hass.states.async_set("input_number.fake_buy_cost", "0.25")
+    hass.states.async_set("input_number.fake_sell_tax_percent", "0")
+
+
+@pytest.mark.parametrize("force_offpeak", [False, True], ids=["ordinary", "offpeak"])
+@pytest.mark.parametrize("reverse_device_order", [False, True], ids=["stop-first", "start-first"])
+async def test_issue_230_no_activation_from_phantom_released_power(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    force_offpeak,
+    reverse_device_order,
+):
+    """A simulated stop must not finance a radiator start in the same cycle."""
+    heater_entity_id = "input_boolean.issue_230_heater"
+    radiator_entity_id = "input_boolean.issue_230_radiator"
+    heater_config = {}
+    if force_offpeak:
+        heater_config = {
+            CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+            CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+            CONF_OFFPEAK_TIME: "23:00",
+        }
+    heater = await _create_issue_230_fixed_device(hass, "heater", 2400, True, heater_config)
+    radiator = await _create_issue_230_fixed_device(hass, "radiator", 1000, False)
+
+    cycle_time = datetime.now(tz=get_tz(hass)).replace(
+        hour=23,
+        minute=30,
+        second=0,
+        microsecond=0,
+    )
+    if cycle_time < datetime.now(tz=get_tz(hass)):
+        cycle_time += timedelta(days=1)
+    heater._set_now(cycle_time)
+    radiator._set_now(cycle_time)
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    if reverse_device_order:
+        coordinator._devices.reverse()
+    coordinator._smooth_production = False
+    coordinator._algo._nombre_iterations = 2
+    hass.states.async_set("sensor.fake_power_consumption", "1500")
+    hass.states.async_set("sensor.fake_power_production", "8")
+    hass.states.async_set("input_number.fake_sell_cost", "0.10")
+    hass.states.async_set("input_number.fake_buy_cost", "0.25")
+    hass.states.async_set("input_number.fake_sell_tax_percent", "0")
+
+    selected_names = iter([heater.name, radiator.name])
+
+    def select_device(candidates):
+        selected_name = next(selected_names)
+        return next(
+            (candidate for candidate in candidates if candidate["name"] == selected_name),
+            candidates[0],
+        )
+
+    actions = []
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_ACTION, actions.append)
+    with patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.choice",
+        side_effect=select_device,
+    ), patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.random",
+        return_value=0.99,
+    ):
+        await coordinator._async_update_data()
+        await hass.async_block_till_done()
+
+    assert not any(event.data["entity_id"] == radiator_entity_id and event.data["action"] == ACTION_ACTIVATE for event in actions)
+    if force_offpeak:
+        assert not any(event.data["entity_id"] == heater_entity_id and event.data["action"] == ACTION_DEACTIVATE for event in actions)
+    else:
+        assert any(event.data["entity_id"] == heater_entity_id and event.data["action"] == ACTION_DEACTIVATE for event in actions)
+
+
+async def test_issue_230_multiple_stops_preserve_active_devices_and_allow_later_start(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """Classify multiple stops before commands, and do not block a later cycle without stops."""
+    stop_one = await _create_issue_230_fixed_device(hass, "stop one", 2400, True)
+    stop_two = await _create_issue_230_fixed_device(hass, "stop two", 800, True)
+    maintained = await _create_issue_230_fixed_device(hass, "maintained", 500, True)
+    inactive = await _create_issue_230_fixed_device(hass, "inactive", 300, False)
+    radiator = await _create_issue_230_fixed_device(hass, "next radiator", 1000, False)
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    _set_issue_230_power_inputs(hass)
+
+    mixed_plan = [
+        {"name": radiator.name, "requested_power": 1000, "state": True},
+        {"name": maintained.name, "requested_power": 500, "state": True},
+        {"name": stop_two.name, "requested_power": 0, "state": False},
+        {"name": stop_one.name, "requested_power": 0, "state": False},
+        {"name": inactive.name, "requested_power": 0, "state": False},
+    ]
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(mixed_plan, 0, 0)), patch.object(
+        stop_one, "deactivate", new_callable=AsyncMock
+    ) as deactivate_one, patch.object(stop_two, "deactivate", new_callable=AsyncMock) as deactivate_two, patch.object(
+        maintained, "deactivate", new_callable=AsyncMock
+    ) as deactivate_maintained, patch.object(
+        radiator, "activate", new_callable=AsyncMock
+    ) as activate_radiator:
+        await coordinator._async_update_data()
+
+    deactivate_one.assert_awaited_once()
+    deactivate_two.assert_awaited_once()
+    deactivate_maintained.assert_not_awaited()
+    activate_radiator.assert_not_awaited()
+
+    later_plan = [
+        {"name": inactive.name, "requested_power": 0, "state": False},
+        {"name": radiator.name, "requested_power": 1000, "state": True},
+        {"name": maintained.name, "requested_power": 500, "state": True},
+        {"name": stop_one.name, "requested_power": 2400, "state": True},
+        {"name": stop_two.name, "requested_power": 800, "state": True},
+    ]
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(later_plan, 0, 0)), patch.object(radiator, "activate", new_callable=AsyncMock) as activate_radiator:
+        await coordinator._async_update_data()
+
+    activate_radiator.assert_awaited_once_with(1000)
+
+
+async def test_issue_230_blocked_forced_start_has_no_power_command(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    caplog,
+):
+    """A forced variable start is skipped without mutating its plan or power state."""
+    heater = await _create_issue_230_fixed_device(hass, "heater", 2400, True)
+    variable_entity_id = "input_boolean.issue_230_variable"
+    variable_power_id = "input_number.issue_230_variable_power"
+    await create_test_input_boolean(hass, variable_entity_id, "Issue 230 variable")
+    await create_test_input_number(hass, variable_power_id, "Issue 230 variable power")
+    variable = await create_managed_device(
+        hass,
+        MockConfigEntry(
+            domain=DOMAIN,
+            title="Issue 230 variable",
+            unique_id="issue230_variable",
+            data={
+                CONF_NAME: "Issue 230 variable",
+                CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+                CONF_ENTITY_ID: variable_entity_id,
+                CONF_POWER_ENTITY_ID: variable_power_id,
+                CONF_POWER_MAX: 1000,
+                CONF_POWER_MIN: 100,
+                CONF_POWER_STEP: 100,
+                CONF_OFFPEAK_POWER: 600,
+                CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+                CONF_DURATION_MIN: 0,
+                CONF_DURATION_POWER_MIN: 0,
+                CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+                CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+                CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+                CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+                CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+                CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+                CONF_OFFPEAK_TIME: "23:00",
+            },
+        ),
+        "issue_230_variable",
+    )
+    assert variable is not None
+    cycle_time = datetime.now(tz=get_tz(hass)).replace(hour=23, minute=30, second=0, microsecond=0)
+    if cycle_time < datetime.now(tz=get_tz(hass)):
+        cycle_time += timedelta(days=1)
+    heater._set_now(cycle_time)
+    variable._set_now(cycle_time)
+
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    _set_issue_230_power_inputs(hass)
+    solution = [
+        {"name": variable.name, "requested_power": 600, "state": True},
+        {"name": heater.name, "requested_power": 0, "state": False},
+    ]
+    events = []
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_ACTION, events.append)
+    with caplog.at_level("INFO", logger="custom_components.solar_optimizer.coordinator"), patch.object(
+        coordinator._algo, "recuit_simule", return_value=(solution, 0, 2400)
+    ), patch.object(variable, "activate", new_callable=AsyncMock) as activate, patch.object(variable, "change_requested_power", new_callable=AsyncMock) as change_power:
+        calculated_data = await coordinator._async_update_data()
+
+    activate.assert_not_awaited()
+    change_power.assert_not_awaited()
+    assert variable.requested_power == 0
+    assert calculated_data["best_solution"] is solution
+    assert "activation postponed" in caplog.text
+    assert not any(event.data["entity_id"] == variable_entity_id for event in events)
+
+
+async def test_issue_230_active_variable_power_change_is_allowed_with_a_stop(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """The binary restriction does not block a power change on an already active device."""
+    heater = await _create_issue_230_fixed_device(hass, "heater", 2400, True)
+    variable_entity_id = "input_boolean.issue_230_active_variable"
+    variable_power_id = "input_number.issue_230_active_variable_power"
+    await create_test_input_boolean(hass, variable_entity_id, "Issue 230 active variable")
+    await create_test_input_number(hass, variable_power_id, "Issue 230 active variable power")
+    hass.states.async_set(variable_entity_id, "on")
+    hass.states.async_set(variable_power_id, "300")
+    variable = await create_managed_device(
+        hass,
+        MockConfigEntry(
+            domain=DOMAIN,
+            title="Issue 230 active variable",
+            unique_id="issue230_active_variable",
+            data={
+                CONF_NAME: "Issue 230 active variable",
+                CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+                CONF_ENTITY_ID: variable_entity_id,
+                CONF_POWER_ENTITY_ID: variable_power_id,
+                CONF_POWER_MAX: 1000,
+                CONF_POWER_MIN: 100,
+                CONF_POWER_STEP: 100,
+                CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+                CONF_DURATION_MIN: 0,
+                CONF_DURATION_POWER_MIN: 0,
+                CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+                CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+                CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+                CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+            },
+        ),
+        "issue_230_active_variable",
+    )
+    assert variable is not None
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    _set_issue_230_power_inputs(hass)
+    solution = [
+        {"name": variable.name, "requested_power": 500, "state": True},
+        {"name": heater.name, "requested_power": 0, "state": False},
+    ]
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 0)), patch.object(variable, "activate", new_callable=AsyncMock) as activate, patch.object(
+        variable, "change_requested_power", new_callable=AsyncMock
+    ) as change_power:
+        await coordinator._async_update_data()
+
+    activate.assert_not_awaited()
+    change_power.assert_awaited_once_with(500)
+
+
+async def test_issue_230_forced_active_zero_power_stays_in_optimizer_solution(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """A forced active device remains locked even when its current power is measured as zero."""
+    variable_entity_id = "input_boolean.issue_230_zero_power_variable"
+    variable_power_id = "input_number.issue_230_zero_power"
+    await create_test_input_boolean(hass, variable_entity_id, "Issue 230 zero power variable")
+    await create_test_input_number(hass, variable_power_id, "Issue 230 zero power")
+    hass.states.async_set(variable_entity_id, "on")
+    hass.states.async_set(variable_power_id, "0")
+    variable = await create_managed_device(
+        hass,
+        MockConfigEntry(
+            domain=DOMAIN,
+            title="Issue 230 zero power variable",
+            unique_id="issue230_zero_power_variable",
+            data={
+                CONF_NAME: "Issue 230 zero power variable",
+                CONF_DEVICE_TYPE: CONF_POWERED_DEVICE,
+                CONF_ENTITY_ID: variable_entity_id,
+                CONF_POWER_ENTITY_ID: variable_power_id,
+                CONF_POWER_MAX: 1000,
+                CONF_POWER_MIN: 100,
+                CONF_POWER_STEP: 100,
+                CONF_OFFPEAK_POWER: 600,
+                CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+                CONF_DURATION_MIN: 0,
+                CONF_DURATION_POWER_MIN: 0,
+                CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+                CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+                CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+                CONF_CHANGE_POWER_SERVICE: "input_number/set_value",
+                CONF_MAX_ON_TIME_PER_DAY_MIN: 10,
+                CONF_MIN_ON_TIME_PER_DAY_MIN: 5,
+                CONF_OFFPEAK_TIME: "23:00",
+            },
+        ),
+        "issue_230_zero_power_variable",
+    )
+    assert variable is not None
+    cycle_time = datetime.now(tz=get_tz(hass)).replace(hour=23, minute=30, second=0, microsecond=0)
+    if cycle_time < datetime.now(tz=get_tz(hass)):
+        cycle_time += timedelta(days=1)
+    variable._set_now(cycle_time)
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    coordinator._smooth_production = False
+    coordinator._algo._nombre_iterations = 2
+    _set_issue_230_power_inputs(hass)
+
+    calculated_data = await coordinator._async_update_data()
+
+    assert calculated_data["best_solution"][0]["state"] is True
+    assert calculated_data["best_solution"][0]["requested_power"] == 600
+    assert coordinator._algo._puissance_totale_eqt_initiale == 0
+
+
+@pytest.mark.parametrize("fail_stop", [False, True], ids=["delayed-state", "failed-stop"])
+async def test_issue_230_stop_attempt_never_reopens_same_cycle_start(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+    fail_stop,
+):
+    """The full-plan decision holds even when a stop is delayed or raises."""
+    heater = await _create_issue_230_fixed_device(hass, "heater", 2400, True)
+    radiator = await _create_issue_230_fixed_device(hass, "radiator", 1000, False)
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    _set_issue_230_power_inputs(hass)
+    solution = [
+        {"name": radiator.name, "requested_power": 1000, "state": True},
+        {"name": heater.name, "requested_power": 0, "state": False},
+    ]
+    stop_error = RuntimeError("stop failed") if fail_stop else None
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 0)), patch.object(
+        heater, "deactivate", new_callable=AsyncMock, side_effect=stop_error
+    ) as deactivate, patch.object(radiator, "activate", new_callable=AsyncMock) as activate:
+        if fail_stop:
+            with pytest.raises(RuntimeError, match="stop failed"):
+                await coordinator._async_update_data()
+        else:
+            await coordinator._async_update_data()
+
+    deactivate.assert_awaited_once()
+    activate.assert_not_awaited()
+
+
+async def test_issue_230_next_cycle_recalculates_without_replaying_skipped_start(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """An observed stop removes its budget next cycle; a later legitimate start remains possible."""
+    heater = await _create_issue_230_fixed_device(hass, "heater", 2400, True)
+    radiator = await _create_issue_230_fixed_device(hass, "radiator", 1000, False)
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    coordinator._smooth_production = False
+    coordinator._algo._nombre_iterations = 2
+    _set_issue_230_power_inputs(hass)
+    cycle_time = datetime.now(tz=get_tz(hass)) + timedelta(minutes=1)
+    heater._set_now(cycle_time)
+    radiator._set_now(cycle_time)
+
+    def select_in_order():
+        selected_names = iter([heater.name, radiator.name])
+
+        def select_device(candidates):
+            selected_name = next(selected_names)
+            return next(
+                (candidate for candidate in candidates if candidate["name"] == selected_name),
+                candidates[0],
+            )
+
+        return select_device
+
+    events = []
+    hass.bus.async_listen(EVENT_TYPE_SOLAR_OPTIMIZER_ACTION, events.append)
+    with patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.choice",
+        side_effect=select_in_order(),
+    ), patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.random",
+        return_value=0.99,
+    ):
+        await coordinator._async_update_data()
+        await hass.async_block_till_done()
+
+    assert any(event.data["entity_id"] == heater.entity_id and event.data["action"] == ACTION_DEACTIVATE for event in events)
+    assert not any(event.data["entity_id"] == radiator.entity_id and event.data["action"] == ACTION_ACTIVATE for event in events)
+
+    events.clear()
+    hass.states.async_set(heater.entity_id, "off")
+    cycle_time += timedelta(minutes=1)
+    heater._set_now(cycle_time)
+    radiator._set_now(cycle_time)
+    with patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.choice",
+        side_effect=select_in_order(),
+    ), patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.random",
+        return_value=0.99,
+    ):
+        await coordinator._async_update_data()
+        await hass.async_block_till_done()
+
+    assert coordinator._algo._puissance_totale_eqt_initiale == 0
+    assert not any(event.data["entity_id"] == radiator.entity_id and event.data["action"] == ACTION_ACTIVATE for event in events)
+
+    hass.states.async_set("sensor.fake_power_consumption", "-1000")
+    hass.states.async_set("sensor.fake_power_production", "2000")
+    cycle_time += timedelta(minutes=1)
+    heater._set_now(cycle_time)
+    radiator._set_now(cycle_time)
+    with patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.choice",
+        side_effect=select_in_order(),
+    ), patch(
+        "custom_components.solar_optimizer.simulated_annealing_algo.random.random",
+        return_value=0.99,
+    ):
+        await coordinator._async_update_data()
+        await hass.async_block_till_done()
+
+    assert any(event.data["entity_id"] == radiator.entity_id and event.data["action"] == ACTION_ACTIVATE for event in events)
+
+
 async def test_event_change_power_uses_explicit_setpoint(
     hass: HomeAssistant,
     init_solar_optimizer_central_config,
