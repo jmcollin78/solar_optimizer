@@ -54,6 +54,63 @@ async def _setup_device(hass):
     return device, fake_bool
 
 
+async def test_expired_activation_stop_blocks_other_device_start(
+    hass: HomeAssistant,
+    init_solar_optimizer_central_config,
+):
+    """A timer stop earlier in the cycle blocks starts even with a delayed state report."""
+    device, _ = await _setup_device(hass)
+    hass.states.async_set(device.entity_id, STATE_ON)
+
+    second_entity_id = "input_boolean.fake_device_b"
+    await create_test_input_boolean(hass, second_entity_id, "fake underlying B")
+    second_device = await create_managed_device(
+        hass,
+        MockConfigEntry(
+            domain=DOMAIN,
+            title="Equipement B",
+            unique_id="eqtBUniqueId",
+            data={
+                CONF_NAME: "Equipement B",
+                CONF_DEVICE_TYPE: CONF_DEVICE,
+                CONF_ENTITY_ID: second_entity_id,
+                CONF_POWER_MAX: 700,
+                CONF_CHECK_USABLE_TEMPLATE: "{{ True }}",
+                CONF_DURATION_MIN: 0,
+                CONF_DURATION_STOP_MIN: 0,
+                CONF_ACTION_MODE: CONF_ACTION_MODE_ACTION,
+                CONF_ACTIVATION_SERVICE: "input_boolean/turn_on",
+                CONF_DEACTIVATION_SERVICE: "input_boolean/turn_off",
+                CONF_MAX_ON_TIME_PER_DAY_MIN: 60,
+            },
+        ),
+        "equipement_b",
+    )
+    assert second_device is not None
+    current_tz = get_tz(hass)
+    device._forced_end_time = datetime.now(current_tz) - timedelta(seconds=1)
+    device.set_enable(False)
+
+    coordinator = SolarOptimizerCoordinator.get_coordinator()
+    hass.states.async_set("sensor.fake_power_consumption", "1500")
+    hass.states.async_set("sensor.fake_power_production", "8")
+    hass.states.async_set("input_number.fake_sell_cost", "0.10")
+    hass.states.async_set("input_number.fake_buy_cost", "0.25")
+    hass.states.async_set("input_number.fake_sell_tax_percent", "0")
+    solution = [
+        {"name": second_device.name, "requested_power": 700, "state": True},
+        {"name": device.name, "requested_power": 1000, "state": True},
+    ]
+    with patch.object(coordinator._algo, "recuit_simule", return_value=(solution, 0, 700)), patch.object(device, "deactivate", new_callable=AsyncMock) as deactivate, patch.object(
+        second_device, "activate", new_callable=AsyncMock
+    ) as activate:
+        calculated_data = await coordinator._async_update_data()
+
+    deactivate.assert_awaited_once()
+    activate.assert_not_awaited()
+    assert calculated_data["best_solution"] is solution
+
+
 # ---------------------------------------------------------------------------
 # Test 1 : état initial — pas d'activation forcée
 # ---------------------------------------------------------------------------

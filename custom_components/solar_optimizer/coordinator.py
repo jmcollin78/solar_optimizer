@@ -182,9 +182,11 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
         calculated_data = {}
 
         # Check forced activation timers — stop and re-enable any device whose timer has expired
+        stopped_devices = set()
         for device in self._devices:
             expired = await device.expire_forced_activation()
             if expired:
+                stopped_devices.add(device.unique_id)
                 _LOGGER.info("Forced activation expired for %s — SO management re-enabled", device.name)
 
         # Add a device state attributes
@@ -241,6 +243,33 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
 
         calculated_data["priority_weight"] = self.priority_weight
 
+        cycle_states: dict[str, dict[str, Any]] = {}
+        for device in self._devices:
+            device.set_battery_soc(calculated_data["battery_soc"])
+            is_active = device.is_active
+            should_force_offpeak = device.should_be_forced_offpeak
+            offpeak_setpoint = None
+            offpeak_error = None
+            if should_force_offpeak and device.can_change_power:
+                try:
+                    offpeak_setpoint = device.offpeak_setpoint
+                except (ConfigurationError, TypeError, ValueError) as err:
+                    offpeak_error = err
+                    _LOGGER.error(
+                        "%s - invalid off-peak power configuration: %s",
+                        device.name,
+                        err,
+                    )
+            cycle_states[device.unique_id] = {
+                "is_active": is_active,
+                "is_enabled": device.is_enabled,
+                "is_usable": device.is_usable,
+                "is_waiting": device.is_waiting,
+                "should_be_forced_offpeak": should_force_offpeak,
+                "offpeak_setpoint": offpeak_setpoint,
+                "offpeak_error": offpeak_error,
+            }
+
         #
         # Call Algorithm Recuit simulé
         #
@@ -253,11 +282,30 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             calculated_data["sell_tax_percent"],
             calculated_data["battery_soc"],
             calculated_data["priority_weight"],
+            cycle_states,
         )
 
         calculated_data["best_solution"] = best_solution
         calculated_data["best_objective"] = best_objective
         calculated_data["total_power"] = total_power
+
+        planned_stops = set(stopped_devices)
+        planned_starts = set()
+        for equipment in best_solution:
+            device = self.get_device_by_name(equipment["name"])
+            if not device:
+                continue
+            device_cycle_state = cycle_states[device.unique_id]
+            if device_cycle_state["offpeak_error"] is not None:
+                continue
+            is_active = device_cycle_state["is_active"]
+            should_force_offpeak = device_cycle_state["should_be_forced_offpeak"]
+            if is_active and not equipment["state"] and not should_force_offpeak:
+                planned_stops.add(device.unique_id)
+            elif not is_active and (equipment["state"] or should_force_offpeak):
+                planned_starts.add(device.unique_id)
+
+        stop_in_cycle = bool(planned_stops)
 
         # Uses the result to turn on or off or change power
         should_log = False
@@ -270,24 +318,25 @@ class SolarOptimizerCoordinator(DataUpdateCoordinator):
             if not device:
                 continue
 
+            device_cycle_state = cycle_states[device.unique_id]
+            if device_cycle_state["offpeak_error"] is not None:
+                continue
+            if stop_in_cycle and device.unique_id in planned_starts:
+                _LOGGER.info(
+                    "%s - activation postponed because a device is stopped in this cycle",
+                    device.name,
+                )
+                calculated_data[name_to_unique_id(name)] = device
+                continue
+
             old_requested_power = device.requested_power
-            is_active = device.is_active
-            should_force_offpeak = device.should_be_forced_offpeak
+            is_active = device_cycle_state["is_active"]
+            should_force_offpeak = device_cycle_state["should_be_forced_offpeak"]
             effective_requested_power = requested_power
             offpeak_forcing = should_force_offpeak and device.can_change_power
             fallback_offpeak = False
             if offpeak_forcing:
-                try:
-                    # Resolve the off-peak setpoint exactly once per cycle and reuse it
-                    # for both activate() and change_requested_power().
-                    effective_requested_power = device.offpeak_setpoint
-                except (ConfigurationError, TypeError, ValueError) as err:
-                    _LOGGER.error(
-                        "%s - invalid off-peak power configuration: %s",
-                        device.name,
-                        err,
-                    )
-                    continue
+                effective_requested_power = device_cycle_state["offpeak_setpoint"]
                 fallback_offpeak = not device.offpeak_power_configured
                 _LOGGER.debug(
                     "%s - off-peak setpoint imposed: %s (algorithm state=%s, algorithm power=%s ignored)",

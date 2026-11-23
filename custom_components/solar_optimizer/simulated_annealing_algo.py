@@ -3,6 +3,7 @@ import logging
 import random
 import math
 import copy
+from typing import Any
 
 from .managed_device import ManagedDevice
 
@@ -19,7 +20,7 @@ class SimulatedAnnealingAlgorithm:
     _temperature_minimale: float = 0.1
     _facteur_refroidissement: float = 0.95
     _nombre_iterations: float = 1000
-    _equipements: list[ManagedDevice]
+    _equipements: list[dict[str, Any]]
     _puissance_totale_eqt_initiale: float
     _cout_achat: float = 15  # centimes
     _cout_revente: float = 10  # centimes
@@ -57,7 +58,8 @@ class SimulatedAnnealingAlgorithm:
         sell_tax_percent: float,
         battery_soc: float,
         priority_weight: int,
-    ):
+        cycle_states: dict[str, dict[str, Any]] | None = None,
+    ) -> tuple[list[dict[str, Any]], float, float]:
         """The entrypoint of the algorithm:
         You should give:
          - devices: a list of ManagedDevices. devices that are is_usable false are not taken into account
@@ -113,21 +115,34 @@ class SimulatedAnnealingAlgorithm:
             self._cout_achat = self._cout_revente = 1
 
         self._equipements = []
+        initial_power_reference = 0
         for _, device in enumerate(devices):
-            if not device.is_enabled:
+            device_cycle_state = (cycle_states or {}).get(device.unique_id, {})
+            is_enabled = device_cycle_state["is_enabled"] if "is_enabled" in device_cycle_state else device.is_enabled
+            if not is_enabled:
                 _LOGGER.debug("%s is disabled. Forget it", device.name)
                 continue
 
             device.set_battery_soc(battery_soc)
-            usable = device.is_usable
-            waiting = device.is_waiting
+            is_active = device_cycle_state["is_active"] if "is_active" in device_cycle_state else device.is_active
+            usable = device_cycle_state["is_usable"] if "is_usable" in device_cycle_state else device.is_usable
+            waiting = device_cycle_state["is_waiting"] if "is_waiting" in device_cycle_state else device.is_waiting
+            should_force_offpeak = device_cycle_state.get("should_be_forced_offpeak", False)
+            offpeak_error = device_cycle_state.get("offpeak_error") is not None
+            initial_current_power = device.current_power
+            if is_active:
+                initial_power_reference += initial_current_power
             # Force deactivation if active, not usable and not waiting
-            force_state = (
-                False
-                if device.is_active
-                and ((not usable and not waiting) or device.current_power <= 0)
-                else device.is_active
-            )
+            force_state = False if is_active and ((not usable and not waiting) or device.current_power <= 0) else is_active
+            requested_power = initial_current_power
+            if should_force_offpeak:
+                usable = False
+                if offpeak_error:
+                    force_state = is_active
+                    requested_power = initial_current_power if is_active else 0
+                else:
+                    force_state = True
+                    requested_power = device_cycle_state["offpeak_setpoint"] if device.can_change_power else device.power_max
             self._equipements.append(
                 {
                     "power_max": device.power_max,
@@ -135,10 +150,10 @@ class SimulatedAnnealingAlgorithm:
                     "power_step": device.power_step,
                     "current_power": device.current_power,  # if force_state else 0,
                     # Initial Requested power is the current power if usable
-                    "requested_power": device.current_power,  # if force_state else 0,
+                    "requested_power": requested_power,
                     "name": device.name,
                     "state": force_state,
-                    "is_usable": device.is_usable,
+                    "is_usable": usable,
                     "is_waiting": waiting,
                     "can_change_power": device.can_change_power,
                     "priority": device.priority,
@@ -148,7 +163,7 @@ class SimulatedAnnealingAlgorithm:
             _LOGGER.debug("enabled _equipements are: %s", self._equipements)
 
         # Générer une solution initiale
-        solution_actuelle = self.generer_solution_initiale(self._equipements)
+        solution_actuelle = self.generer_solution_initiale(self._equipements, initial_power_reference)
         meilleure_solution = solution_actuelle
         meilleure_objectif = self.calculer_objectif(solution_actuelle)
         temperature = self._temperature_initiale
@@ -250,9 +265,9 @@ class SimulatedAnnealingAlgorithm:
         ret = consumption_coef * (1.0 - priority_weight) + priority_coef * priority_weight
         return ret
 
-    def generer_solution_initiale(self, solution):
+    def generer_solution_initiale(self, solution, reference_power=None):
         """Generate the initial solution (which is the solution given in argument) and calculate the total initial power"""
-        self._puissance_totale_eqt_initiale = self.consommation_equipements(solution)
+        self._puissance_totale_eqt_initiale = self.consommation_equipements(solution) if reference_power is None else reference_power
         return copy.deepcopy(solution)
 
     def consommation_equipements(self, solution):
